@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { destinations } from "@/data/mockData";
 import {
   Carousel,
@@ -12,9 +13,18 @@ const DestinationGrid = () => {
   return (
     <section className="py-16 lg:py-24">
       <div className="container mx-auto px-6">
-        <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-8 font-sans">
-          Popular places travellers ask about
-        </h2>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
+            Popular places travellers ask about
+          </h2>
+          <Link 
+            to="/destinations" 
+            className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
+          >
+            See more
+            <ArrowRight size={16} />
+          </Link>
+        </div>
 
         <div className="relative px-12">
           <Carousel
