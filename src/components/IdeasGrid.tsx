@@ -14,26 +14,36 @@ const IdeasGrid = () => {
           {ideas.map((idea, index) => (
             <article
               key={idea.id}
-              className="card-soft p-6 flex flex-col animate-slide-up"
+              className="card-soft overflow-hidden flex flex-col animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <span className="tag-pill self-start mb-4">{idea.destination}</span>
+              <div className="aspect-[16/10] overflow-hidden">
+                <img 
+                  src={idea.imageUrl} 
+                  alt={idea.title}
+                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                />
+              </div>
               
-              <h3 className="text-xl font-display font-semibold text-foreground mb-2">
-                {idea.title}
-              </h3>
-              
-              <p className="text-muted-foreground text-sm mb-6 flex-1">
-                {idea.desc}
-              </p>
+              <div className="p-6 flex flex-col flex-1">
+                <span className="tag-pill self-start mb-4">{idea.destination}</span>
+                
+                <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+                  {idea.title}
+                </h3>
+                
+                <p className="text-muted-foreground text-sm mb-6 flex-1">
+                  {idea.desc}
+                </p>
 
-              <Link
-                to={`/explore-locals?destination=${idea.destination.toLowerCase()}`}
-                className="inline-flex items-center gap-2 text-primary font-medium text-sm group"
-              >
-                Ask a local about this
-                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-              </Link>
+                <Link
+                  to={`/explore-locals?destination=${idea.destination.toLowerCase()}`}
+                  className="inline-flex items-center gap-2 text-primary font-medium text-sm group"
+                >
+                  Ask a local about this
+                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
             </article>
           ))}
         </div>

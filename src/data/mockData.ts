@@ -20,6 +20,7 @@ export interface Idea {
   title: string;
   desc: string;
   destination: string;
+  imageUrl: string;
 }
 
 export const consultants: Consultant[] = [
@@ -105,37 +106,43 @@ export const ideas: Idea[] = [
     id: "1",
     title: "Where to find the best carbonara",
     desc: "Skip the tourist traps and eat where Romans actually go.",
-    destination: "Rome"
+    destination: "Rome",
+    imageUrl: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=600&h=400&fit=crop"
   },
   {
     id: "2",
     title: "Hidden courtyards of the Marais",
     desc: "Quiet spots locals retreat to away from the crowds.",
-    destination: "Paris"
+    destination: "Paris",
+    imageUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=600&h=400&fit=crop"
   },
   {
     id: "3",
     title: "Morning fish markets in Tsukiji",
     desc: "Experience Tokyo's food culture before the tourists wake up.",
-    destination: "Tokyo"
+    destination: "Tokyo",
+    imageUrl: "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?w=600&h=400&fit=crop"
   },
   {
     id: "4",
     title: "Secret viewpoints over Barcelona",
     desc: "The best sunset spots that aren't on Instagram yet.",
-    destination: "Barcelona"
+    destination: "Barcelona",
+    imageUrl: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=600&h=400&fit=crop"
   },
   {
     id: "5",
     title: "Borough Market on a weekday",
     desc: "How to enjoy London's famous market without the weekend chaos.",
-    destination: "London"
+    destination: "London",
+    imageUrl: "https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?w=600&h=400&fit=crop"
   },
   {
     id: "6",
     title: "Brooklyn neighborhoods worth exploring",
     desc: "Beyond Williamsburg: where New Yorkers actually hang out.",
-    destination: "New York"
+    destination: "New York",
+    imageUrl: "https://images.unsplash.com/photo-1555109307-f7d9da25c244?w=600&h=400&fit=crop"
   }
 ];
 
