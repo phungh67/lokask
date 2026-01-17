@@ -11,7 +11,7 @@ const ConsultantCard = ({
   return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
       {/* Badge - Highly Trusted Local - Top Right */}
       {consultant.isHighlyTrusted && (
-        <span className="absolute -top-2 -right-2 inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
           <Heart className="w-3 h-3 fill-primary-foreground" />
           Highly trusted
         </span>
