@@ -15,7 +15,7 @@ const Index = () => {
         <HeroSection />
         <DestinationGrid />
         <LocalsCarousel title="Wonderful locals in Thailand" consultants={thailandConsultants} />
-        <LocalsCarousel title="Most asked local in Paris" consultants={parisConsultants} />
+        <LocalsCarousel title="Most asked local in Paris" consultants={parisConsultants} showMostAskedBadge={true} />
         <IdeasGrid />
         <CTASection />
       </main>
