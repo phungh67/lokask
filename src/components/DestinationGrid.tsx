@@ -12,11 +12,11 @@ const DestinationGrid = () => {
           animationDelay: `${index * 100}ms`
         }}>
               <img src={destination.imageUrl} alt={destination.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-white text-lg font-semibold font-display">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-gray-900/90 text-white text-sm font-semibold px-3 py-1.5 rounded-lg inline-block">
                   {destination.name}
-                </h3>
+                </span>
               </div>
             </Link>)}
         </div>
