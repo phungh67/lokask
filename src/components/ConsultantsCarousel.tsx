@@ -24,7 +24,7 @@ const ConsultantsCarousel = () => {
           loop: true
         }} className="w-full">
             <CarouselContent className="-ml-4">
-              {thailandConsultants.map(consultant => <CarouselItem key={consultant.id} className="pl-4 basis-[85%] sm:basis-1/2 md:basis-1/2 lg:basis-1/3">
+              {thailandConsultants.map(consultant => <CarouselItem key={consultant.id} className="pl-4 basis-[320px] shrink-0">
                   <ConsultantCard consultant={consultant} />
                 </CarouselItem>)}
             </CarouselContent>
