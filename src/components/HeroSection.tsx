@@ -41,7 +41,7 @@ const HeroSection = () => {
       <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
         {/* Left Column - Video Panel (40%) - Starts from left edge */}
         <div className="lg:w-[42%] relative">
-          <div className="chamfer-tr rounded-br-3xl overflow-hidden relative h-[450px] lg:h-full lg:min-h-[calc(100vh-64px)]">
+          <div className="rounded-tr-[28px] rounded-br-[28px] lg:rounded-tr-[48px] lg:rounded-br-[48px] overflow-hidden relative h-[450px] lg:h-full lg:min-h-[calc(100vh-64px)]">
             {/* Video */}
             <video
               key={slides[activeSlide].video}
