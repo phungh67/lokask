@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import DestinationGrid from "@/components/DestinationGrid";
+import ConsultantsCarousel from "@/components/ConsultantsCarousel";
 import IdeasGrid from "@/components/IdeasGrid";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
@@ -12,6 +13,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <DestinationGrid />
+        <ConsultantsCarousel />
         <IdeasGrid />
         <CTASection />
       </main>
