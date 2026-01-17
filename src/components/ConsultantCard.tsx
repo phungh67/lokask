@@ -8,21 +8,21 @@ interface ConsultantCardProps {
 const ConsultantCard = ({
   consultant
 }: ConsultantCardProps) => {
-  return <div className="bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
+  return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
+      {/* Badge - Highly Trusted Local - Top Right */}
+      {consultant.isHighlyTrusted && (
+        <span className="absolute -top-2 -right-2 inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
+          <Heart className="w-3 h-3 fill-primary-foreground" />
+          Highly trusted
+        </span>
+      )}
+
       {/* Avatar - Centered Circle */}
       <div className="flex justify-center mb-3">
         <div className="w-36 h-36 rounded-full overflow-hidden ring-2 ring-background shadow-md">
           <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover object-top" />
         </div>
       </div>
-
-      {/* Badge - Highly Trusted Local */}
-      {consultant.isHighlyTrusted && <div className="flex justify-center mb-2">
-          <span className="inline-flex items-center gap-1.5 bg-terracotta-light text-primary rounded-full px-3 py-1 text-xs font-medium">
-            <Heart className="w-3.5 h-3.5 fill-primary" />
-            Highly trusted local
-          </span>
-        </div>}
 
       {/* Name & City */}
       <div className="mb-3">
