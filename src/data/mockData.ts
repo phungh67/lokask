@@ -30,7 +30,7 @@ export const consultants: Consultant[] = [
     tag: "Food & neighborhoods",
     rating: 4.9,
     helpedCount: 150,
-    avatarUrl: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=200&fit=crop"
   },
   {
