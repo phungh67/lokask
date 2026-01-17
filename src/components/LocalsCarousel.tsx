@@ -12,7 +12,7 @@ interface LocalsCarouselProps {
 
 const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals" }: LocalsCarouselProps) => {
   return (
-    <section className="py-16 lg:py-24">
+    <section className="py-10 lg:py-14">
       <div className="container px-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
