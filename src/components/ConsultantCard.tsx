@@ -19,15 +19,19 @@ const ConsultantCard = ({
           Most asked local
         </span>
       ) : consultant.isHighlyTrusted && (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
-          <Heart className="w-3 h-3 fill-primary-foreground" />
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-[#2F8F6B] text-white rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
+          <Heart className="w-3 h-3 fill-white" />
           Highly trusted
         </span>
       )}
 
       {/* Avatar - Centered Circle */}
       <div className="flex justify-center mb-3">
-        <div className="w-36 h-36 rounded-full overflow-hidden ring-2 ring-background shadow-md">
+        <div className={`w-36 h-36 rounded-full overflow-hidden shadow-md ${
+          consultant.isHighlyTrusted && !showMostAskedBadge 
+            ? 'ring-[3px] ring-[#1F6F54]' 
+            : 'ring-2 ring-background'
+        }`}>
           <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover object-top" />
         </div>
       </div>
@@ -45,7 +49,11 @@ const ConsultantCard = ({
 
       {/* Tag - Only show first tag */}
       <div className="mb-4">
-        {consultant.tags[0] && <span className="border border-primary/30 text-primary rounded-full px-3 py-1 text-xs">
+        {consultant.tags[0] && <span className={`rounded-full px-3 py-1 text-xs ${
+          consultant.isHighlyTrusted && !showMostAskedBadge
+            ? 'border border-[#1F6F54] text-[#1F6F54]'
+            : 'border border-primary/30 text-primary'
+        }`}>
             {consultant.tags[0]}
           </span>}
       </div>
