@@ -10,7 +10,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center">
             <span className="text-2xl font-black font-body tracking-tight">
               <span className="text-foreground font-extrabold text-4xl">Lok</span>
-              <span className="text-primary">ask</span>
+              <span className="text-primary text-4xl">ask</span>
             </span>
           </Link>
 
