@@ -3,25 +3,30 @@ import { Play } from "lucide-react";
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
 import { consultants } from "@/data/mockData";
+import heroDesertPoster from "@/assets/hero-desert-poster.jpg";
 
 const slides = [
   {
     video: "https://videos.pexels.com/video-files/3015488/3015488-uhd_2560_1440_24fps.mp4",
+    poster: heroDesertPoster,
     location: "Siwa Oasis, Egypt",
     description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius.",
   },
   {
     video: "https://videos.pexels.com/video-files/1721294/1721294-uhd_2560_1440_25fps.mp4",
+    poster: heroDesertPoster,
     location: "Amalfi Coast, Italy",
     description: "Where cliffside villages cascade down to the sparkling Mediterranean.",
   },
   {
     video: "https://videos.pexels.com/video-files/2169880/2169880-uhd_2560_1440_30fps.mp4",
+    poster: heroDesertPoster,
     location: "Kyoto, Japan",
     description: "Ancient temples whisper stories among bamboo groves and cherry blossoms.",
   },
   {
     video: "https://videos.pexels.com/video-files/857195/857195-hd_1920_1080_25fps.mp4",
+    poster: heroDesertPoster,
     location: "Santorini, Greece",
     description: "Whitewashed villages perched above the deep blue Aegean Sea.",
   },
@@ -44,6 +49,7 @@ const HeroSection = () => {
               muted
               loop
               playsInline
+              poster={slides[activeSlide].poster}
               className="absolute inset-0 w-full h-full object-cover"
             >
               <source src={slides[activeSlide].video} type="video/mp4" />
