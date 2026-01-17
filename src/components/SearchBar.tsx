@@ -12,10 +12,10 @@ const SearchBar = () => {
   return (
     <div className="w-full">
       {/* Desktop Search Bar */}
-      <div className="hidden md:flex items-stretch bg-card rounded-full shadow-medium border border-border/50 overflow-hidden transition-shadow hover:shadow-strong">
+      <div className="hidden md:flex items-stretch bg-card rounded-full shadow-medium border border-border/50 transition-shadow hover:shadow-strong relative z-10">
         {/* Where */}
         <div 
-          className={`search-segment flex-1 border-r border-border/50 cursor-text transition-all ${
+          className={`search-segment flex-1 border-r border-border/50 cursor-text transition-all rounded-l-full ${
             focusedField === 'where' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
           }`}
         >
@@ -58,7 +58,7 @@ const SearchBar = () => {
 
         {/* Who */}
         <div 
-          className={`search-segment flex-1 cursor-pointer relative transition-all ${
+          className={`search-segment flex-1 cursor-pointer relative transition-all rounded-r-full ${
             focusedField === 'who' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
           }`}
           onClick={() => setIsWhoOpen(!isWhoOpen)}
@@ -79,7 +79,7 @@ const SearchBar = () => {
 
           {/* Dropdown */}
           {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-10 animate-fade-in">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in">
               {whoFilterOptions.map((option) => (
                 <button
                   key={option}
@@ -145,7 +145,7 @@ const SearchBar = () => {
           </button>
 
           {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-10">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50">
               {whoFilterOptions.map((option) => (
                 <button
                   key={option}
