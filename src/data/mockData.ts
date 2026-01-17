@@ -31,7 +31,7 @@ export const consultants: Consultant[] = [
     tag: "Food & neighborhoods",
     rating: 4.9,
     helpedCount: 150,
-    avatarUrl: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=200&fit=crop"
   },
   {
@@ -41,7 +41,7 @@ export const consultants: Consultant[] = [
     tag: "History & Art",
     rating: 4.9,
     helpedCount: 150,
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=200&fit=crop"
   },
   {
@@ -51,7 +51,7 @@ export const consultants: Consultant[] = [
     tag: "History & Art",
     rating: 4.9,
     helpedCount: 150,
-    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=400&h=200&fit=crop"
   },
   {
@@ -61,7 +61,7 @@ export const consultants: Consultant[] = [
     tag: "Food & neighborhoods",
     rating: 4.9,
     helpedCount: 150,
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400&h=200&fit=crop"
   },
   {
@@ -71,7 +71,7 @@ export const consultants: Consultant[] = [
     tag: "Hidden gems & nightlife",
     rating: 4.8,
     helpedCount: 120,
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop"
   },
   {
@@ -81,8 +81,72 @@ export const consultants: Consultant[] = [
     tag: "Nature & outdoors",
     rating: 4.9,
     helpedCount: 200,
-    avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
+    avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop"
+  }
+];
+
+// Thailand-based consultants for the carousel
+export const thailandConsultants: Consultant[] = [
+  {
+    id: "th-1",
+    name: "Niran",
+    city: "Bangkok",
+    tag: "Street food & markets",
+    rating: 4.9,
+    helpedCount: 180,
+    avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=400&h=200&fit=crop"
+  },
+  {
+    id: "th-2",
+    name: "Suda",
+    city: "Chiang Mai",
+    tag: "Temples & culture",
+    rating: 4.9,
+    helpedCount: 145,
+    avatarUrl: "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=400&h=200&fit=crop"
+  },
+  {
+    id: "th-3",
+    name: "Korn",
+    city: "Phuket",
+    tag: "Beaches & islands",
+    rating: 4.8,
+    helpedCount: 210,
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=400&h=200&fit=crop"
+  },
+  {
+    id: "th-4",
+    name: "Ploy",
+    city: "Bangkok",
+    tag: "Nightlife & rooftops",
+    rating: 4.9,
+    helpedCount: 165,
+    avatarUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=400&h=200&fit=crop"
+  },
+  {
+    id: "th-5",
+    name: "Tawan",
+    city: "Krabi",
+    tag: "Nature & adventures",
+    rating: 4.8,
+    helpedCount: 130,
+    avatarUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=200&fit=crop"
+  },
+  {
+    id: "th-6",
+    name: "Mai",
+    city: "Chiang Rai",
+    tag: "Hill tribes & traditions",
+    rating: 4.9,
+    helpedCount: 95,
+    avatarUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=400&h=200&fit=crop"
   }
 ];
 
