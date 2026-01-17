@@ -11,7 +11,7 @@ const ConsultantCard = ({
   consultant,
   showMostAskedBadge = false
 }: ConsultantCardProps) => {
-  return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
+  return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 w-full max-w-[250px] cursor-pointer group">
       {/* Badge - Most Asked Local - Top Right (priority over Highly Trusted) */}
       {showMostAskedBadge ? (
         <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-[#F2A93B] text-white rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
@@ -34,7 +34,7 @@ const ConsultantCard = ({
               ? 'ring-[3px] ring-[#1F6F54]' 
               : 'ring-2 ring-background'
         }`}>
-          <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover object-top" />
+          <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" />
         </div>
       </div>
 
