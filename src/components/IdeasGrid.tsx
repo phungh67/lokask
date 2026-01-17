@@ -32,7 +32,7 @@ const IdeasGrid = () => {
                         <span className="bg-primary/90 text-primary-foreground text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
                           {idea.destination}
                         </span>
-                        <h3 className="text-base font-display font-semibold text-white mb-1">
+                        <h3 className="text-base font-semibold text-white mb-1 font-sans">
                           {idea.title}
                         </h3>
                         <p className="text-white/80 text-xs line-clamp-2">
