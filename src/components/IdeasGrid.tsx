@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { ideas } from "@/data/mockData";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 const IdeasGrid = () => {
-  return <section className="py-16 lg:py-24 bg-secondary/30">
+  return <section className="py-10 lg:py-14 bg-secondary/30">
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
