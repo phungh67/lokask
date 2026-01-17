@@ -116,7 +116,7 @@ const HeroSection = () => {
             <h2 className="text-lg font-semibold text-foreground mb-5">
               Top locals travellers trust
             </h2>
-            <div className="flex gap-5 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
               {topConsultants.map((consultant) => (
                 <ConsultantCardCompact
                   key={consultant.id}

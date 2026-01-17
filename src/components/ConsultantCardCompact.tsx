@@ -9,11 +9,11 @@ interface ConsultantCardCompactProps {
 const ConsultantCardCompact = ({ consultant }: ConsultantCardCompactProps) => {
   return (
     <div 
-      className="bg-white rounded-[20px] overflow-hidden min-w-[220px] max-w-[240px] flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-strong group cursor-pointer"
+      className="bg-white rounded-[20px] overflow-hidden w-[200px] flex-shrink-0 flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-strong group cursor-pointer"
       style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
     >
       {/* Cover Image */}
-      <div className="relative h-[100px] overflow-hidden">
+      <div className="relative h-[90px] overflow-hidden">
         <img
           src={consultant.coverUrl}
           alt=""
