@@ -9,10 +9,10 @@ interface ConsultantCardProps {
 
 const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
   return (
-    <div className="bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[300px]">
+    <div className="bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
       {/* Avatar - Centered Circle */}
       <div className="flex justify-center mb-3">
-        <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-background shadow-md">
+        <div className="w-36 h-36 rounded-full overflow-hidden ring-2 ring-background shadow-md">
           <img
             src={consultant.avatarUrl}
             alt={consultant.name}
