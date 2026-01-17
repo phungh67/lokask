@@ -8,7 +8,7 @@ const slides = [
   {
     video: "https://videos.pexels.com/video-files/3015488/3015488-uhd_2560_1440_24fps.mp4",
     location: "Siwa Oasis, Egypt",
-    description: "Discover the hidden oasis where ancient traditions meet endless golden dunes.",
+    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius.",
   },
   {
     video: "https://videos.pexels.com/video-files/1721294/1721294-uhd_2560_1440_25fps.mp4",
@@ -32,99 +32,97 @@ const HeroSection = () => {
   const topConsultants = consultants.slice(0, 4);
 
   return (
-    <section className="relative">
-      <div className="container mx-auto px-6 py-8 lg:py-12">
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-0">
-          {/* Left Column - Video Panel (40%) */}
-          <div className="lg:w-2/5 relative">
-            <div className="chamfer-tr rounded-3xl overflow-hidden relative h-[400px] lg:h-[600px]">
-              {/* Video */}
-              <video
-                key={slides[activeSlide].video}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover"
-              >
-                <source src={slides[activeSlide].video} type="video/mp4" />
-              </video>
+    <section className="relative min-h-[calc(100vh-64px)]">
+      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
+        {/* Left Column - Video Panel (40%) - Starts from left edge */}
+        <div className="lg:w-[42%] relative">
+          <div className="chamfer-tr rounded-br-3xl overflow-hidden relative h-[450px] lg:h-full lg:min-h-[calc(100vh-64px)]">
+            {/* Video */}
+            <video
+              key={slides[activeSlide].video}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            >
+              <source src={slides[activeSlide].video} type="video/mp4" />
+            </video>
 
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-              {/* Play button */}
-              <button
-                className="absolute left-6 bottom-40 lg:bottom-48 w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
-                aria-label="Play video"
-              >
-                <Play size={24} className="text-white ml-1" fill="white" />
+            {/* Play button */}
+            <button
+              className="absolute left-6 lg:left-8 bottom-48 lg:bottom-56 w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+              aria-label="Play video"
+            >
+              <Play size={24} className="text-white ml-1" fill="white" />
+            </button>
+
+            {/* Location info */}
+            <div className="absolute bottom-6 lg:bottom-8 left-6 lg:left-8 right-6 lg:right-16">
+              <h3 className="text-white text-2xl lg:text-3xl font-display font-semibold mb-2">
+                {slides[activeSlide].location}
+              </h3>
+              <p className="text-white/80 text-sm lg:text-base leading-relaxed max-w-sm">
+                {slides[activeSlide].description}
+              </p>
+
+              {/* Read more link */}
+              <button className="mt-4 text-white text-xs font-semibold tracking-wider flex items-center gap-1 hover:gap-2 transition-all uppercase">
+                Read more
+                <span className="text-lg">›</span>
               </button>
+            </div>
 
-              {/* Location info */}
-              <div className="absolute bottom-6 left-6 right-6">
-                <h3 className="text-white text-xl lg:text-2xl font-display font-semibold mb-2">
-                  {slides[activeSlide].location}
-                </h3>
-                <p className="text-white/80 text-sm lg:text-base leading-relaxed max-w-xs">
-                  {slides[activeSlide].description}
-                </p>
-
-                {/* Read more link */}
-                <button className="mt-4 text-white text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all">
-                  READ MORE
-                  <span className="text-lg">›</span>
-                </button>
-              </div>
-
-              {/* Slide dots */}
-              <div className="absolute bottom-6 right-6 flex gap-2">
-                {slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveSlide(index)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${
-                      index === activeSlide
-                        ? "bg-white w-6"
-                        : "bg-white/40 hover:bg-white/60"
-                    }`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
+            {/* Slide dots */}
+            <div className="absolute bottom-8 left-1/2 lg:left-auto lg:right-8 -translate-x-1/2 lg:translate-x-0 flex gap-2">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveSlide(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    index === activeSlide
+                      ? "bg-white w-6"
+                      : "bg-white/40 hover:bg-white/60"
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Right Column - Content (60%) */}
-          <div className="lg:w-3/5 lg:pl-12 flex flex-col justify-center">
-            {/* Headline */}
-            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-foreground leading-tight mb-4">
-              Ask locals. Travel with confidence.
-            </h1>
+        {/* Right Column - Content (58%) */}
+        <div className="lg:w-[58%] px-6 lg:pl-12 lg:pr-8 xl:pr-16 py-8 lg:py-12 flex flex-col justify-center">
+          {/* Headline */}
+          <h1 className="text-4xl lg:text-5xl xl:text-[56px] font-display font-bold text-foreground leading-[1.1] mb-4">
+            Ask locals. Travel with<br className="hidden lg:block" /> confidence.
+          </h1>
 
-            {/* Subheadline */}
-            <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-xl">
-              Find real people who live there and get honest advice before your trip.
-            </p>
+          {/* Subheadline */}
+          <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-xl leading-relaxed">
+            Find real people who live there and get honest advice before your trip.
+          </p>
 
-            {/* Search Bar */}
-            <div className="mb-10">
-              <SearchBar />
-            </div>
+          {/* Search Bar */}
+          <div className="mb-10 max-w-2xl">
+            <SearchBar />
+          </div>
 
-            {/* Top Consultants */}
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Top locals travellers trust
-              </h2>
-              <div className="flex gap-5 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
-                {topConsultants.map((consultant) => (
-                  <ConsultantCardCompact
-                    key={consultant.id}
-                    consultant={consultant}
-                  />
-                ))}
-              </div>
+          {/* Top Consultants */}
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-5">
+              Top locals travellers trust
+            </h2>
+            <div className="flex gap-5 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
+              {topConsultants.map((consultant) => (
+                <ConsultantCardCompact
+                  key={consultant.id}
+                  consultant={consultant}
+                />
+              ))}
             </div>
           </div>
         </div>
