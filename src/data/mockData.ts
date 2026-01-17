@@ -236,6 +236,82 @@ export const ideas: Idea[] = [
   }
 ];
 
+// Paris-based consultants for the carousel
+export const parisConsultants: Consultant[] = [
+  {
+    id: "pa-1",
+    name: "Sophie",
+    city: "Paris",
+    tag: "Hidden gems & nightlife",
+    tags: ["Hidden gems", "Nightlife"],
+    quote: "Paris has secrets only locals know.",
+    rating: 4.8,
+    helpedCount: 120,
+    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop"
+  },
+  {
+    id: "pa-2",
+    name: "Antoine",
+    city: "Paris",
+    tag: "Wine & cuisine",
+    tags: ["Wine", "Cuisine"],
+    quote: "French gastronomy beyond the Michelin stars.",
+    rating: 4.9,
+    helpedCount: 185,
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop"
+  },
+  {
+    id: "pa-3",
+    name: "Camille",
+    city: "Paris",
+    tag: "Art & museums",
+    tags: ["Art", "Museums"],
+    quote: "I show you art beyond the Louvre queues.",
+    rating: 4.9,
+    helpedCount: 160,
+    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=200&fit=crop"
+  },
+  {
+    id: "pa-4",
+    name: "Lucas",
+    city: "Paris",
+    tag: "Fashion & shopping",
+    tags: ["Fashion", "Shopping"],
+    quote: "Parisian style without the tourist prices.",
+    rating: 4.8,
+    helpedCount: 140,
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=400&h=200&fit=crop"
+  },
+  {
+    id: "pa-5",
+    name: "Margot",
+    city: "Paris",
+    tag: "Cafés & bakeries",
+    tags: ["Cafés", "Bakeries"],
+    quote: "The best croissants are never near the Eiffel Tower.",
+    rating: 4.9,
+    helpedCount: 195,
+    avatarUrl: "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=200&fit=crop"
+  },
+  {
+    id: "pa-6",
+    name: "Théo",
+    city: "Paris",
+    tag: "Jazz & nightlife",
+    tags: ["Jazz", "Nightlife"],
+    quote: "Paris after midnight is a different city.",
+    rating: 4.8,
+    helpedCount: 110,
+    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop&crop=face",
+    coverUrl: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop"
+  }
+];
+
 export const whoFilterOptions = [
   "Food & neighborhoods",
   "History & art",

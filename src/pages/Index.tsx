@@ -1,10 +1,11 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import DestinationGrid from "@/components/DestinationGrid";
-import ConsultantsCarousel from "@/components/ConsultantsCarousel";
+import LocalsCarousel from "@/components/LocalsCarousel";
 import IdeasGrid from "@/components/IdeasGrid";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import { thailandConsultants, parisConsultants } from "@/data/mockData";
 
 const Index = () => {
   return (
@@ -13,7 +14,8 @@ const Index = () => {
       <main>
         <HeroSection />
         <DestinationGrid />
-        <ConsultantsCarousel />
+        <LocalsCarousel title="Wonderful locals in Thailand" consultants={thailandConsultants} />
+        <LocalsCarousel title="Most asked local in Paris" consultants={parisConsultants} />
         <IdeasGrid />
         <CTASection />
       </main>
