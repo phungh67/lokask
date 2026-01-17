@@ -10,6 +10,9 @@ export interface Consultant {
   avatarUrl: string;
   coverUrl: string;
   isHighlyTrusted?: boolean;
+  bio?: string;
+  languages?: string[];
+  responseTime?: string;
 }
 
 export interface Destination {
@@ -26,6 +29,17 @@ export interface Idea {
   imageUrl: string;
 }
 
+export interface Review {
+  id: string;
+  consultantId: string;
+  reviewerName: string;
+  reviewerAvatar: string;
+  rating: number;
+  comment: string;
+  date: string;
+  tripType?: string;
+}
+
 export const consultants: Consultant[] = [
   {
     id: "1",
@@ -37,7 +51,10 @@ export const consultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 150,
     avatarUrl: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=200&fit=crop",
+    bio: "Born and raised in Trastevere, I've spent my life exploring Rome's culinary scene. From hidden trattorias to the best gelato spots, I know where Romans actually eat. Let me guide you through authentic Roman cuisine.",
+    languages: ["Italian", "English", "Spanish"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "2",
@@ -49,7 +66,10 @@ export const consultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 150,
     avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=200&fit=crop",
+    bio: "Art historian by training, Roman by heart. I'll take you beyond the Colosseum to discover the hidden layers of history that make this city eternal.",
+    languages: ["Italian", "English"],
+    responseTime: "Usually within 3 hours"
   },
   {
     id: "3",
@@ -61,7 +81,10 @@ export const consultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 150,
     avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=400&h=200&fit=crop",
+    bio: "I grew up running through the ancient streets of Rome. Now I share those secret paths with travelers who want more than just selfies.",
+    languages: ["Italian", "English", "French"],
+    responseTime: "Usually within 1 hour"
   },
   {
     id: "4",
@@ -73,7 +96,10 @@ export const consultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 150,
     avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400&h=200&fit=crop",
+    bio: "Former chef turned local guide. I know every back alley restaurant where the food is incredible and the prices are fair.",
+    languages: ["Italian", "English"],
+    responseTime: "Usually within 4 hours"
   },
   {
     id: "5",
@@ -85,7 +111,10 @@ export const consultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 120,
     avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop",
+    bio: "Paris native who loves showing visitors the city beyond the postcard views. From hidden speakeasies to secret gardens.",
+    languages: ["French", "English"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "6",
@@ -97,7 +126,10 @@ export const consultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 200,
     avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop",
+    bio: "I'll show you the peaceful side of Tokyo - tranquil gardens, mountain trails, and nature escapes just minutes from the city center.",
+    languages: ["Japanese", "English"],
+    responseTime: "Usually within 3 hours"
   }
 ];
 
@@ -114,7 +146,10 @@ export const thailandConsultants: Consultant[] = [
     helpedCount: 180,
     avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=400&h=200&fit=crop",
-    isHighlyTrusted: true
+    isHighlyTrusted: true,
+    bio: "Street food is my passion. I've been eating at the same stalls my grandmother took me to as a child. Let me share Bangkok's real flavors with you.",
+    languages: ["Thai", "English", "Mandarin"],
+    responseTime: "Usually within 1 hour"
   },
   {
     id: "th-2",
@@ -126,7 +161,10 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 145,
     avatarUrl: "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=400&h=200&fit=crop",
+    bio: "Growing up near the old city temples, I learned meditation and Buddhist traditions from monks. I share this spiritual heritage with respectful travelers.",
+    languages: ["Thai", "English"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "th-3",
@@ -138,7 +176,10 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 210,
     avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=400&h=200&fit=crop",
+    bio: "Former diving instructor who knows every hidden cove and secret beach in Southern Thailand. I'll help you escape the crowds.",
+    languages: ["Thai", "English"],
+    responseTime: "Usually within 3 hours"
   },
   {
     id: "th-4",
@@ -151,7 +192,10 @@ export const thailandConsultants: Consultant[] = [
     helpedCount: 165,
     avatarUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=400&h=200&fit=crop",
-    isHighlyTrusted: true
+    isHighlyTrusted: true,
+    bio: "From underground jazz bars to the best rooftop views, I know where Bangkok comes alive after dark. Skip the tourist traps and party with locals.",
+    languages: ["Thai", "English", "Korean"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "th-5",
@@ -163,7 +207,10 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 130,
     avatarUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=200&fit=crop",
+    bio: "Rock climbing guide and nature enthusiast. I'll take you to waterfalls, caves, and viewpoints that most tourists never see.",
+    languages: ["Thai", "English"],
+    responseTime: "Usually within 4 hours"
   },
   {
     id: "th-6",
@@ -176,7 +223,10 @@ export const thailandConsultants: Consultant[] = [
     helpedCount: 95,
     avatarUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=500&fit=crop&crop=face",
     coverUrl: "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=400&h=200&fit=crop",
-    isHighlyTrusted: true
+    isHighlyTrusted: true,
+    bio: "I connect travelers with hill tribe communities in ethical, meaningful ways. Learn traditional crafts, share meals, and understand our culture.",
+    languages: ["Thai", "English", "Akha"],
+    responseTime: "Usually within 3 hours"
   }
 ];
 
@@ -252,7 +302,10 @@ export const parisConsultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 120,
     avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop",
+    bio: "Paris native who loves showing visitors the city beyond the postcard views. From hidden speakeasies to secret gardens, I know every corner of this magical city.",
+    languages: ["French", "English"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "pa-2",
@@ -264,7 +317,10 @@ export const parisConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 185,
     avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop",
+    bio: "Trained sommelier with a passion for French cuisine. I'll guide you through wine regions, bistros, and food markets that define authentic Parisian dining.",
+    languages: ["French", "English", "Italian"],
+    responseTime: "Usually within 3 hours"
   },
   {
     id: "pa-3",
@@ -276,7 +332,11 @@ export const parisConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 160,
     avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=200&fit=crop",
+    isHighlyTrusted: true,
+    bio: "Art history graduate from the Sorbonne. I've spent years exploring every museum, gallery, and street art corner of Paris. From impressionism to contemporary installations, I'll help you discover art that speaks to your soul.",
+    languages: ["French", "English", "Spanish"],
+    responseTime: "Usually within 1 hour"
   },
   {
     id: "pa-4",
@@ -288,7 +348,10 @@ export const parisConsultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 140,
     avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=400&h=200&fit=crop",
+    bio: "Fashion industry insider who knows where to find the best vintage shops, emerging designers, and secret sales that tourists never discover.",
+    languages: ["French", "English"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "pa-5",
@@ -300,7 +363,10 @@ export const parisConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 195,
     avatarUrl: "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=200&fit=crop",
+    bio: "Former pastry chef turned café connoisseur. I've tested every croissant in Paris (tough job!) and know exactly where to find the flakiest, most buttery perfection.",
+    languages: ["French", "English", "Portuguese"],
+    responseTime: "Usually within 2 hours"
   },
   {
     id: "pa-6",
@@ -312,7 +378,97 @@ export const parisConsultants: Consultant[] = [
     rating: 4.8,
     helpedCount: 110,
     avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop",
+    bio: "Jazz musician by night, local guide by day. I know every underground jazz club, late-night bar, and secret venue where Parisians actually hang out.",
+    languages: ["French", "English"],
+    responseTime: "Usually within 4 hours"
+  }
+];
+
+export const reviews: Review[] = [
+  // Camille (pa-3) reviews
+  {
+    id: "r1",
+    consultantId: "pa-3",
+    reviewerName: "Sarah M.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Camille was absolutely amazing! She took us to galleries I never would have found on my own. Her knowledge of art history made every piece come alive. The Musée de l'Orangerie visit was a highlight of our trip.",
+    date: "2025-12-15",
+    tripType: "Couple"
+  },
+  {
+    id: "r2",
+    consultantId: "pa-3",
+    reviewerName: "John D.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Best local guide experience ever! Camille's passion for art is contagious. She helped us skip the Louvre crowds and showed us incredible street art in the 13th arrondissement.",
+    date: "2025-11-28",
+    tripType: "Solo"
+  },
+  {
+    id: "r3",
+    consultantId: "pa-3",
+    reviewerName: "Emma L.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Our family had an incredible time with Camille. She made art accessible and fun for our kids, and we discovered so many hidden gems. Highly recommend for families!",
+    date: "2025-11-10",
+    tripType: "Family"
+  },
+  {
+    id: "r4",
+    consultantId: "pa-3",
+    reviewerName: "Michael R.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
+    rating: 4,
+    comment: "Very knowledgeable about Parisian art scene. Camille responded quickly and gave excellent recommendations. The only reason for 4 stars is we wished we had more time!",
+    date: "2025-10-22",
+    tripType: "Couple"
+  },
+  {
+    id: "r5",
+    consultantId: "pa-3",
+    reviewerName: "Lisa T.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Camille is a treasure! Her insider tips for the Musée d'Orsay saved us hours of queuing. She also recommended the perfect café nearby for our après-museum croissants.",
+    date: "2025-10-05",
+    tripType: "Friends"
+  },
+  // Sophie (pa-1) reviews
+  {
+    id: "r6",
+    consultantId: "pa-1",
+    reviewerName: "David K.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Sophie showed us Paris nightlife we never knew existed. The speakeasy she recommended was incredible!",
+    date: "2025-12-01",
+    tripType: "Couple"
+  },
+  // Niran (th-1) reviews
+  {
+    id: "r7",
+    consultantId: "th-1",
+    reviewerName: "Alex P.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Niran took us to street food stalls that blew our minds. Authentic Thai flavors at unbelievable prices. A must for foodies!",
+    date: "2025-12-10",
+    tripType: "Solo"
+  },
+  // Giulia (1) reviews
+  {
+    id: "r8",
+    consultantId: "1",
+    reviewerName: "Rachel B.",
+    reviewerAvatar: "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=100&h=100&fit=crop&crop=face",
+    rating: 5,
+    comment: "Giulia's food recommendations were perfect. We ate the best carbonara of our lives in a tiny trattoria she suggested.",
+    date: "2025-11-20",
+    tripType: "Couple"
   }
 ];
 

@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ExploreLocals from "./pages/ExploreLocals";
 import HowItWorks from "./pages/HowItWorks";
 import DestinationPage from "./pages/DestinationPage";
+import ConsultantPage from "./pages/ConsultantPage";
 import BecomeLocal from "./pages/BecomeLocal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/explore-locals" element={<ExploreLocals />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
+          <Route path="/consultant/:id" element={<ConsultantPage />} />
           <Route path="/become-local" element={<BecomeLocal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
