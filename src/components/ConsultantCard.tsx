@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Star } from "lucide-react";
+import { Star, Heart } from "lucide-react";
 import { Consultant } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +20,16 @@ const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
           />
         </div>
       </div>
+
+      {/* Badge - Highly Trusted Local */}
+      {consultant.isHighlyTrusted && (
+        <div className="flex justify-center mb-2">
+          <span className="inline-flex items-center gap-1.5 bg-terracotta-light text-primary rounded-full px-3 py-1 text-xs font-medium">
+            <Heart className="w-3.5 h-3.5 fill-primary" />
+            Highly trusted local
+          </span>
+        </div>
+      )}
 
       {/* Name & City */}
       <div className="mb-3">

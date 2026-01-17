@@ -9,6 +9,7 @@ export interface Consultant {
   helpedCount: number;
   avatarUrl: string;
   coverUrl: string;
+  isHighlyTrusted?: boolean;
 }
 
 export interface Destination {
@@ -112,7 +113,8 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 180,
     avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=400&h=200&fit=crop",
+    isHighlyTrusted: true
   },
   {
     id: "th-2",
@@ -148,7 +150,8 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 165,
     avatarUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=400&h=200&fit=crop",
+    isHighlyTrusted: true
   },
   {
     id: "th-5",
@@ -172,7 +175,8 @@ export const thailandConsultants: Consultant[] = [
     rating: 4.9,
     helpedCount: 95,
     avatarUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=500&fit=crop&crop=face",
-    coverUrl: "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=400&h=200&fit=crop"
+    coverUrl: "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=400&h=200&fit=crop",
+    isHighlyTrusted: true
   }
 ];
 
