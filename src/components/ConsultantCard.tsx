@@ -32,16 +32,13 @@ const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
         "{consultant.quote}"
       </p>
 
-      {/* Tags */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {consultant.tags.map((tag, index) => (
-          <span
-            key={index}
-            className="border border-primary/30 text-primary rounded-full px-3 py-1 text-xs"
-          >
-            {tag}
+      {/* Tag - Only show first tag */}
+      <div className="mb-4">
+        {consultant.tags[0] && (
+          <span className="border border-primary/30 text-primary rounded-full px-3 py-1 text-xs">
+            {consultant.tags[0]}
           </span>
-        ))}
+        )}
       </div>
 
       {/* Rating & Helped Count */}
