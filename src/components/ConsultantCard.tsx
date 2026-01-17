@@ -9,10 +9,10 @@ interface ConsultantCardProps {
 
 const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
   return (
-    <div className="bg-gradient-to-b from-orange-50 to-white rounded-2xl p-6 shadow-sm border border-orange-100/50 hover:shadow-md transition-shadow duration-300">
+    <div className="bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300">
       {/* Avatar - Centered Circle */}
-      <div className="flex justify-center mb-4">
-        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg">
+      <div className="flex justify-center mb-3">
+        <div className="w-[clamp(56px,5.5vw,72px)] h-[clamp(56px,5.5vw,72px)] rounded-full overflow-hidden ring-2 ring-background shadow-md">
           <img
             src={consultant.avatarUrl}
             alt={consultant.name}
@@ -37,7 +37,7 @@ const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
         {consultant.tags.map((tag, index) => (
           <span
             key={index}
-            className="border border-[#A0695E]/30 text-[#A0695E] rounded-full px-3 py-1 text-xs"
+            className="border border-primary/30 text-primary rounded-full px-3 py-1 text-xs"
           >
             {tag}
           </span>
@@ -57,7 +57,7 @@ const ConsultantCard = ({ consultant }: ConsultantCardProps) => {
       {/* CTA Button */}
       <Link to={`/consultant/${consultant.id}`} className="block">
         <Button 
-          className="w-full bg-[#A0695E] hover:bg-[#8B5A4F] text-white rounded-full py-2.5"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-2.5"
         >
           Ask this local
         </Button>
