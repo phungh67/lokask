@@ -14,7 +14,7 @@ const ConsultantCard = ({
   return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-md transition-shadow duration-300 w-full max-w-[250px]">
       {/* Badge - Most Asked Local - Top Right (priority over Highly Trusted) */}
       {showMostAskedBadge ? (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-[#F2A93B] text-white rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
           <MessageCircleQuestion className="w-3 h-3" />
           Most asked local
         </span>
@@ -28,9 +28,11 @@ const ConsultantCard = ({
       {/* Avatar - Centered Circle */}
       <div className="flex justify-center mb-3">
         <div className={`w-36 h-36 rounded-full overflow-hidden shadow-md ${
-          consultant.isHighlyTrusted && !showMostAskedBadge 
-            ? 'ring-[3px] ring-[#1F6F54]' 
-            : 'ring-2 ring-background'
+          showMostAskedBadge 
+            ? 'ring-[3px] ring-[#D88C1D]'
+            : consultant.isHighlyTrusted 
+              ? 'ring-[3px] ring-[#1F6F54]' 
+              : 'ring-2 ring-background'
         }`}>
           <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover object-top" />
         </div>
@@ -50,9 +52,11 @@ const ConsultantCard = ({
       {/* Tag - Only show first tag */}
       <div className="mb-4">
         {consultant.tags[0] && <span className={`rounded-full px-3 py-1 text-xs ${
-          consultant.isHighlyTrusted && !showMostAskedBadge
-            ? 'border border-[#1F6F54] text-[#1F6F54]'
-            : 'border border-primary/30 text-primary'
+          showMostAskedBadge
+            ? 'border border-[#D88C1D] text-[#D88C1D]'
+            : consultant.isHighlyTrusted
+              ? 'border border-[#1F6F54] text-[#1F6F54]'
+              : 'border border-primary/30 text-primary'
         }`}>
             {consultant.tags[0]}
           </span>}
