@@ -22,13 +22,13 @@ const ConsultantCardCompact = ({ consultant }: ConsultantCardCompactProps) => {
       </div>
 
       {/* Content with overlapping avatar */}
-      <div className="flex flex-col items-center text-center px-4 pb-5 -mt-10 relative">
+      <div className="flex flex-col items-center text-center px-4 pb-5 -mt-14 relative">
         {/* Avatar - Large, overlapping the cover */}
         <div className="mb-3">
           <img
             src={consultant.avatarUrl}
             alt={`${consultant.name}'s profile`}
-            className="w-[72px] h-[72px] rounded-full object-cover border-[3px] border-white transition-transform duration-300 group-hover:scale-105"
+            className="w-[96px] h-[96px] rounded-full object-cover border-[4px] border-white transition-transform duration-300 group-hover:scale-105"
             style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
           />
         </div>
