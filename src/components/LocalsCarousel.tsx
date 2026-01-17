@@ -9,9 +9,10 @@ interface LocalsCarouselProps {
   consultants: Consultant[];
   seeMoreLink?: string;
   showMostAskedBadge?: boolean;
+  mostAskedLocalId?: string;
 }
 
-const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", showMostAskedBadge = false }: LocalsCarouselProps) => {
+const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", showMostAskedBadge = false, mostAskedLocalId }: LocalsCarouselProps) => {
   return (
     <section className="py-10 lg:py-14">
       <div className="container px-6">
@@ -41,7 +42,10 @@ const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", s
             <CarouselContent className="-ml-4">
               {consultants.map((consultant) => (
                 <CarouselItem key={consultant.id} className="pl-4 basis-[270px] shrink-0">
-                  <ConsultantCard consultant={consultant} showMostAskedBadge={showMostAskedBadge} />
+                  <ConsultantCard 
+                    consultant={consultant} 
+                    showMostAskedBadge={showMostAskedBadge || consultant.id === mostAskedLocalId} 
+                  />
                 </CarouselItem>
               ))}
             </CarouselContent>
