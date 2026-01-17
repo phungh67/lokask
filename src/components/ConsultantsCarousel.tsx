@@ -8,7 +8,7 @@ import {
   CarouselNext,
 } from "@/components/ui/carousel";
 import ConsultantCard from "@/components/ConsultantCard";
-import { consultants } from "@/data/mockData";
+import { thailandConsultants } from "@/data/mockData";
 
 const ConsultantsCarousel = () => {
   return (
@@ -38,7 +38,7 @@ const ConsultantsCarousel = () => {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {consultants.map((consultant) => (
+              {thailandConsultants.map((consultant) => (
                 <CarouselItem
                   key={consultant.id}
                   className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4"
