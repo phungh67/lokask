@@ -97,7 +97,7 @@ const HeroSection = () => {
         {/* Right Column - Content (58%) */}
         <div className="lg:w-[58%] px-6 lg:pl-12 lg:pr-8 xl:pr-16 py-8 lg:py-12 flex flex-col justify-center">
           {/* Headline */}
-          <h1 className="text-4xl lg:text-5xl xl:text-[56px] font-display font-bold text-foreground leading-[1.1] mb-4">
+          <h1 className="text-4xl lg:text-5xl xl:text-[56px] font-body font-black text-foreground leading-[1.1] mb-4 tracking-tight">
             Ask locals. Travel with<br className="hidden lg:block" /> confidence.
           </h1>
 
