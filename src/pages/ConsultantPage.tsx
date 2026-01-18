@@ -62,9 +62,9 @@ const ConsultantPage = () => {
             <span>Back</span>
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center max-w-5xl mx-auto">
             {/* Left: Consultant Profile Card with decorative circles */}
-            <div className="relative max-w-md mx-auto lg:mx-0">
+            <div className="relative max-w-md mx-auto lg:ml-auto lg:mr-0">
               {/* Orange/Coral circle - BEHIND card, extending to the right */}
               <div className="pointer-events-none absolute -top-8 -right-16 lg:-right-24 w-[280px] h-[280px] lg:w-[340px] lg:h-[340px] rounded-full bg-gradient-to-br from-[#E07A5F] to-[#D97706] opacity-75 blur-[2px] z-0" />
               
@@ -138,7 +138,7 @@ const ConsultantPage = () => {
             </div>
 
             {/* Right: Content */}
-            <div className="relative flex flex-col justify-center lg:pl-8 lg:pt-4">
+            <div className="relative flex flex-col justify-center lg:pl-0 lg:pt-4">
               {/* Sparkle decoration near headline */}
               <div className="pointer-events-none absolute top-0 right-4 lg:right-8">
                 <Sparkles className="text-amber-400/60 w-5 h-5" />
