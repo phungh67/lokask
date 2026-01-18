@@ -29,7 +29,7 @@ const Navbar = () => {
           {/* Search Bar - appears on scroll */}
           {isScrolled && (
             <div className="hidden md:flex items-center flex-1 max-w-md mx-8 animate-fade-in">
-              <div className="flex items-center w-full bg-muted/50 rounded-full border border-border/50 px-4 py-2">
+              <div className="flex items-center w-full bg-white/90 rounded-full border border-border/50 px-4 py-2">
                 <Search className="w-4 h-4 text-muted-foreground mr-2" />
                 <input
                   type="text"
