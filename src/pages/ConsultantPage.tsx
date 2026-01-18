@@ -1,11 +1,19 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ReviewCard from "@/components/ReviewCard";
+import ReviewCardCompact from "@/components/ReviewCardCompact";
 import AISummaryDialog from "@/components/AISummaryDialog";
 import LocalsCarousel from "@/components/LocalsCarousel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   consultants, 
   thailandConsultants, 
@@ -15,6 +23,7 @@ import {
 } from "@/data/mockData";
 
 const ConsultantPage = () => {
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const { id } = useParams<{ id: string }>();
 
   // Find consultant from all arrays
@@ -342,6 +351,30 @@ const ConsultantPage = () => {
                   </div>
                 </div>
               )}
+              
+              {/* Highlighted Reviews */}
+              {consultantReviews.length > 0 && (
+                <div className="mt-8 pt-8 border-t">
+                  <h3 className="font-display text-lg font-semibold mb-4">
+                    Highlighted reviews from travelers
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {consultantReviews.slice(0, 2).map((review) => (
+                      <ReviewCardCompact key={review.id} review={review} />
+                    ))}
+                  </div>
+                  
+                  {consultantReviews.length > 2 && (
+                    <button 
+                      onClick={() => setShowAllReviews(true)}
+                      className="text-sm font-medium underline mt-4 text-primary hover:text-primary/80"
+                    >
+                      See more reviews ({consultantReviews.length})
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Right Column: Image Gallery */}
@@ -387,33 +420,35 @@ const ConsultantPage = () => {
         </div>
       </section>
 
-      {/* Reviews Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-display text-2xl font-semibold">
-              What travelers say
-            </h2>
-            {consultantReviews.length > 3 && (
-              <Button variant="ghost" className="text-primary">
-                See all {consultantReviews.length} reviews
-              </Button>
-            )}
+      {/* All Reviews Modal */}
+      <Dialog open={showAllReviews} onOpenChange={setShowAllReviews}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">
+              Customer reviews
+            </DialogTitle>
+            <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    size={16}
+                    className={i < Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-medium">{consultant.rating} / 5</span>
+              <span className="text-sm text-muted-foreground">({consultantReviews.length} reviews)</span>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {consultantReviews.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
           </div>
-
-          {consultantReviews.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {consultantReviews.slice(0, 6).map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-card rounded-2xl">
-              <p className="text-muted-foreground">No reviews yet. Be the first to share your experience!</p>
-            </div>
-          )}
-        </div>
-      </section>
+        </DialogContent>
+      </Dialog>
 
       {/* Related Locals Section */}
       {relatedConsultants.length > 0 && (
