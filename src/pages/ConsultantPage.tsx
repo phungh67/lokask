@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -62,7 +62,7 @@ const ConsultantPage = () => {
             <span>Back</span>
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-8 lg:gap-16 items-center">
             {/* Left: Consultant Profile Card with decorative circles */}
             <div className="relative max-w-md mx-auto lg:mx-0">
               {/* Orange/Coral circle - BEHIND card, extending to the right */}
@@ -76,97 +76,41 @@ const ConsultantPage = () => {
                 <Sparkles className="text-amber-200 w-6 h-6" />
               </div>
 
-              {/* Card - z-10 to sit between purple (z-0) and yellow (z-20) */}
-              <div className="relative z-10 bg-card rounded-3xl shadow-strong overflow-hidden">
-                {/* Card Header with actions */}
-                <div className="absolute top-4 left-4 right-4 z-10 flex justify-between">
-                  <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-soft">
-                    <Heart size={18} className="text-foreground/70" />
-                  </button>
-                  <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-soft">
-                    <Share2 size={18} className="text-foreground/70" />
-                  </button>
-                </div>
-
-                {/* Cover Image */}
-                <div className="relative h-48">
+              {/* Phone Mockup Card */}
+              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px]">
+                {/* Square Photo */}
+                <div className="aspect-square rounded-2xl overflow-hidden mb-4 bg-gray-100">
                   <img
-                    src={consultant.coverUrl}
-                    alt={`${consultant.city} cover`}
+                    src={consultant.avatarUrl}
+                    alt={consultant.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 </div>
 
-                {/* Profile Content */}
-                <div className="p-6 -mt-12 relative">
-                  {/* Avatar */}
-                  <div className={`w-24 h-24 rounded-full border-4 overflow-hidden mb-4 ${
-                    badgeType === "trusted" 
-                      ? "border-emerald-500" 
-                      : badgeType === "mostAsked" 
-                        ? "border-primary" 
-                        : "border-white"
-                  }`}>
-                    <img
-                      src={consultant.avatarUrl}
-                      alt={consultant.name}
-                      className="w-full h-full object-cover"
-                    />
+                {/* Avatars + Rating Row */}
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <div className="flex -space-x-2">
+                    <div className="w-7 h-7 rounded-full bg-gray-300 border-2 border-white" />
+                    <div className="w-7 h-7 rounded-full bg-gray-400 border-2 border-white" />
+                    <div className="w-7 h-7 rounded-full bg-gray-500 border-2 border-white" />
                   </div>
-
-                  {/* Name and Badge */}
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h2 className="text-xl font-display font-semibold">{consultant.name}</h2>
-                    {badgeType === "trusted" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                        <Star size={12} className="fill-current" />
-                        Highly trusted
-                      </span>
-                    )}
-                    {badgeType === "mostAsked" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                        <Star size={12} className="fill-current" />
-                        Most asked local
-                      </span>
-                    )}
-                  </div>
-
-                  {/* City */}
-                  <p className="text-muted-foreground mb-4">{consultant.city}</p>
-
-                  {/* Rating and Stats */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          className={i < Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}
-                        />
-                      ))}
-                      <span className="text-sm font-medium ml-1">{consultant.rating}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {consultant.helpedCount} travellers helped
-                    </span>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {consultant.tags.map((tag) => (
-                      <span key={tag} className="tag-pill">
-                        {tag}
-                      </span>
+                  <div className="flex items-center gap-0.5">
+                    {[1,2,3,4,5].map((i) => (
+                      <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
                     ))}
+                    <span className="text-sm font-medium ml-1">{consultant.rating}</span>
                   </div>
-
-                  {/* CTA Button */}
-                  <Button className="w-full rounded-full gap-2" size="lg">
-                    <MessageCircle size={18} />
-                    Send a message
-                  </Button>
                 </div>
+
+                {/* Map Preview */}
+                <div className="rounded-2xl border-4 border-teal-300 overflow-hidden mb-4 h-[80px] bg-teal-50 flex items-center justify-center">
+                  <MapPin className="text-teal-400 w-6 h-6" />
+                </div>
+
+                {/* Booknow Button */}
+                <Button className="w-full bg-black hover:bg-gray-800 text-white rounded-full py-2.5 text-sm">
+                  Booknow
+                </Button>
               </div>
             </div>
 
