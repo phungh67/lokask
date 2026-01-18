@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -162,6 +162,148 @@ const ConsultantPage = () => {
                 Get Started
               </Button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Awards/Achievements Section */}
+      <section className="py-10 border-b">
+        <div className="container mx-auto px-6">
+          
+          {/* Main Badge Card */}
+          <div className="bg-white border rounded-2xl p-6 mb-8">
+            <div className="flex items-center justify-between flex-wrap gap-6">
+              {/* Left: Local Favorite badge */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 text-amber-600">
+                  <span className="text-2xl">🏆</span>
+                  <div className="text-center font-display font-semibold">
+                    <p className="text-lg leading-tight">Local</p>
+                    <p className="text-lg leading-tight">Favorite</p>
+                  </div>
+                  <span className="text-2xl">🏆</span>
+                </div>
+                <div className="hidden sm:block h-12 w-px bg-border" />
+                <p className="text-muted-foreground text-sm max-w-[260px]">
+                  One of the most loved locals on LokaAsk, according to travelers
+                </p>
+              </div>
+              
+              {/* Right: Rating + Reviews */}
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{consultant.rating}</p>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
+                    ))}
+                  </div>
+                </div>
+                <div className="h-12 w-px bg-border" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{consultantReviews.length}</p>
+                  <p className="text-sm text-muted-foreground">Reviews</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Host Info Row */}
+          <div className="flex items-center gap-4 pb-6 border-b">
+            <img 
+              src={consultant.avatarUrl} 
+              alt={consultant.name}
+              className="w-14 h-14 rounded-full object-cover"
+            />
+            <div>
+              <p className="font-semibold text-lg">Connected with {consultant.name}</p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                {consultant.isHighlyTrusted && (
+                  <span className="flex items-center gap-1">
+                    <Award size={14} className="text-primary" />
+                    Highly Trusted
+                  </span>
+                )}
+                <span>{consultant.helpedCount}+ travelers helped</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Achievement Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            
+            {/* Always show: Certified Expert */}
+            <div className="flex items-start gap-4">
+              <Award className="w-6 h-6 text-primary shrink-0" />
+              <div>
+                <p className="font-semibold">Certified Local Expert</p>
+                <p className="text-sm text-muted-foreground">
+                  Verified expertise in {consultant.tags?.slice(0, 2).join(" & ") || consultant.city}
+                </p>
+              </div>
+            </div>
+            
+            {/* Always show: Member since */}
+            <div className="flex items-start gap-4">
+              <Calendar className="w-6 h-6 text-muted-foreground shrink-0" />
+              <div>
+                <p className="font-semibold">3+ years on LokaAsk</p>
+                <p className="text-sm text-muted-foreground">
+                  Member since 2022. Experienced local guide.
+                </p>
+              </div>
+            </div>
+            
+            {/* Always show: Identity verified */}
+            <div className="flex items-start gap-4">
+              <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
+              <div>
+                <p className="font-semibold">Identity verified</p>
+                <p className="text-sm text-muted-foreground">
+                  Personal info confirmed. You're in safe hands.
+                </p>
+              </div>
+            </div>
+            
+            {/* Conditional: Top Rated */}
+            {consultant.rating >= 4.8 && (
+              <div className="flex items-start gap-4">
+                <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+                <div>
+                  <p className="font-semibold">Top Rated Local</p>
+                  <p className="text-sm text-muted-foreground">
+                    Highly ranked based on ratings and reliability.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Conditional: Quick Responder */}
+            {consultant.responseTime && (
+              <div className="flex items-start gap-4">
+                <Clock className="w-6 h-6 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="font-semibold">Quick Responder</p>
+                  <p className="text-sm text-muted-foreground">
+                    {consultant.responseTime}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Conditional: Most Asked */}
+            {consultant.helpedCount >= 150 && (
+              <div className="flex items-start gap-4">
+                <MessageCircle className="w-6 h-6 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="font-semibold">Most Asked</p>
+                  <p className="text-sm text-muted-foreground">
+                    Helped {consultant.helpedCount}+ travelers with local insights.
+                  </p>
+                </div>
+              </div>
+            )}
+            
           </div>
         </div>
       </section>
