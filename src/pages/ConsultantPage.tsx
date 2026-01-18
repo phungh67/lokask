@@ -62,7 +62,7 @@ const ConsultantPage = () => {
             <span>Back</span>
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-20 items-center max-w-5xl mx-auto">
             {/* Left: Consultant Profile Card with decorative circles */}
             <div className="relative max-w-md mx-auto lg:ml-auto lg:mr-0">
               {/* Orange/Coral circle - BEHIND card, extending to the right */}
@@ -161,6 +161,43 @@ const ConsultantPage = () => {
               >
                 Get Started
               </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="py-16 bg-secondary/30">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl">
+            <h2 className="font-display text-2xl font-semibold mb-6">
+              About {consultant.name}
+            </h2>
+            
+            <p className="text-foreground/80 leading-relaxed mb-8">
+              {consultant.bio || `${consultant.name} is a passionate local expert based in ${consultant.city}. With extensive knowledge of the area and a love for sharing hidden gems, they help travelers experience the authentic side of the city.`}
+            </p>
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {consultant.languages && (
+                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+                  <Globe size={20} className="text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Languages</p>
+                    <p className="text-sm font-medium">{consultant.languages.join(", ")}</p>
+                  </div>
+                </div>
+              )}
+              {consultant.responseTime && (
+                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+                  <Clock size={20} className="text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Response time</p>
+                    <p className="text-sm font-medium">{consultant.responseTime}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -304,43 +341,6 @@ const ConsultantPage = () => {
               </div>
             )}
             
-          </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl">
-            <h2 className="font-display text-2xl font-semibold mb-6">
-              About {consultant.name}
-            </h2>
-            
-            <p className="text-foreground/80 leading-relaxed mb-8">
-              {consultant.bio || `${consultant.name} is a passionate local expert based in ${consultant.city}. With extensive knowledge of the area and a love for sharing hidden gems, they help travelers experience the authentic side of the city.`}
-            </p>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {consultant.languages && (
-                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
-                  <Globe size={20} className="text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Languages</p>
-                    <p className="text-sm font-medium">{consultant.languages.join(", ")}</p>
-                  </div>
-                </div>
-              )}
-              {consultant.responseTime && (
-                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
-                  <Clock size={20} className="text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Response time</p>
-                    <p className="text-sm font-medium">{consultant.responseTime}</p>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </section>
