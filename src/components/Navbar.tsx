@@ -57,11 +57,6 @@ const Navbar = () => {
               <span className="text-xs mt-0.5">EN</span>
             </button>
             
-            {/* Become a consultant */}
-            <Link to="/become-local" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-              Become a consultant
-            </Link>
-            
             <div className="flex items-center gap-3 ml-4">
               <Link to="/login" className="btn-outline-pill" aria-label="Log in to your account">
                 Log in
@@ -89,9 +84,6 @@ const Navbar = () => {
                 <Globe className="w-5 h-5" />
                 Language (EN)
               </button>
-              <Link to="/become-local" className="text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
-                Become a consultant
-              </Link>
               <div className="flex gap-3 pt-2">
                 <Link to="/login" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
                   Log in
