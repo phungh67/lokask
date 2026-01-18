@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -157,11 +157,18 @@ const ConsultantPage = () => {
                 <Sparkles className="text-amber-400/60 w-5 h-5" />
               </div>
 
-              <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-6 leading-tight">
+              <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-4 leading-tight">
                 Seamless Travel<br />
                 Experiences with<br />
                 <span className="text-[#1E3A5F]">{consultant.name}</span>
               </h1>
+
+              <div className="flex items-center gap-2 mb-6">
+                <Users size={14} className="text-[#1E3A5F]" />
+                <span className="text-sm text-muted-foreground italic">
+                  AI-generated summary based on traveler reviews
+                </span>
+              </div>
 
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
                 Effortless and unforgettable travel adventures. We understand that travel should be about experiencing beauty and wonder. That's why we've crafted a platform that puts seamless travel experiences at the forefront of your journey.
