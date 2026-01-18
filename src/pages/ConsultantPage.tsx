@@ -378,7 +378,7 @@ const ConsultantPage = () => {
             </div>
             
             {/* Right Column: Image Gallery */}
-            <div className="relative min-h-[280px] lg:min-h-[320px]">
+            <div className="relative min-h-[280px] lg:min-h-[320px] self-start">
               <div className="grid grid-cols-[2fr_1fr] gap-2 h-full rounded-xl overflow-hidden">
                 
                 {/* Large image on left */}
