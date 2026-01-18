@@ -13,7 +13,60 @@ export interface Consultant {
   bio?: string;
   languages?: string[];
   responseTime?: string;
+  galleryImages?: string[];
 }
+
+// Gallery images by city for consultants
+const cityGalleryImages: Record<string, string[]> = {
+  "Rome": [
+    "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=800&h=600&fit=crop",
+  ],
+  "Paris": [
+    "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=800&h=600&fit=crop",
+  ],
+  "Tokyo": [
+    "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=800&h=600&fit=crop",
+  ],
+  "Bangkok": [
+    "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&h=600&fit=crop",
+  ],
+  "Chiang Mai": [
+    "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1512553631425-adbb0e4df7ed?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=800&h=600&fit=crop",
+  ],
+  "Phuket": [
+    "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1537956965359-7573183d8f53?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?w=800&h=600&fit=crop",
+  ],
+  "Krabi": [
+    "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&h=600&fit=crop",
+  ],
+  "Chiang Rai": [
+    "https://images.unsplash.com/photo-1569936890410-5063755b3b9a?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1512553631425-adbb0e4df7ed?w=800&h=600&fit=crop",
+  ],
+};
+
+// Helper function to get gallery images for a consultant
+export const getGalleryImages = (consultant: Consultant): string[] => {
+  if (consultant.galleryImages && consultant.galleryImages.length > 0) {
+    return consultant.galleryImages;
+  }
+  return cityGalleryImages[consultant.city] || [consultant.coverUrl, consultant.coverUrl, consultant.coverUrl];
+};
 
 export interface Destination {
   slug: string;

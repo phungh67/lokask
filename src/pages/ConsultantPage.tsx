@@ -19,6 +19,7 @@ import {
   thailandConsultants, 
   parisConsultants, 
   reviews,
+  getGalleryImages,
   type Consultant 
 } from "@/data/mockData";
 
@@ -37,6 +38,9 @@ const ConsultantPage = () => {
   const relatedConsultants = allConsultants.filter(
     (c) => c.city === consultant?.city && c.id !== id
   );
+
+  // Get gallery images for this consultant
+  const galleryImages = consultant ? getGalleryImages(consultant) : [];
 
   if (!consultant) {
     return (
@@ -383,8 +387,8 @@ const ConsultantPage = () => {
                 
                 {/* Large image on left */}
                 <img 
-                  src={consultant.avatarUrl} 
-                  alt="Gallery main"
+                  src={galleryImages[0]} 
+                  alt={`${consultant.city} destination`}
                   className="w-full h-full object-cover rounded-l-xl"
                 />
                 
@@ -393,8 +397,8 @@ const ConsultantPage = () => {
                   {/* Top smaller image */}
                   <div className="flex-1">
                     <img 
-                      src={consultant.avatarUrl} 
-                      alt="Gallery 2"
+                      src={galleryImages[1]} 
+                      alt={`${consultant.city} scene`}
                       className="w-full h-full object-cover rounded-tr-xl"
                     />
                   </div>
@@ -402,13 +406,13 @@ const ConsultantPage = () => {
                   {/* Bottom smaller image with overlay */}
                   <div className="relative flex-1">
                     <img 
-                      src={consultant.avatarUrl} 
-                      alt="Gallery 3"
+                      src={galleryImages[2]} 
+                      alt={`${consultant.city} location`}
                       className="w-full h-full object-cover rounded-br-xl"
                     />
                     <button className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-white transition-colors text-sm font-medium">
                       <Images size={16} />
-                      <span>18</span>
+                      <span>{galleryImages.length}+</span>
                     </button>
                   </div>
                 </div>
