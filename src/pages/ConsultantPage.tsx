@@ -62,7 +62,7 @@ const ConsultantPage = () => {
             <span>Back</span>
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-8 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 lg:gap-8 items-center">
             {/* Left: Consultant Profile Card with decorative circles */}
             <div className="relative max-w-md mx-auto lg:mx-0">
               {/* Orange/Coral circle - BEHIND card, extending to the right */}
@@ -79,7 +79,7 @@ const ConsultantPage = () => {
               {/* Phone Mockup Card */}
               <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px]">
                 {/* Square Photo */}
-                <div className="aspect-square rounded-2xl overflow-hidden mb-4 bg-gray-100">
+                <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
                   <img
                     src={consultant.avatarUrl}
                     alt={consultant.name}
@@ -87,8 +87,31 @@ const ConsultantPage = () => {
                   />
                 </div>
 
+                {/* Name + Location */}
+                <div className="text-center mb-2">
+                  <h3 className="font-display text-lg font-semibold text-foreground">{consultant.name}</h3>
+                  <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                    <MapPin size={12} />
+                    {consultant.city}
+                  </p>
+                </div>
+
+                {/* Quote */}
+                <p className="text-xs text-muted-foreground text-center italic mb-3 line-clamp-2 px-2">
+                  "{consultant.quote || `Your local guide to ${consultant.city}`}"
+                </p>
+
+                {/* Hashtags */}
+                <div className="flex flex-wrap justify-center gap-1 mb-3">
+                  {consultant.tags?.slice(0, 3).map((tag) => (
+                    <span key={tag} className="text-xs bg-secondary text-foreground/70 px-2 py-0.5 rounded-full">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+
                 {/* Avatars + Rating Row */}
-                <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex items-center justify-between mb-3 px-1">
                   <div className="flex -space-x-2">
                     <div className="w-7 h-7 rounded-full bg-gray-300 border-2 border-white" />
                     <div className="w-7 h-7 rounded-full bg-gray-400 border-2 border-white" />
@@ -103,7 +126,7 @@ const ConsultantPage = () => {
                 </div>
 
                 {/* Map Preview */}
-                <div className="rounded-2xl border-4 border-teal-300 overflow-hidden mb-4 h-[80px] bg-teal-50 flex items-center justify-center">
+                <div className="rounded-2xl border-4 border-teal-300 overflow-hidden mb-3 h-[80px] bg-teal-50 flex items-center justify-center">
                   <MapPin className="text-teal-400 w-6 h-6" />
                 </div>
 
