@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -266,80 +266,122 @@ const ConsultantPage = () => {
             </div>
           </div>
           
-          {/* Achievement Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+          {/* Achievement Items + Gallery Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 pt-6">
             
-            {/* Always show: Certified Expert */}
-            <div className="flex items-start gap-4">
-              <Award className="w-6 h-6 text-primary shrink-0" />
-              <div>
-                <p className="font-semibold">Certified Local Expert</p>
-                <p className="text-sm text-muted-foreground">
-                  Verified expertise in {consultant.tags?.slice(0, 2).join(" & ") || consultant.city}
-                </p>
-              </div>
-            </div>
-            
-            {/* Always show: Member since */}
-            <div className="flex items-start gap-4">
-              <Calendar className="w-6 h-6 text-muted-foreground shrink-0" />
-              <div>
-                <p className="font-semibold">3+ years on LokaAsk</p>
-                <p className="text-sm text-muted-foreground">
-                  Member since 2022. Experienced local guide.
-                </p>
-              </div>
-            </div>
-            
-            {/* Always show: Identity verified */}
-            <div className="flex items-start gap-4">
-              <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
-              <div>
-                <p className="font-semibold">Identity verified</p>
-                <p className="text-sm text-muted-foreground">
-                  Personal info confirmed. You're in safe hands.
-                </p>
-              </div>
-            </div>
-            
-            {/* Conditional: Top Rated */}
-            {consultant.rating >= 4.8 && (
+            {/* Left Column: All Achievement Items */}
+            <div className="space-y-5">
+              {/* Certified Expert */}
               <div className="flex items-start gap-4">
-                <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+                <Award className="w-6 h-6 text-primary shrink-0" />
                 <div>
-                  <p className="font-semibold">Top Rated Local</p>
+                  <p className="font-semibold">Certified Local Expert</p>
                   <p className="text-sm text-muted-foreground">
-                    Highly ranked based on ratings and reliability.
+                    Verified expertise in {consultant.tags?.slice(0, 2).join(" & ") || consultant.city}
                   </p>
                 </div>
               </div>
-            )}
-            
-            {/* Conditional: Quick Responder */}
-            {consultant.responseTime && (
+              
+              {/* Identity verified */}
               <div className="flex items-start gap-4">
-                <Clock className="w-6 h-6 text-muted-foreground shrink-0" />
+                <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
                 <div>
-                  <p className="font-semibold">Quick Responder</p>
+                  <p className="font-semibold">Identity verified</p>
                   <p className="text-sm text-muted-foreground">
-                    {consultant.responseTime}
+                    Personal info confirmed. You're in safe hands.
                   </p>
                 </div>
               </div>
-            )}
-            
-            {/* Conditional: Most Asked */}
-            {consultant.helpedCount >= 150 && (
+              
+              {/* Quick Responder */}
+              {consultant.responseTime && (
+                <div className="flex items-start gap-4">
+                  <Clock className="w-6 h-6 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold">Quick Responder</p>
+                    <p className="text-sm text-muted-foreground">
+                      {consultant.responseTime}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Member since */}
               <div className="flex items-start gap-4">
-                <MessageCircle className="w-6 h-6 text-muted-foreground shrink-0" />
+                <Calendar className="w-6 h-6 text-muted-foreground shrink-0" />
                 <div>
-                  <p className="font-semibold">Most Asked</p>
+                  <p className="font-semibold">3+ years on LokaAsk</p>
                   <p className="text-sm text-muted-foreground">
-                    Helped {consultant.helpedCount}+ travelers with local insights.
+                    Member since 2022. Experienced local guide.
                   </p>
                 </div>
               </div>
-            )}
+              
+              {/* Top Rated */}
+              {consultant.rating >= 4.8 && (
+                <div className="flex items-start gap-4">
+                  <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Top Rated Local</p>
+                    <p className="text-sm text-muted-foreground">
+                      Highly ranked based on ratings and reliability.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Most Asked */}
+              {consultant.helpedCount >= 150 && (
+                <div className="flex items-start gap-4">
+                  <MessageCircle className="w-6 h-6 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold">Most Asked</p>
+                    <p className="text-sm text-muted-foreground">
+                      Helped {consultant.helpedCount}+ travelers with local insights.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Right Column: Image Gallery */}
+            <div className="relative min-h-[280px] lg:min-h-[320px]">
+              <div className="grid grid-cols-[2fr_1fr] gap-2 h-full rounded-xl overflow-hidden">
+                
+                {/* Large image on left */}
+                <img 
+                  src={consultant.avatarUrl} 
+                  alt="Gallery main"
+                  className="w-full h-full object-cover rounded-l-xl"
+                />
+                
+                {/* Right column: 2 stacked images */}
+                <div className="flex flex-col gap-2">
+                  {/* Top smaller image */}
+                  <div className="flex-1">
+                    <img 
+                      src={consultant.avatarUrl} 
+                      alt="Gallery 2"
+                      className="w-full h-full object-cover rounded-tr-xl"
+                    />
+                  </div>
+                  
+                  {/* Bottom smaller image with overlay */}
+                  <div className="relative flex-1">
+                    <img 
+                      src={consultant.avatarUrl} 
+                      alt="Gallery 3"
+                      className="w-full h-full object-cover rounded-br-xl"
+                    />
+                    <button className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-white transition-colors text-sm font-medium">
+                      <Images size={16} />
+                      <span>18</span>
+                    </button>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
             
           </div>
         </div>
