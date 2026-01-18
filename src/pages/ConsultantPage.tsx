@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -92,12 +92,16 @@ const ConsultantPage = () => {
               {/* Phone Mockup Card */}
               <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px]">
                 {/* Square Photo */}
-                <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
+                <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
                   <img
                     src={consultant.avatarUrl}
                     alt={consultant.name}
                     className="w-full h-full object-cover"
                   />
+                  {/* Video Play Icon */}
+                  <div className="absolute top-3 left-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-black/80 transition-colors">
+                    <Play className="w-4 h-4 text-white fill-white" />
+                  </div>
                 </div>
 
                 {/* Name + Location */}
