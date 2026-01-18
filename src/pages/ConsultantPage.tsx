@@ -171,7 +171,7 @@ const ConsultantPage = () => {
               </div>
 
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
-                Effortless and unforgettable travel adventures. We understand that travel should be about experiencing beauty and wonder. That's why we've crafted a platform that puts seamless travel experiences at the forefront of your journey.
+                Travellers consistently describe Giulia as friendly, patient, and easy to talk to. Many reviews highlight her deep local knowledge, especially when it comes to food spots and lesser-known neighborhoods. Guests often mention that her recommendations feel practical and realistic, helping them avoid tourist traps while still feeling confident exploring the city on their own.
               </p>
 
               {/* Get Started CTA */}
