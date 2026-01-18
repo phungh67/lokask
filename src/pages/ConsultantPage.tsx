@@ -31,7 +31,7 @@ const ConsultantPage = () => {
 
   if (!consultant) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="container mx-auto px-6 py-20 text-center">
           <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
@@ -47,7 +47,7 @@ const ConsultantPage = () => {
   const badgeType = consultant.isHighlyTrusted ? "trusted" : (consultant.helpedCount >= 160 ? "mostAsked" : null);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* Hero Banner Section */}
