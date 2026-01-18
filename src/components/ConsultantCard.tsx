@@ -40,7 +40,18 @@ const ConsultantCard = ({
 
       {/* Name & City */}
       <div className="mb-3">
-        <h3 className="font-bold text-xl text-foreground font-sans">{consultant.name}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-xl text-foreground font-sans">{consultant.name}</h3>
+          <button 
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 transition-colors" />
+          </button>
+        </div>
         <p className="text-sm text-muted-foreground">{consultant.city}</p>
       </div>
 

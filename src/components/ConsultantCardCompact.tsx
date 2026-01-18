@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Star, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Consultant } from "@/data/mockData";
 interface ConsultantCardCompactProps {
@@ -24,10 +24,21 @@ const ConsultantCardCompact = ({
         }} />
         </div>
 
-        {/* Name */}
-        <h3 className="font-bold text-[18px] text-foreground leading-tight font-sans">
-          {consultant.name}
-        </h3>
+        {/* Name with Wishlist */}
+        <div className="flex items-center justify-between w-full gap-2">
+          <h3 className="font-bold text-[18px] text-foreground leading-tight font-sans">
+            {consultant.name}
+          </h3>
+          <button 
+            className="p-1 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
+          </button>
+        </div>
 
         {/* City */}
         <p className="text-[13px] text-muted-foreground mb-3">
