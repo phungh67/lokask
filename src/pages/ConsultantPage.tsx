@@ -71,7 +71,7 @@ const ConsultantPage = () => {
               </div>
 
               {/* Phone Mockup Card */}
-              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px]">
+              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px] transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02] cursor-pointer">
                 {/* Square Photo */}
                 <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
                   <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover" />
@@ -182,14 +182,14 @@ const ConsultantPage = () => {
 
             {/* Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {consultant.languages && <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+              {consultant.languages && <div className="flex items-center gap-3 bg-card rounded-xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:bg-primary/5 cursor-pointer">
                   <Globe size={20} className="text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Languages</p>
                     <p className="text-sm font-medium">{consultant.languages.join(", ")}</p>
                   </div>
                 </div>}
-              {consultant.responseTime && <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+              {consultant.responseTime && <div className="flex items-center gap-3 bg-card rounded-xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:bg-primary/5 cursor-pointer">
                   <Clock size={20} className="text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Response time</p>
