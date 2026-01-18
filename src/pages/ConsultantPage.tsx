@@ -156,7 +156,7 @@ const ConsultantPage = () => {
 
               {/* Get Started CTA */}
               <Button 
-                className="bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-lg px-5 py-2 text-sm font-medium"
+                className="bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-lg px-4 py-2 text-sm font-medium w-fit"
                 size="sm"
               >
                 Get Started
