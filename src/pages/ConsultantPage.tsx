@@ -319,7 +319,7 @@ const ConsultantPage = () => {
               
               {/* Highlighted Reviews */}
               {consultantReviews.length > 0 && <div className="mt-8 pt-8 border-t">
-                  <h3 className="font-display text-lg font-semibold mb-4">
+                  <h3 className="text-lg font-semibold mb-4 font-sans">
                     Highlighted reviews from travelers
                   </h3>
                   
@@ -327,7 +327,7 @@ const ConsultantPage = () => {
                     {consultantReviews.slice(0, 2).map(review => <ReviewCardCompact key={review.id} review={review} />)}
                   </div>
                   
-                  {consultantReviews.length > 2 && <button onClick={() => setShowAllReviews(true)} className="text-sm font-medium underline mt-4 text-primary hover:text-primary/80">
+                  {consultantReviews.length > 2 && <button onClick={() => setShowAllReviews(true)} className="text-sm font-medium underline mt-4 text-primary hover:text-primary/80 font-sans">
                       See more reviews ({consultantReviews.length})
                     </button>}
                 </div>}
@@ -398,7 +398,7 @@ const ConsultantPage = () => {
       {/* Final CTA */}
       <section className="py-16">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="font-display text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-semibold mb-4 font-sans">
             Ready to explore {consultant.city} with {consultant.name}?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">
