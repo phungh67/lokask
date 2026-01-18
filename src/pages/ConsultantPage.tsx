@@ -52,26 +52,7 @@ const ConsultantPage = () => {
 
       {/* Hero Banner Section */}
       <section className="relative min-h-[650px] py-16 overflow-hidden">
-        {/* Decorative Circles - pointer-events-none to not block clicks */}
-        <div className="pointer-events-none absolute inset-0 z-0">
-          {/* Purple circle - behind content, top-right area */}
-          <div className="absolute top-8 right-[10%] lg:right-[15%] w-[280px] h-[280px] lg:w-[350px] lg:h-[350px] rounded-full bg-gradient-to-br from-[#7C5DFA] to-[#9B7EFF] opacity-80 blur-[2px]" />
-          
-          {/* Yellow circle - bottom-left, overlapping card area */}
-          <div className="absolute bottom-24 lg:bottom-32 -left-8 lg:left-[3%] w-[200px] h-[200px] lg:w-[240px] lg:h-[240px] rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90 z-20" />
-          
-          {/* Sparkle inside yellow circle */}
-          <div className="absolute bottom-36 lg:bottom-48 left-8 lg:left-[8%] z-30">
-            <Sparkles className="text-amber-300/90 w-7 h-7" />
-          </div>
-          
-          {/* Sparkle near purple circle */}
-          <div className="absolute top-24 right-[35%] lg:right-[40%]">
-            <Sparkles className="text-amber-400/80 w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-6 relative">
           {/* Back button */}
           <Link 
             to="/" 
@@ -82,10 +63,22 @@ const ConsultantPage = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Left: Consultant Profile Card */}
-            <div className="relative z-10">
-              <div className="relative bg-card rounded-3xl shadow-strong overflow-hidden max-w-md mx-auto lg:mx-0">
-                {/* Card Header with actions - now inside relative card container */}
+            {/* Left: Consultant Profile Card with decorative circles */}
+            <div className="relative max-w-md mx-auto lg:mx-0">
+              {/* Purple circle - BEHIND card, extending to the right */}
+              <div className="pointer-events-none absolute -top-8 -right-16 lg:-right-24 w-[280px] h-[280px] lg:w-[340px] lg:h-[340px] rounded-full bg-gradient-to-br from-[#7C5DFA] to-[#9B7EFF] opacity-75 blur-[2px] z-0" />
+              
+              {/* Yellow circle - IN FRONT of card, overlapping bottom-left */}
+              <div className="pointer-events-none absolute bottom-12 -left-12 lg:-left-16 w-[160px] h-[160px] lg:w-[200px] lg:h-[200px] rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90 z-20" />
+              
+              {/* Sparkle inside yellow circle */}
+              <div className="pointer-events-none absolute bottom-20 -left-4 lg:-left-6 z-30">
+                <Sparkles className="text-amber-200 w-6 h-6" />
+              </div>
+
+              {/* Card - z-10 to sit between purple (z-0) and yellow (z-20) */}
+              <div className="relative z-10 bg-card rounded-3xl shadow-strong overflow-hidden">
+                {/* Card Header with actions */}
                 <div className="absolute top-4 left-4 right-4 z-10 flex justify-between">
                   <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-soft">
                     <Heart size={18} className="text-foreground/70" />
@@ -178,26 +171,30 @@ const ConsultantPage = () => {
             </div>
 
             {/* Right: Content */}
-            <div className="flex flex-col justify-center lg:pl-8">
+            <div className="relative flex flex-col justify-center lg:pl-8 lg:pt-4">
+              {/* Sparkle decoration near headline */}
+              <div className="pointer-events-none absolute top-0 right-4 lg:right-8">
+                <Sparkles className="text-amber-400/60 w-5 h-5" />
+              </div>
+
               <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-6 leading-tight">
                 Seamless Travel<br />
-                with <span className="text-primary">{consultant.name}</span>
+                with <span className="text-[#E8941C]">{consultant.name}</span>
               </h1>
 
-              <blockquote className="text-lg text-muted-foreground italic mb-8 border-l-4 border-primary/30 pl-4">
+              <blockquote className="text-lg text-muted-foreground italic mb-8">
                 "{consultant.quote}"
               </blockquote>
 
-              {/* AI Summary CTA */}
-              <div className="flex flex-wrap gap-4">
+              {/* AI Summary CTA - vertical layout */}
+              <div className="flex flex-col gap-2">
                 <AISummaryDialog 
                   consultantName={consultant.name} 
                   reviews={consultantReviews} 
                 />
-                <Button variant="ghost" className="gap-2 rounded-full">
-                  <Star size={18} />
-                  {consultantReviews.length} reviews
-                </Button>
+                <span className="text-sm text-muted-foreground">
+                  ({consultantReviews.length} reviews)
+                </span>
               </div>
             </div>
           </div>
