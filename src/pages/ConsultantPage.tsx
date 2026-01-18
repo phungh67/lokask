@@ -1,30 +1,51 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ReviewCard from "@/components/ReviewCard";
+import ReviewCardCompact from "@/components/ReviewCardCompact";
 import AISummaryDialog from "@/components/AISummaryDialog";
 import LocalsCarousel from "@/components/LocalsCarousel";
-import { consultants, thailandConsultants, parisConsultants, reviews, type Consultant } from "@/data/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  consultants, 
+  thailandConsultants, 
+  parisConsultants, 
+  reviews,
+  getGalleryImages,
+  type Consultant 
+} from "@/data/mockData";
+
 const ConsultantPage = () => {
-  const {
-    id
-  } = useParams<{
-    id: string;
-  }>();
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { id } = useParams<{ id: string }>();
 
   // Find consultant from all arrays
   const allConsultants = [...consultants, ...thailandConsultants, ...parisConsultants];
-  const consultant = allConsultants.find(c => c.id === id);
+  const consultant = allConsultants.find((c) => c.id === id);
 
   // Get reviews for this consultant
-  const consultantReviews = reviews.filter(r => r.consultantId === id);
+  const consultantReviews = reviews.filter((r) => r.consultantId === id);
 
   // Get related consultants from same city (excluding current)
-  const relatedConsultants = allConsultants.filter(c => c.city === consultant?.city && c.id !== id);
+  const relatedConsultants = allConsultants.filter(
+    (c) => c.city === consultant?.city && c.id !== id
+  );
+
+  // Get gallery images for this consultant
+  const galleryImages = consultant ? getGalleryImages(consultant) : [];
+
   if (!consultant) {
-    return <div className="min-h-screen bg-white">
+    return (
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="container mx-auto px-6 py-20 text-center">
           <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
@@ -33,17 +54,24 @@ const ConsultantPage = () => {
           </Link>
         </div>
         <Footer />
-      </div>;
+      </div>
+    );
   }
-  const badgeType = consultant.isHighlyTrusted ? "trusted" : consultant.helpedCount >= 160 ? "mostAsked" : null;
-  return <div className="min-h-screen bg-white">
+
+  const badgeType = consultant.isHighlyTrusted ? "trusted" : (consultant.helpedCount >= 160 ? "mostAsked" : null);
+
+  return (
+    <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* Hero Banner Section */}
       <section className="relative min-h-[650px] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative">
           {/* Back button */}
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
+          <Link 
+            to="/" 
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
+          >
             <ArrowLeft size={18} />
             <span>Back</span>
           </Link>
@@ -65,8 +93,16 @@ const ConsultantPage = () => {
               {/* Phone Mockup Card */}
               <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px]">
                 {/* Square Photo */}
-                <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
-                  <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover" />
+                <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
+                  <img
+                    src={consultant.avatarUrl}
+                    alt={consultant.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Video Play Icon */}
+                  <div className="absolute top-3 left-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-black/80 transition-colors">
+                    <Play className="w-4 h-4 text-white fill-white" />
+                  </div>
                 </div>
 
                 {/* Name + Location */}
@@ -85,9 +121,11 @@ const ConsultantPage = () => {
 
                 {/* Hashtags */}
                 <div className="flex flex-wrap justify-center gap-1 mb-3">
-                  {consultant.tags?.slice(0, 3).map(tag => <span key={tag} className="text-xs bg-secondary text-foreground/70 px-2 py-0.5 rounded-full">
+                  {consultant.tags?.slice(0, 3).map((tag) => (
+                    <span key={tag} className="text-xs bg-secondary text-foreground/70 px-2 py-0.5 rounded-full">
                       #{tag}
-                    </span>)}
+                    </span>
+                  ))}
                 </div>
 
                 {/* Avatars + Rating Row */}
@@ -98,7 +136,9 @@ const ConsultantPage = () => {
                     <div className="w-7 h-7 rounded-full bg-gray-500 border-2 border-white" />
                   </div>
                   <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />)}
+                    {[1,2,3,4,5].map((i) => (
+                      <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
+                    ))}
                     <span className="text-sm font-medium ml-1">{consultant.rating}</span>
                   </div>
                 </div>
@@ -117,24 +157,48 @@ const ConsultantPage = () => {
 
             {/* Right: Content */}
             <div className="relative flex flex-col justify-center lg:pl-0 lg:pt-4">
+              {/* Add to wishlist button - top right, aligned with avatar image top */}
+              <button 
+                onClick={() => setIsWishlisted(!isWishlisted)}
+                className="absolute -top-8 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10"
+              >
+                <Heart 
+                  size={18} 
+                  className={isWishlisted ? "fill-red-500 text-red-500" : ""} 
+                />
+                <span className="text-sm font-medium underline">
+                  {isWishlisted ? "Saved to wishlist" : "Add to wishlist"}
+                </span>
+              </button>
+
               {/* Sparkle decoration near headline */}
-              <div className="pointer-events-none absolute top-0 right-4 lg:right-8">
+              <div className="pointer-events-none absolute top-8 right-4 lg:right-8">
                 <Sparkles className="text-amber-400/60 w-5 h-5" />
               </div>
 
-              <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-6 leading-tight">
+              <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-4 leading-tight">
                 Seamless Travel<br />
                 Experiences with<br />
                 <span className="text-[#1E3A5F]">{consultant.name}</span>
               </h1>
 
+              <div className="flex items-center gap-2 mb-6">
+                <Users size={14} className="text-[#1E3A5F]" />
+                <span className="text-sm text-muted-foreground italic">
+                  AI-generated summary based on traveler reviews
+                </span>
+              </div>
+
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
-                Effortless and unforgettable travel adventures. We understand that travel should be about experiencing beauty and wonder. That's why we've crafted a platform that puts seamless travel experiences at the forefront of your journey.
+                Travellers consistently describe Giulia as friendly, patient, and easy to talk to. Many reviews highlight her deep local knowledge, especially when it comes to food spots and lesser-known neighborhoods. Guests often mention that her recommendations feel practical and realistic, helping them avoid tourist traps while still feeling confident exploring the city on their own.
               </p>
 
               {/* Get Started CTA */}
-              <Button className="bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-lg px-4 py-2 text-sm font-medium w-fit" size="sm">
-                Get Started
+              <Button 
+                className="bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-lg px-4 py-2 text-sm font-medium w-fit"
+                size="sm"
+              >
+                Read more
               </Button>
             </div>
           </div>
@@ -154,21 +218,25 @@ const ConsultantPage = () => {
             </p>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans">
-              {consultant.languages && <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {consultant.languages && (
+                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
                   <Globe size={20} className="text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Languages</p>
                     <p className="text-sm font-medium">{consultant.languages.join(", ")}</p>
                   </div>
-                </div>}
-              {consultant.responseTime && <div className="flex items-center gap-3 bg-card rounded-xl p-4">
+                </div>
+              )}
+              {consultant.responseTime && (
+                <div className="flex items-center gap-3 bg-card rounded-xl p-4">
                   <Clock size={20} className="text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Response time</p>
                     <p className="text-sm font-medium">{consultant.responseTime}</p>
                   </div>
-                </div>}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -180,7 +248,7 @@ const ConsultantPage = () => {
           
           {/* Main Badge Card */}
           <div className="bg-white border rounded-2xl p-6 mb-8">
-            <div className="flex items-center justify-between flex-wrap gap-6 font-sans">
+            <div className="flex items-center justify-between flex-wrap gap-6">
               {/* Left: Local Favorite badge */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1 text-amber-600">
@@ -202,7 +270,9 @@ const ConsultantPage = () => {
                 <div className="text-center">
                   <p className="text-2xl font-bold">{consultant.rating}</p>
                   <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />)}
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} size={12} className={i <= Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
+                    ))}
                   </div>
                 </div>
                 <div className="h-12 w-px bg-border" />
@@ -216,118 +286,211 @@ const ConsultantPage = () => {
           
           {/* Host Info Row */}
           <div className="flex items-center gap-4 pb-6 border-b">
-            <img src={consultant.avatarUrl} alt={consultant.name} className="w-14 h-14 rounded-full object-cover" />
+            <img 
+              src={consultant.avatarUrl} 
+              alt={consultant.name}
+              className="w-14 h-14 rounded-full object-cover"
+            />
             <div>
               <p className="font-semibold text-lg">Connected with {consultant.name}</p>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                {consultant.isHighlyTrusted && <span className="flex items-center gap-1">
+                {consultant.isHighlyTrusted && (
+                  <span className="flex items-center gap-1">
                     <Award size={14} className="text-primary" />
                     Highly Trusted
-                  </span>}
+                  </span>
+                )}
                 <span>{consultant.helpedCount}+ travelers helped</span>
               </div>
             </div>
           </div>
           
-          {/* Achievement Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            {/* Achievement Items + Gallery Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 pt-6">
             
-            {/* Always show: Certified Expert */}
-            <div className="flex items-start gap-4">
-              <Award className="w-6 h-6 text-primary shrink-0" />
-              <div>
-                <p className="font-semibold">Certified Local Expert</p>
-                <p className="text-sm text-muted-foreground">
-                  Verified expertise in {consultant.tags?.slice(0, 2).join(" & ") || consultant.city}
-                </p>
-              </div>
-            </div>
-            
-            {/* Always show: Member since */}
-            <div className="flex items-start gap-4">
-              <Calendar className="w-6 h-6 text-muted-foreground shrink-0" />
-              <div>
-                <p className="font-semibold">3+ years on LokaAsk</p>
-                <p className="text-sm text-muted-foreground">
-                  Member since 2022. Experienced local guide.
-                </p>
-              </div>
-            </div>
-            
-            {/* Always show: Identity verified */}
-            <div className="flex items-start gap-4">
-              <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
-              <div>
-                <p className="font-semibold">Identity verified</p>
-                <p className="text-sm text-muted-foreground">
-                  Personal info confirmed. You're in safe hands.
-                </p>
-              </div>
-            </div>
-            
-            {/* Conditional: Top Rated */}
-            {consultant.rating >= 4.8 && <div className="flex items-start gap-4">
-                <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+            {/* Left Column: All Achievement Items */}
+            <div className="space-y-5">
+              {/* Certified Expert */}
+              <div className="flex items-start gap-4">
+                <Award className="w-6 h-6 text-primary shrink-0" />
                 <div>
-                  <p className="font-semibold">Top Rated Local</p>
+                  <p className="font-semibold">Certified Local Expert</p>
                   <p className="text-sm text-muted-foreground">
-                    Highly ranked based on ratings and reliability.
+                    Verified expertise in {consultant.tags?.slice(0, 2).join(" & ") || consultant.city}
                   </p>
                 </div>
-              </div>}
-            
-            {/* Conditional: Quick Responder */}
-            {consultant.responseTime && <div className="flex items-start gap-4">
-                <Clock className="w-6 h-6 text-muted-foreground shrink-0" />
+              </div>
+              
+              {/* Identity verified */}
+              <div className="flex items-start gap-4">
+                <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
                 <div>
-                  <p className="font-semibold">Quick Responder</p>
+                  <p className="font-semibold">Identity verified</p>
                   <p className="text-sm text-muted-foreground">
-                    {consultant.responseTime}
+                    Personal info confirmed. You're in safe hands.
                   </p>
                 </div>
-              </div>}
-            
-            {/* Conditional: Most Asked */}
-            {consultant.helpedCount >= 150 && <div className="flex items-start gap-4">
-                <MessageCircle className="w-6 h-6 text-muted-foreground shrink-0" />
+              </div>
+              
+              {/* Quick Responder */}
+              {consultant.responseTime && (
+                <div className="flex items-start gap-4">
+                  <Clock className="w-6 h-6 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold">Quick Responder</p>
+                    <p className="text-sm text-muted-foreground">
+                      {consultant.responseTime}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Member since */}
+              <div className="flex items-start gap-4">
+                <Calendar className="w-6 h-6 text-muted-foreground shrink-0" />
                 <div>
-                  <p className="font-semibold">Most Asked</p>
+                  <p className="font-semibold">3+ years on LokaAsk</p>
                   <p className="text-sm text-muted-foreground">
-                    Helped {consultant.helpedCount}+ travelers with local insights.
+                    Member since 2022. Experienced local guide.
                   </p>
                 </div>
-              </div>}
+              </div>
+              
+              {/* Top Rated */}
+              {consultant.rating >= 4.8 && (
+                <div className="flex items-start gap-4">
+                  <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Top Rated Local</p>
+                    <p className="text-sm text-muted-foreground">
+                      Highly ranked based on ratings and reliability.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Most Asked */}
+              {consultant.helpedCount >= 150 && (
+                <div className="flex items-start gap-4">
+                  <MessageCircle className="w-6 h-6 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold">Most Asked</p>
+                    <p className="text-sm text-muted-foreground">
+                      Helped {consultant.helpedCount}+ travelers with local insights.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Highlighted Reviews */}
+              {consultantReviews.length > 0 && (
+                <div className="mt-8 pt-8 border-t">
+                  <h3 className="font-display text-lg font-semibold mb-4">
+                    Highlighted reviews from travelers
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {consultantReviews.slice(0, 2).map((review) => (
+                      <ReviewCardCompact key={review.id} review={review} />
+                    ))}
+                  </div>
+                  
+                  {consultantReviews.length > 2 && (
+                    <button 
+                      onClick={() => setShowAllReviews(true)}
+                      className="text-sm font-medium underline mt-4 text-primary hover:text-primary/80"
+                    >
+                      See more reviews ({consultantReviews.length})
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Right Column: Image Gallery */}
+            <div className="relative min-h-[320px] lg:min-h-[380px] self-start">
+              <div className="grid grid-cols-[2fr_1fr] gap-2 h-full rounded-xl overflow-hidden">
+                
+                {/* Large image on left */}
+                <img 
+                  src={galleryImages[0]} 
+                  alt={`${consultant.city} destination`}
+                  className="w-full h-full object-cover rounded-l-xl"
+                />
+                
+                {/* Right column: 2 stacked images */}
+                <div className="flex flex-col gap-2">
+                  {/* Top smaller image */}
+                  <div className="flex-1">
+                    <img 
+                      src={galleryImages[1]} 
+                      alt={`${consultant.city} scene`}
+                      className="w-full h-full object-cover rounded-tr-xl"
+                    />
+                  </div>
+                  
+                  {/* Bottom smaller image with overlay */}
+                  <div className="relative flex-1">
+                    <img 
+                      src={galleryImages[2]} 
+                      alt={`${consultant.city} location`}
+                      className="w-full h-full object-cover rounded-br-xl"
+                    />
+                    <button className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-white transition-colors text-sm font-medium">
+                      <Images size={16} />
+                      <span>{galleryImages.length}+</span>
+                    </button>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
             
           </div>
         </div>
       </section>
 
-      {/* Reviews Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-display text-2xl font-semibold">
-              What travelers say
-            </h2>
-            {consultantReviews.length > 3 && <Button variant="ghost" className="text-primary">
-                See all {consultantReviews.length} reviews
-              </Button>}
+      {/* All Reviews Modal */}
+      <Dialog open={showAllReviews} onOpenChange={setShowAllReviews}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">
+              Customer reviews
+            </DialogTitle>
+            <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    size={16}
+                    className={i < Math.floor(consultant.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-medium">{consultant.rating} / 5</span>
+              <span className="text-sm text-muted-foreground">({consultantReviews.length} reviews)</span>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {consultantReviews.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
           </div>
-
-          {consultantReviews.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {consultantReviews.slice(0, 6).map(review => <ReviewCard key={review.id} review={review} />)}
-            </div> : <div className="text-center py-12 bg-card rounded-2xl">
-              <p className="text-muted-foreground">No reviews yet. Be the first to share your experience!</p>
-            </div>}
-        </div>
-      </section>
+        </DialogContent>
+      </Dialog>
 
       {/* Related Locals Section */}
-      {relatedConsultants.length > 0 && <section className="py-16 bg-secondary/30">
+      {relatedConsultants.length > 0 && (
+        <section className="py-16 bg-secondary/30">
           <div className="container mx-auto px-6">
-            <LocalsCarousel title={`Other locals in ${consultant.city}`} consultants={relatedConsultants} />
+            <LocalsCarousel
+              title={`Other locals in ${consultant.city}`}
+              consultants={relatedConsultants}
+            />
           </div>
-        </section>}
+        </section>
+      )}
 
       {/* Final CTA */}
       <section className="py-16">
@@ -346,6 +509,8 @@ const ConsultantPage = () => {
       </section>
 
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default ConsultantPage;
