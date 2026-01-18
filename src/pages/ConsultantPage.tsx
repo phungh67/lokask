@@ -25,6 +25,7 @@ import {
 
 const ConsultantPage = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const { id } = useParams<{ id: string }>();
 
   // Find consultant from all arrays
@@ -156,8 +157,22 @@ const ConsultantPage = () => {
 
             {/* Right: Content */}
             <div className="relative flex flex-col justify-center lg:pl-0 lg:pt-4">
+              {/* Add to wishlist button - top right */}
+              <button 
+                onClick={() => setIsWishlisted(!isWishlisted)}
+                className="absolute top-0 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10"
+              >
+                <Heart 
+                  size={18} 
+                  className={isWishlisted ? "fill-red-500 text-red-500" : ""} 
+                />
+                <span className="text-sm font-medium underline">
+                  {isWishlisted ? "Saved to wishlist" : "Add to wishlist"}
+                </span>
+              </button>
+
               {/* Sparkle decoration near headline */}
-              <div className="pointer-events-none absolute top-0 right-4 lg:right-8">
+              <div className="pointer-events-none absolute top-8 right-4 lg:right-8">
                 <Sparkles className="text-amber-400/60 w-5 h-5" />
               </div>
 
