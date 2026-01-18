@@ -132,7 +132,7 @@ const ConsultantPage = () => {
 
                 {/* Booknow Button */}
                 <Button className="w-full bg-black hover:bg-gray-800 text-white rounded-full py-2.5 text-sm">
-                  Booknow
+                  Ask now
                 </Button>
               </div>
             </div>
