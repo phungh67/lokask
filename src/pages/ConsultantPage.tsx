@@ -279,8 +279,8 @@ const ConsultantPage = () => {
             </div>
           </div>
           
-          {/* Achievement Items + Gallery Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 pt-6">
+            {/* Achievement Items + Gallery Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 pt-6">
             
             {/* Left Column: All Achievement Items */}
             <div className="space-y-5">
@@ -382,7 +382,7 @@ const ConsultantPage = () => {
             </div>
             
             {/* Right Column: Image Gallery */}
-            <div className="relative min-h-[280px] lg:min-h-[320px] self-start">
+            <div className="relative min-h-[320px] lg:min-h-[380px] self-start">
               <div className="grid grid-cols-[2fr_1fr] gap-2 h-full rounded-xl overflow-hidden">
                 
                 {/* Large image on left */}
