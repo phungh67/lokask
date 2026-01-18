@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Search } from "lucide-react";
+import { Menu, X, Search, Heart, Globe } from "lucide-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,13 +44,24 @@ const Navbar = () => {
           )}
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8 shrink-0">
-            <Link to="/how-it-works" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-              How it works
+          <div className="hidden md:flex items-center gap-6 shrink-0">
+            {/* Wishlist */}
+            <Link to="/wishlist" className="flex flex-col items-center text-foreground/80 hover:text-foreground transition-colors">
+              <Heart className="w-5 h-5" />
+              <span className="text-xs mt-0.5">Wishlist</span>
             </Link>
-            <Link to="/explore-locals" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-              Explore locals
+            
+            {/* Language Selector */}
+            <button className="flex flex-col items-center text-foreground/80 hover:text-foreground transition-colors">
+              <Globe className="w-5 h-5" />
+              <span className="text-xs mt-0.5">EN</span>
+            </button>
+            
+            {/* Become a consultant */}
+            <Link to="/become-local" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
+              Become a consultant
             </Link>
+            
             <div className="flex items-center gap-3 ml-4">
               <Link to="/login" className="btn-outline-pill" aria-label="Log in to your account">
                 Log in
@@ -70,11 +81,16 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isOpen && <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
-              <Link to="/how-it-works" className="text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
-                How it works
+              <Link to="/wishlist" className="flex items-center gap-3 text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
+                <Heart className="w-5 h-5" />
+                Wishlist
               </Link>
-              <Link to="/explore-locals" className="text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
-                Explore locals
+              <button className="flex items-center gap-3 text-sm font-medium text-foreground/80 hover:text-foreground py-2">
+                <Globe className="w-5 h-5" />
+                Language (EN)
+              </button>
+              <Link to="/become-local" className="text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
+                Become a consultant
               </Link>
               <div className="flex gap-3 pt-2">
                 <Link to="/login" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
