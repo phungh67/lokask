@@ -206,7 +206,7 @@ const ConsultantPage = () => {
         <div className="container mx-auto px-6">
           
           {/* Main Badge Card */}
-          <div className="bg-white border rounded-2xl p-6 mb-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8">
             <div className="flex items-center justify-between flex-wrap gap-6">
               {/* Left: Local Favorite badge */}
               <div className="flex items-center gap-4">
