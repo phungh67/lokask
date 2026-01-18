@@ -65,14 +65,14 @@ const ConsultantPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Left: Consultant Profile Card with decorative circles */}
             <div className="relative max-w-md mx-auto lg:mx-0">
-              {/* Purple circle - BEHIND card, extending to the right */}
-              <div className="pointer-events-none absolute -top-8 -right-16 lg:-right-24 w-[280px] h-[280px] lg:w-[340px] lg:h-[340px] rounded-full bg-gradient-to-br from-[#7C5DFA] to-[#9B7EFF] opacity-75 blur-[2px] z-0" />
+              {/* Orange/Coral circle - BEHIND card, extending to the right */}
+              <div className="pointer-events-none absolute -top-8 -right-16 lg:-right-24 w-[280px] h-[280px] lg:w-[340px] lg:h-[340px] rounded-full bg-gradient-to-br from-[#E07A5F] to-[#D97706] opacity-75 blur-[2px] z-0" />
               
-              {/* Yellow circle - IN FRONT of card, overlapping bottom-left */}
-              <div className="pointer-events-none absolute bottom-12 -left-12 lg:-left-16 w-[160px] h-[160px] lg:w-[200px] lg:h-[200px] rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90 z-20" />
+              {/* Yellow circle - BEHIND card, overlapping bottom-left */}
+              <div className="pointer-events-none absolute bottom-12 -left-12 lg:-left-16 w-[160px] h-[160px] lg:w-[200px] lg:h-[200px] rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90 z-[5]" />
               
-              {/* Sparkle inside yellow circle */}
-              <div className="pointer-events-none absolute bottom-20 -left-4 lg:-left-6 z-30">
+              {/* Sparkle inside yellow circle - also behind card */}
+              <div className="pointer-events-none absolute bottom-20 -left-4 lg:-left-6 z-[6]">
                 <Sparkles className="text-amber-200 w-6 h-6" />
               </div>
 
@@ -179,23 +179,21 @@ const ConsultantPage = () => {
 
               <h1 className="font-display text-4xl lg:text-5xl font-semibold text-foreground mb-6 leading-tight">
                 Seamless Travel<br />
-                with <span className="text-[#E8941C]">{consultant.name}</span>
+                Experiences with<br />
+                <span className="text-[#1E3A5F]">{consultant.name}</span>
               </h1>
 
-              <blockquote className="text-lg text-muted-foreground italic mb-8">
-                "{consultant.quote}"
-              </blockquote>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
+                Effortless and unforgettable travel adventures. We understand that travel should be about experiencing beauty and wonder. That's why we've crafted a platform that puts seamless travel experiences at the forefront of your journey.
+              </p>
 
-              {/* AI Summary CTA - vertical layout */}
-              <div className="flex flex-col gap-2">
-                <AISummaryDialog 
-                  consultantName={consultant.name} 
-                  reviews={consultantReviews} 
-                />
-                <span className="text-sm text-muted-foreground">
-                  ({consultantReviews.length} reviews)
-                </span>
-              </div>
+              {/* Get Started CTA */}
+              <Button 
+                className="bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-lg px-8 py-3 text-base font-medium"
+                size="lg"
+              >
+                Get Started
+              </Button>
             </div>
           </div>
         </div>
