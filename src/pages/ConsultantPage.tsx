@@ -157,10 +157,10 @@ const ConsultantPage = () => {
 
             {/* Right: Content */}
             <div className="relative flex flex-col justify-center lg:pl-0 lg:pt-4">
-              {/* Add to wishlist button - top right, aligned with avatar image */}
+              {/* Add to wishlist button - top right, aligned with avatar image top */}
               <button 
                 onClick={() => setIsWishlisted(!isWishlisted)}
-                className="absolute top-5 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10"
+                className="absolute -top-8 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10"
               >
                 <Heart 
                   size={18} 
