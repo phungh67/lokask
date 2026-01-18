@@ -1,21 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Search } from "lucide-react";
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+    
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center shrink-0">
             <span className="text-2xl font-black font-body tracking-tight">
               <span className="text-foreground font-extrabold text-4xl">Lok</span>
               <span className="text-primary text-4xl">ask</span>
             </span>
           </Link>
 
+          {/* Search Bar - appears on scroll */}
+          {isScrolled && (
+            <div className="hidden md:flex items-center flex-1 max-w-md mx-8 animate-fade-in">
+              <div className="flex items-center w-full bg-muted/50 rounded-full border border-border/50 px-4 py-2">
+                <Search className="w-4 h-4 text-muted-foreground mr-2" />
+                <input
+                  type="text"
+                  placeholder="Find your local travel buddy"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+                <button className="ml-2 px-4 py-1.5 bg-primary text-primary-foreground text-sm font-medium rounded-full hover:opacity-90 transition-opacity">
+                  Search
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-8 shrink-0">
             <Link to="/how-it-works" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
               How it works
             </Link>
