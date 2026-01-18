@@ -131,7 +131,7 @@ const ConsultantPage = () => {
                 </div>
 
                 {/* Booknow Button */}
-                <Button className="w-full bg-black hover:bg-gray-800 text-white rounded-full py-2.5 text-sm">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-2.5 text-sm">
                   Ask now
                 </Button>
               </div>
