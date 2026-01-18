@@ -52,14 +52,23 @@ const ConsultantPage = () => {
 
       {/* Hero Banner Section */}
       <section className="relative min-h-[650px] py-16 overflow-hidden">
-        {/* Decorative Circles */}
-        <div className="absolute top-16 right-[15%] w-72 h-72 rounded-full bg-gradient-to-br from-[#7C5DFA] to-[#9B7EFF] opacity-80 blur-sm" />
-        <div className="absolute bottom-20 left-[5%] w-56 h-56 rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90" />
-        <div className="absolute top-32 left-[25%] w-6 h-6">
-          <Sparkles className="text-amber-400 w-full h-full" />
-        </div>
-        <div className="absolute bottom-40 right-[25%] w-5 h-5">
-          <Sparkles className="text-amber-300 w-full h-full" />
+        {/* Decorative Circles - pointer-events-none to not block clicks */}
+        <div className="pointer-events-none absolute inset-0 z-0">
+          {/* Purple circle - behind content, top-right area */}
+          <div className="absolute top-8 right-[10%] lg:right-[15%] w-[280px] h-[280px] lg:w-[350px] lg:h-[350px] rounded-full bg-gradient-to-br from-[#7C5DFA] to-[#9B7EFF] opacity-80 blur-[2px]" />
+          
+          {/* Yellow circle - bottom-left, overlapping card area */}
+          <div className="absolute bottom-24 lg:bottom-32 -left-8 lg:left-[3%] w-[200px] h-[200px] lg:w-[240px] lg:h-[240px] rounded-full bg-gradient-to-br from-[#F2A93B] to-[#E8941C] opacity-90 z-20" />
+          
+          {/* Sparkle inside yellow circle */}
+          <div className="absolute bottom-36 lg:bottom-48 left-8 lg:left-[8%] z-30">
+            <Sparkles className="text-amber-300/90 w-7 h-7" />
+          </div>
+          
+          {/* Sparkle near purple circle */}
+          <div className="absolute top-24 right-[35%] lg:right-[40%]">
+            <Sparkles className="text-amber-400/80 w-5 h-5" />
+          </div>
         </div>
 
         <div className="container mx-auto px-6 relative z-10">
@@ -72,11 +81,11 @@ const ConsultantPage = () => {
             <span>Back</span>
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Left: Consultant Profile Card */}
-            <div className="relative">
-              <div className="bg-card rounded-3xl shadow-strong overflow-hidden max-w-md mx-auto lg:mx-0">
-                {/* Card Header with actions */}
+            <div className="relative z-10">
+              <div className="relative bg-card rounded-3xl shadow-strong overflow-hidden max-w-md mx-auto lg:mx-0">
+                {/* Card Header with actions - now inside relative card container */}
                 <div className="absolute top-4 left-4 right-4 z-10 flex justify-between">
                   <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-soft">
                     <Heart size={18} className="text-foreground/70" />
