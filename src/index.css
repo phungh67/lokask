@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
 
 /* Lokask Design System
    Primary: Terracotta (#C46A4A) - accent only
@@ -61,7 +61,7 @@
     --shadow-strong: 0 12px 40px rgba(0, 0, 0, 0.12);
 
     /* Typography */
-    --font-display: 'Playfair Display', serif;
+    --font-display: 'DM Sans', sans-serif;
     --font-body: 'DM Sans', sans-serif;
   }
 
@@ -100,6 +100,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
+    font-weight: 700;
   }
 }
 
