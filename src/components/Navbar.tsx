@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Search, Heart, Globe } from "lucide-react";
+import { Menu, X, Search, Heart, Globe, User, Briefcase } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,9 +62,35 @@ const Navbar = () => {
               <Link to="/login" className="btn-outline-pill" aria-label="Log in to your account">
                 Log in
               </Link>
-              <Link to="/signup" className="btn-outline-pill" aria-label="Create a new account">
-                Sign up
-              </Link>
+              <HoverCard openDelay={100} closeDelay={200}>
+                <HoverCardTrigger asChild>
+                  <button className="btn-outline-pill" aria-label="Create a new account">
+                    Sign up
+                  </button>
+                </HoverCardTrigger>
+                <HoverCardContent 
+                  align="end" 
+                  className="w-64 p-4 bg-background rounded-xl shadow-lg border border-border"
+                >
+                  <h3 className="font-bold text-lg mb-3 text-foreground">Sign up</h3>
+                  <div className="space-y-1">
+                    <Link 
+                      to="/signup/traveller" 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground"
+                    >
+                      <User className="w-5 h-5 text-primary" />
+                      <span>Sign up as Traveller</span>
+                    </Link>
+                    <Link 
+                      to="/signup/consultant" 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground"
+                    >
+                      <Briefcase className="w-5 h-5 text-primary" />
+                      <span>Sign up as Consultant</span>
+                    </Link>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             </div>
           </div>
 
@@ -88,8 +115,11 @@ const Navbar = () => {
                 <Link to="/login" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
                   Log in
                 </Link>
-                <Link to="/signup" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
-                  Sign up
+                <Link to="/signup/traveller" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
+                  Traveller
+                </Link>
+                <Link to="/signup/consultant" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
+                  Consultant
                 </Link>
               </div>
             </div>
