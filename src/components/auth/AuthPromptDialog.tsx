@@ -45,7 +45,7 @@ const AuthPromptDialog = ({
           {onGoogleAuth && (
             <Button
               variant="outline"
-              className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:border-foreground/30"
+              className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:text-foreground hover:border-foreground/30"
               onClick={() => {
                 onGoogleAuth();
                 onOpenChange(false);
@@ -77,7 +77,7 @@ const AuthPromptDialog = ({
           {onFacebookAuth && (
             <Button
               variant="outline"
-              className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:border-foreground/30"
+              className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:text-foreground hover:border-foreground/30"
               onClick={() => {
                 onFacebookAuth();
                 onOpenChange(false);
@@ -93,7 +93,7 @@ const AuthPromptDialog = ({
           {/* Email Button */}
           <Button
             variant="outline"
-            className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:border-foreground/30"
+            className="w-full h-12 rounded-full border-2 gap-3 font-medium justify-start px-6 hover:bg-transparent hover:text-foreground hover:border-foreground/30"
             onClick={() => {
               onLogin();
               onOpenChange(false);
