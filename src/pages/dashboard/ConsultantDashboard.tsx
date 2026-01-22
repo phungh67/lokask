@@ -3,7 +3,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
 import ChatPanel from "@/components/dashboard/ChatPanel";
-import { currentConsultant, mockConversations, DashboardConversation } from "@/data/dashboardMockData";
+import ProfilePanel from "@/components/dashboard/ProfilePanel";
+import { currentConsultant, mockConversations, DashboardConversation, DashboardConsultant } from "@/data/dashboardMockData";
 
 const ConsultantDashboard = () => {
   const [activeSection, setActiveSection] = useState<"inbox" | "bookings" | "profile">("inbox");
@@ -11,6 +12,7 @@ const ConsultantDashboard = () => {
     mockConversations[0]?.id || null
   );
   const [conversations, setConversations] = useState<DashboardConversation[]>(mockConversations);
+  const [consultantProfile, setConsultantProfile] = useState<DashboardConsultant>(currentConsultant);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
 
@@ -68,12 +70,12 @@ const ConsultantDashboard = () => {
         );
       case "profile":
         return (
-          <div className="flex-1 flex items-center justify-center bg-secondary/20">
-            <div className="text-center text-muted-foreground">
-              <p className="text-lg font-medium">Profile</p>
-              <p className="text-sm">Coming soon...</p>
-            </div>
-          </div>
+          <ProfilePanel
+            consultant={consultantProfile}
+            onSave={(updates) => {
+              setConsultantProfile((prev) => ({ ...prev, ...updates }));
+            }}
+          />
         );
       default:
         return null;
