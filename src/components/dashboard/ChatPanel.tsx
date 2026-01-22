@@ -1,20 +1,39 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatPanelHeader from "./ChatPanelHeader";
 import ChatPanelComposer from "./ChatPanelComposer";
 import FloatingAISummary from "./FloatingAISummary";
 import LocationCard from "./LocationCard";
-import { DashboardConversation, DashboardMessage } from "@/data/dashboardMockData";
+import ScheduledCallMessage from "./chat/ScheduledCallMessage";
+import UpcomingCallBanner from "./chat/UpcomingCallBanner";
+import { DashboardConversation, DashboardMessage, ScheduledCall } from "@/data/dashboardMockData";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isAfter, addHours } from "date-fns";
 
 interface ChatPanelProps {
   conversation: DashboardConversation | null;
   onSendMessage: (message: string) => void;
+  onScheduleCall: (callData: Omit<ScheduledCall, "id" | "conversationId" | "createdAt">) => void;
+  onCancelCall?: (callId: string) => void;
 }
 
-const ChatPanel = ({ conversation, onSendMessage }: ChatPanelProps) => {
+const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }: ChatPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Find the next upcoming call for the banner
+  const upcomingCall = useMemo(() => {
+    if (!conversation?.scheduledCalls) return null;
+    const now = new Date();
+    const next24Hours = addHours(now, 24);
+    
+    return conversation.scheduledCalls
+      .filter(call => 
+        call.status === "confirmed" && 
+        isAfter(call.scheduledAt, now) && 
+        !isAfter(call.scheduledAt, next24Hours)
+      )
+      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0] || null;
+  }, [conversation?.scheduledCalls]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,8 +52,24 @@ const ChatPanel = ({ conversation, onSendMessage }: ChatPanelProps) => {
     );
   }
 
+
   const renderMessage = (message: DashboardMessage) => {
     const isConsultant = message.sender === "consultant";
+
+    if (message.type === "scheduled_call" && message.scheduledCallData) {
+      return (
+        <div
+          key={message.id}
+          className={cn("flex", isConsultant ? "justify-end" : "justify-start")}
+        >
+          <ScheduledCallMessage
+            scheduledCall={message.scheduledCallData}
+            isConsultant={isConsultant}
+            onCancel={() => onCancelCall?.(message.scheduledCallData!.id)}
+          />
+        </div>
+      );
+    }
 
     if (message.type === "location" && message.locationData) {
       return (
@@ -81,7 +116,18 @@ const ChatPanel = ({ conversation, onSendMessage }: ChatPanelProps) => {
   return (
     <div className="flex-1 flex flex-col bg-secondary/20 relative">
       {/* Header */}
-      <ChatPanelHeader traveller={conversation.traveller} />
+      <ChatPanelHeader 
+        traveller={conversation.traveller} 
+        onScheduleCall={onScheduleCall}
+      />
+
+      {/* Upcoming Call Banner */}
+      {upcomingCall && (
+        <UpcomingCallBanner 
+          scheduledCall={upcomingCall}
+          onJoin={() => console.log("Join call:", upcomingCall.id)}
+        />
+      )}
 
       {/* Messages area with floating AI Summary */}
       <div className="flex-1 relative overflow-hidden">
