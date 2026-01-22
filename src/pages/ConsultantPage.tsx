@@ -10,9 +10,11 @@ import AISummaryDialog from "@/components/AISummaryDialog";
 import LocalsCarousel from "@/components/LocalsCarousel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { consultants, thailandConsultants, parisConsultants, reviews, getGalleryImages, type Consultant } from "@/data/mockData";
+import { useChat } from "@/context/ChatContext";
 const ConsultantPage = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { openChat } = useChat();
   const {
     id
   } = useParams<{
@@ -111,7 +113,10 @@ const ConsultantPage = () => {
                 </div>
 
                 {/* Booknow Button */}
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-2.5 text-sm">
+                <Button 
+                  onClick={() => openChat(consultant)}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-2.5 text-sm"
+                >
                   Ask now
                 </Button>
               </div>
