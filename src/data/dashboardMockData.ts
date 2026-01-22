@@ -42,6 +42,15 @@ export interface DashboardConsultant {
   photo: string;
   isOnline: boolean;
   weeklyEarnings: number;
+  // Editable profile fields
+  quote?: string;
+  bio?: string;
+  coverImage?: string;
+  galleryImages?: string[];
+  mainTag?: string;
+  tags?: string[];
+  languages?: string[];
+  responseTime?: string;
 }
 
 // Sample consultant (logged in user)
@@ -54,6 +63,18 @@ export const currentConsultant: DashboardConsultant = {
   photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
   isOnline: true,
   weeklyEarnings: 450,
+  quote: "I help travelers discover the real Rome beyond the tourist crowds",
+  bio: "Born and raised in Rome, I've spent my whole life exploring every corner of this eternal city. From hidden trattorias in Trastevere to secret viewpoints with stunning sunsets, I know the spots that only locals know. I love sharing my passion for authentic Roman food, art, and culture with travelers who want more than just the typical tourist experience.",
+  coverImage: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1200&h=400&fit=crop",
+  galleryImages: [
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=400&h=400&fit=crop",
+  ],
+  mainTag: "Food & Neighborhoods",
+  tags: ["Food", "Hidden gems", "Local markets", "Walking tours"],
+  languages: ["Italian", "English", "Spanish"],
+  responseTime: "~2 hours",
 };
 
 // Sample conversations
