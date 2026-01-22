@@ -1,12 +1,18 @@
 import { Star, Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Consultant } from "@/data/mockData";
+import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
+import { useAuthPrompt } from "@/hooks/useAuthPrompt";
+
 interface ConsultantCardCompactProps {
   consultant: Consultant;
 }
+
 const ConsultantCardCompact = ({
   consultant
 }: ConsultantCardCompactProps) => {
+  const navigate = useNavigate();
+  const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
   return <div className="bg-white rounded-[20px] overflow-hidden w-[200px] flex-shrink-0 flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-strong group cursor-pointer" style={{
     boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
   }}>
@@ -34,6 +40,10 @@ const ConsultantCardCompact = ({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              requireAuth(
+                () => {/* Toggle wishlist logic will be added when auth is connected */},
+                { actionType: 'wishlist', consultantName: consultant.name }
+              );
             }}
           >
             <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
@@ -68,6 +78,16 @@ const ConsultantCardCompact = ({
           Ask this local
         </Link>
       </div>
+
+      {/* Auth Prompt Dialog */}
+      <AuthPromptDialog
+        open={showPrompt}
+        onOpenChange={setShowPrompt}
+        message={promptMessage}
+        onLogin={() => navigate('/login')}
+        onSignup={() => navigate('/signup')}
+        onGoogleAuth={() => navigate('/login')}
+      />
     </div>;
 };
 export default ConsultantCardCompact;

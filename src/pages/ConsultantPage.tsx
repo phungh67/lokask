@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -11,10 +11,15 @@ import LocalsCarousel from "@/components/LocalsCarousel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { consultants, thailandConsultants, parisConsultants, reviews, getGalleryImages, type Consultant } from "@/data/mockData";
 import { useChat } from "@/context/ChatContext";
+import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
+import { useAuthPrompt } from "@/hooks/useAuthPrompt";
+
 const ConsultantPage = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { openChat } = useChat();
+  const navigate = useNavigate();
+  const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
   const {
     id
   } = useParams<{
@@ -114,7 +119,10 @@ const ConsultantPage = () => {
 
                 {/* Booknow Button */}
                 <Button 
-                  onClick={() => openChat(consultant)}
+                  onClick={() => requireAuth(
+                    () => openChat(consultant),
+                    { actionType: 'ask', consultantName: consultant.name }
+                  )}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-2.5 text-sm"
                 >
                   Ask now
@@ -125,7 +133,13 @@ const ConsultantPage = () => {
             {/* Right: Content */}
             <div className="relative flex flex-col justify-center lg:pl-0 lg:pt-4">
               {/* Add to wishlist button - top right, aligned with avatar image top */}
-              <button onClick={() => setIsWishlisted(!isWishlisted)} className="absolute -top-8 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10">
+              <button 
+                onClick={() => requireAuth(
+                  () => setIsWishlisted(!isWishlisted),
+                  { actionType: 'wishlist', consultantName: consultant.name }
+                )} 
+                className="absolute -top-8 right-0 flex items-center gap-2 text-foreground hover:text-primary transition-colors z-10"
+              >
                 <Heart size={18} className={isWishlisted ? "fill-red-500 text-red-500" : ""} />
                 <span className="text-sm underline font-extrabold">
                   {isWishlisted ? "Saved to wishlist" : "Add to wishlist"}
@@ -417,6 +431,16 @@ const ConsultantPage = () => {
       </section>
 
       <Footer />
+
+      {/* Auth Prompt Dialog */}
+      <AuthPromptDialog
+        open={showPrompt}
+        onOpenChange={setShowPrompt}
+        message={promptMessage}
+        onLogin={() => navigate('/login')}
+        onSignup={() => navigate('/signup')}
+        onGoogleAuth={() => navigate('/login')}
+      />
     </div>;
 };
 export default ConsultantPage;
