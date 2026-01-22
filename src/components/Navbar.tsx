@@ -2,10 +2,18 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Search, Heart, Globe, User, Briefcase } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+
+  const handleOpenAuth = (message: string) => {
+    setAuthMessage(message);
+    setShowAuthDialog(true);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,9 +67,13 @@ const Navbar = () => {
             </button>
             
             <div className="flex items-center gap-3 ml-4">
-              <Link to="/login" className="btn-outline-pill" aria-label="Log in to your account">
+              <button 
+                onClick={() => handleOpenAuth("Sign in to unlock the best of Lokask")}
+                className="btn-outline-pill" 
+                aria-label="Log in to your account"
+              >
                 Log in
-              </Link>
+              </button>
               <HoverCard openDelay={100} closeDelay={200}>
                 <HoverCardTrigger asChild>
                   <button className="btn-outline-pill" aria-label="Create a new account">
@@ -74,20 +86,20 @@ const Navbar = () => {
                 >
                   <h3 className="font-bold text-lg mb-3 text-foreground">Sign up</h3>
                   <div className="space-y-1">
-                    <Link 
-                      to="/signup/traveller" 
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground"
+                    <button 
+                      onClick={() => handleOpenAuth("Sign up as a Traveller to unlock the best of Lokask")}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground w-full text-left"
                     >
                       <User className="w-5 h-5 text-primary" />
                       <span>Sign up as Traveller</span>
-                    </Link>
-                    <Link 
-                      to="/signup/consultant" 
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground"
+                    </button>
+                    <button 
+                      onClick={() => handleOpenAuth("Sign up as a Consultant to share your local expertise")}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-foreground w-full text-left"
                     >
                       <Briefcase className="w-5 h-5 text-primary" />
                       <span>Sign up as Consultant</span>
-                    </Link>
+                    </button>
                   </div>
                 </HoverCardContent>
               </HoverCard>
@@ -112,18 +124,47 @@ const Navbar = () => {
                 Language (EN)
               </button>
               <div className="flex gap-3 pt-2">
-                <Link to="/login" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
+                <button 
+                  onClick={() => {
+                    handleOpenAuth("Sign in to unlock the best of Lokask");
+                    setIsOpen(false);
+                  }}
+                  className="btn-outline-pill flex-1 text-center"
+                >
                   Log in
-                </Link>
-                <Link to="/signup/traveller" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
+                </button>
+                <button 
+                  onClick={() => {
+                    handleOpenAuth("Sign up as a Traveller to unlock the best of Lokask");
+                    setIsOpen(false);
+                  }}
+                  className="btn-outline-pill flex-1 text-center"
+                >
                   Traveller
-                </Link>
-                <Link to="/signup/consultant" className="btn-outline-pill flex-1 text-center" onClick={() => setIsOpen(false)}>
+                </button>
+                <button 
+                  onClick={() => {
+                    handleOpenAuth("Sign up as a Consultant to share your local expertise");
+                    setIsOpen(false);
+                  }}
+                  className="btn-outline-pill flex-1 text-center"
+                >
                   Consultant
-                </Link>
+                </button>
               </div>
             </div>
           </div>}
+
+        {/* Auth Dialog */}
+        <AuthPromptDialog
+          open={showAuthDialog}
+          onOpenChange={setShowAuthDialog}
+          message={authMessage}
+          onLogin={() => console.log("Login success")}
+          onSignup={() => console.log("Signup success")}
+          onGoogleAuth={() => console.log("Google auth")}
+          onFacebookAuth={() => console.log("Facebook auth")}
+        />
       </div>
     </nav>;
 };
