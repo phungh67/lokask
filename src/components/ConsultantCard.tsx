@@ -1,16 +1,21 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Star, Heart, MessageCircleQuestion } from "lucide-react";
 import { Consultant } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
+import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
+import { useAuthPrompt } from "@/hooks/useAuthPrompt";
 
 interface ConsultantCardProps {
   consultant: Consultant;
   showMostAskedBadge?: boolean;
 }
+
 const ConsultantCard = ({
   consultant,
   showMostAskedBadge = false
 }: ConsultantCardProps) => {
+  const navigate = useNavigate();
+  const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
   return <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 w-full max-w-[250px] cursor-pointer group">
       {/* Badge - Most Asked Local - Top Right (priority over Highly Trusted) */}
       {showMostAskedBadge ? (
@@ -47,6 +52,10 @@ const ConsultantCard = ({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              requireAuth(
+                () => {/* Toggle wishlist logic will be added when auth is connected */},
+                { actionType: 'wishlist', consultantName: consultant.name }
+              );
             }}
           >
             <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 transition-colors" />
@@ -89,6 +98,16 @@ const ConsultantCard = ({
           Ask this local
         </Button>
       </Link>
+
+      {/* Auth Prompt Dialog */}
+      <AuthPromptDialog
+        open={showPrompt}
+        onOpenChange={setShowPrompt}
+        message={promptMessage}
+        onLogin={() => navigate('/login')}
+        onSignup={() => navigate('/signup')}
+        onGoogleAuth={() => navigate('/login')}
+      />
     </div>;
 };
 export default ConsultantCard;
