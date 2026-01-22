@@ -1,12 +1,12 @@
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 
 interface AuthPromptDialogProps {
   open: boolean;
@@ -29,27 +29,18 @@ const AuthPromptDialog = ({
   onFacebookAuth,
 }: AuthPromptDialogProps) => {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md rounded-2xl p-6 relative">
-        {/* Close Button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-        >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
-        </button>
-
-        <AlertDialogHeader className="text-left pt-4 pr-8 space-y-2">
-          <AlertDialogTitle className="text-2xl font-display font-semibold">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md rounded-2xl p-6">
+        <DialogHeader className="text-left space-y-2">
+          <DialogTitle className="text-2xl font-display font-semibold">
             {title}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-muted-foreground text-base">
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-base">
             {message}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-4 space-y-3">
           {/* Google OAuth Button */}
           {onGoogleAuth && (
             <Button
@@ -114,7 +105,7 @@ const AuthPromptDialog = ({
         </div>
 
         {/* Terms Footer */}
-        <p className="text-xs text-muted-foreground text-center mt-6 px-2">
+        <p className="text-xs text-muted-foreground text-center mt-4 px-2">
           By proceeding, you agree to our{" "}
           <a href="/terms" className="underline hover:text-foreground">
             Terms of Use
@@ -125,8 +116,8 @@ const AuthPromptDialog = ({
           </a>
           .
         </p>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 };
 
