@@ -4,6 +4,7 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
+import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import { currentConsultant, mockConversations, DashboardConversation, DashboardConsultant, ScheduledCall } from "@/data/dashboardMockData";
 import { toast } from "@/hooks/use-toast";
 
@@ -130,14 +131,7 @@ const ConsultantDashboard = () => {
           </>
         );
       case "bookings":
-        return (
-          <div className="flex-1 flex items-center justify-center bg-secondary/20">
-            <div className="text-center text-muted-foreground">
-              <p className="text-lg font-medium">Bookings</p>
-              <p className="text-sm">Coming soon...</p>
-            </div>
-          </div>
-        );
+        return <BookingsPanel />;
       case "profile":
         return (
           <ProfilePanel
