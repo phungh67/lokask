@@ -45,17 +45,17 @@ const ChatPanelHeader = ({ traveller, onScheduleCall }: ChatPanelHeaderProps) =>
 
       {/* Right: Action icons */}
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Phone className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
         <ScheduleCallDialog 
           travellerName={traveller.name} 
           onSchedule={onScheduleCall} 
         />
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>
       </div>
