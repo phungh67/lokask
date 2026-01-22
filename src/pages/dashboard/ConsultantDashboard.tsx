@@ -4,7 +4,8 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
-import { currentConsultant, mockConversations, DashboardConversation, DashboardConsultant } from "@/data/dashboardMockData";
+import { currentConsultant, mockConversations, DashboardConversation, DashboardConsultant, ScheduledCall } from "@/data/dashboardMockData";
+import { toast } from "@/hooks/use-toast";
 
 const ConsultantDashboard = () => {
   const [activeSection, setActiveSection] = useState<"inbox" | "bookings" | "profile">("inbox");
@@ -43,6 +44,73 @@ const ConsultantDashboard = () => {
     );
   };
 
+  const handleScheduleCall = (callData: Omit<ScheduledCall, "id" | "conversationId" | "createdAt">) => {
+    if (!activeConversationId) return;
+
+    const newCall: ScheduledCall = {
+      ...callData,
+      id: `call-${Date.now()}`,
+      conversationId: activeConversationId,
+      createdAt: new Date(),
+    };
+
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === activeConversationId) {
+          return {
+            ...conv,
+            scheduledCalls: [...(conv.scheduledCalls || []), newCall],
+            messages: [
+              ...conv.messages,
+              {
+                id: `msg-${Date.now()}`,
+                content: `Scheduled a ${callData.type} call`,
+                sender: "consultant" as const,
+                timestamp: new Date(),
+                type: "scheduled_call" as const,
+                scheduledCallData: newCall,
+              },
+            ],
+          };
+        }
+        return conv;
+      })
+    );
+
+    toast({
+      title: "Call scheduled!",
+      description: `${callData.type === "video" ? "Video" : "Voice"} call scheduled successfully.`,
+    });
+  };
+
+  const handleCancelCall = (callId: string) => {
+    if (!activeConversationId) return;
+
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === activeConversationId) {
+          return {
+            ...conv,
+            scheduledCalls: conv.scheduledCalls?.map(call =>
+              call.id === callId ? { ...call, status: "cancelled" as const } : call
+            ),
+            messages: conv.messages.map(msg =>
+              msg.scheduledCallData?.id === callId
+                ? { ...msg, scheduledCallData: { ...msg.scheduledCallData, status: "cancelled" as const } }
+                : msg
+            ),
+          };
+        }
+        return conv;
+      })
+    );
+
+    toast({
+      title: "Call cancelled",
+      description: "The scheduled call has been cancelled.",
+    });
+  };
+
   const renderMainContent = () => {
     switch (activeSection) {
       case "inbox":
@@ -56,6 +124,8 @@ const ConsultantDashboard = () => {
             <ChatPanel
               conversation={activeConversation}
               onSendMessage={handleSendMessage}
+              onScheduleCall={handleScheduleCall}
+              onCancelCall={handleCancelCall}
             />
           </>
         );

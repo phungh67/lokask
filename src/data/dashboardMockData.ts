@@ -1,5 +1,17 @@
 import { ConversationSummary } from "@/components/chat/types";
 
+// Scheduled Call interface
+export interface ScheduledCall {
+  id: string;
+  conversationId: string;
+  type: "video" | "voice";
+  scheduledAt: Date;
+  duration: number; // minutes (30, 45, 60)
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  createdAt: Date;
+  notes?: string;
+}
+
 export interface DashboardTraveller {
   id: string;
   name: string;
@@ -12,12 +24,13 @@ export interface DashboardMessage {
   content: string;
   sender: "traveller" | "consultant";
   timestamp: Date;
-  type: "text" | "image" | "location";
+  type: "text" | "image" | "location" | "scheduled_call";
   locationData?: {
     name: string;
     image: string;
     hashtags: string[];
   };
+  scheduledCallData?: ScheduledCall;
 }
 
 export interface DashboardConversation {
@@ -31,6 +44,7 @@ export interface DashboardConversation {
   timestamp: Date;
   messages: DashboardMessage[];
   summary: ConversationSummary;
+  scheduledCalls?: ScheduledCall[];
 }
 
 export interface DashboardConsultant {

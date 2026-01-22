@@ -1,13 +1,15 @@
 import { Phone, Video, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { DashboardTraveller } from "@/data/dashboardMockData";
+import { DashboardTraveller, ScheduledCall } from "@/data/dashboardMockData";
+import ScheduleCallDialog from "./chat/ScheduleCallDialog";
 
 interface ChatPanelHeaderProps {
   traveller: DashboardTraveller;
+  onScheduleCall: (callData: Omit<ScheduledCall, "id" | "conversationId" | "createdAt">) => void;
 }
 
-const ChatPanelHeader = ({ traveller }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = ({ traveller, onScheduleCall }: ChatPanelHeaderProps) => {
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -49,6 +51,10 @@ const ChatPanelHeader = ({ traveller }: ChatPanelHeaderProps) => {
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
+        <ScheduleCallDialog 
+          travellerName={traveller.name} 
+          onSchedule={onScheduleCall} 
+        />
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>
