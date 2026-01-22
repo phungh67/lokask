@@ -13,6 +13,8 @@ import ConsultantPage from "./pages/ConsultantPage";
 import BecomeLocal from "./pages/BecomeLocal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import SignupTraveller from "./pages/SignupTraveller";
+import SignupConsultant from "./pages/SignupConsultant";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/become-local" element={<BecomeLocal />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/signup/traveller" element={<SignupTraveller />} />
+            <Route path="/signup/consultant" element={<SignupConsultant />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
