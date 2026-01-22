@@ -107,6 +107,7 @@ const ConsultantCard = ({
         onLogin={() => navigate('/login')}
         onSignup={() => navigate('/signup')}
         onGoogleAuth={() => navigate('/login')}
+        onFacebookAuth={() => navigate('/login')}
       />
     </div>;
 };

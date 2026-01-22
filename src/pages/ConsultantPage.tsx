@@ -440,6 +440,7 @@ const ConsultantPage = () => {
         onLogin={() => navigate('/login')}
         onSignup={() => navigate('/signup')}
         onGoogleAuth={() => navigate('/login')}
+        onFacebookAuth={() => navigate('/login')}
       />
     </div>;
 };
