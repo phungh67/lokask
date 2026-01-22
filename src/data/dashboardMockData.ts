@@ -310,3 +310,208 @@ export const formatRelativeTime = (date: Date): string => {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 };
+
+// ============= BOOKINGS =============
+
+export interface BookingTraveller {
+  id: string;
+  name: string;
+  avatar: string;
+  location: string;
+  tripDates: {
+    start: Date;
+    end: Date;
+  };
+  timezone: string;
+}
+
+export interface Booking {
+  id: string;
+  traveller: BookingTraveller;
+  serviceType: "chat_only" | "video_call" | "voice_call" | "itinerary_review";
+  scheduledAt: Date;
+  duration: number;
+  consultantTimezone: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  price: number;
+  fees: number;
+  payout: number;
+  conversationId?: string;
+  createdAt: Date;
+  consultantNotes?: string[];
+  aiSummary?: string[];
+}
+
+export const mockBookings: Booking[] = [
+  {
+    id: "booking-1",
+    traveller: {
+      id: "emma-1",
+      name: "Emma",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+      location: "Rome",
+      tripDates: {
+        start: new Date("2024-04-20"),
+        end: new Date("2024-04-22"),
+      },
+      timezone: "GMT+1",
+    },
+    serviceType: "video_call",
+    scheduledAt: new Date("2024-04-21T09:00:00"),
+    duration: 45,
+    consultantTimezone: "CET",
+    status: "pending",
+    price: 15,
+    fees: 2,
+    payout: 13,
+    conversationId: "conv-3",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    consultantNotes: [
+      "Traveller loves local food",
+      "First time in Rome",
+      "Budget: $-$$$",
+    ],
+    aiSummary: [
+      "Budget-friendly, local, authentic spots",
+      "Recommend Testaccio area",
+      "Provide a list of 4 traditional trattorias",
+    ],
+  },
+  {
+    id: "booking-2",
+    traveller: {
+      id: "james-1",
+      name: "James",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+      location: "Barcelona",
+      tripDates: {
+        start: new Date("2024-04-25"),
+        end: new Date("2024-04-28"),
+      },
+      timezone: "GMT+2",
+    },
+    serviceType: "voice_call",
+    scheduledAt: new Date("2024-04-26T14:00:00"),
+    duration: 30,
+    consultantTimezone: "CET",
+    status: "confirmed",
+    price: 10,
+    fees: 1.5,
+    payout: 8.5,
+    conversationId: "conv-2",
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    consultantNotes: [
+      "Looking for nightlife recommendations",
+      "Interested in local music scene",
+    ],
+    aiSummary: [
+      "Nightlife and music focus",
+      "Recommend El Raval area",
+      "Jazz clubs and rooftop bars",
+    ],
+  },
+  {
+    id: "booking-3",
+    traveller: {
+      id: "sarah-2",
+      name: "Sarah",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
+      location: "Florence",
+      tripDates: {
+        start: new Date("2024-05-01"),
+        end: new Date("2024-05-05"),
+      },
+      timezone: "GMT+1",
+    },
+    serviceType: "itinerary_review",
+    scheduledAt: new Date("2024-04-28T11:00:00"),
+    duration: 60,
+    consultantTimezone: "CET",
+    status: "confirmed",
+    price: 25,
+    fees: 3,
+    payout: 22,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    consultantNotes: [
+      "Art history enthusiast",
+      "Wants museum tips",
+      "Avoid crowds",
+    ],
+    aiSummary: [
+      "Focus on Renaissance art",
+      "Early morning Uffizi visit",
+      "Lesser-known galleries",
+    ],
+  },
+  {
+    id: "booking-4",
+    traveller: {
+      id: "mike-2",
+      name: "Mike",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
+      location: "Venice",
+      tripDates: {
+        start: new Date("2024-03-15"),
+        end: new Date("2024-03-18"),
+      },
+      timezone: "GMT+1",
+    },
+    serviceType: "video_call",
+    scheduledAt: new Date("2024-03-16T10:00:00"),
+    duration: 45,
+    consultantTimezone: "CET",
+    status: "completed",
+    price: 15,
+    fees: 2,
+    payout: 13,
+    createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+    consultantNotes: [
+      "Honeymoon trip",
+      "Romantic restaurant suggestions",
+    ],
+    aiSummary: [
+      "Romantic Venice experience",
+      "Gondola recommendations",
+      "Hidden canals to explore",
+    ],
+  },
+  {
+    id: "booking-5",
+    traveller: {
+      id: "lisa-2",
+      name: "Lisa",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
+      location: "Milan",
+      tripDates: {
+        start: new Date("2024-04-10"),
+        end: new Date("2024-04-12"),
+      },
+      timezone: "GMT+1",
+    },
+    serviceType: "chat_only",
+    scheduledAt: new Date("2024-04-09T16:00:00"),
+    duration: 30,
+    consultantTimezone: "CET",
+    status: "cancelled",
+    price: 8,
+    fees: 1,
+    payout: 7,
+    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    consultantNotes: [
+      "Fashion week visit",
+      "Shopping recommendations",
+    ],
+    aiSummary: [
+      "Fashion and shopping focus",
+      "Designer outlets",
+      "Vintage stores in Navigli",
+    ],
+  },
+];
+
+export const serviceTypeLabels: Record<Booking["serviceType"], string> = {
+  chat_only: "Chat",
+  video_call: "Video",
+  voice_call: "Voice",
+  itinerary_review: "Itinerary",
+};
