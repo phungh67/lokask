@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-type ActionType = "ask" | "wishlist";
+type ActionType = "ask" | "wishlist" | "navbar-login" | "signup-traveller" | "signup-consultant";
 
 interface UseAuthPromptOptions {
   actionType: ActionType;
@@ -19,6 +19,12 @@ const getMessageForAction = (options: UseAuthPromptOptions): string => {
       return consultantName
         ? `Sign in to save ${consultantName} to your favorites and build your travel wishlist.`
         : "Sign in to save your favorite locals and access them later.";
+    case "navbar-login":
+      return "Sign in to unlock the best of Lokask";
+    case "signup-traveller":
+      return "Sign up as a Traveller to unlock the best of Lokask";
+    case "signup-consultant":
+      return "Sign up as a Consultant to share your local expertise";
     default:
       return "Please sign in to continue.";
   }
