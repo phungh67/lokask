@@ -1,0 +1,6 @@
+# ignore git
+.git
+
+# ignore ulities script
+scripts/
+

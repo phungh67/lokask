@@ -1,0 +1,143 @@
+package repository
+
+import (
+	"log"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+)
+
+type Conversation struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	TravelerID    uuid.UUID `db:"traveler_id" json:"traveler_id"`
+	ConsultantID  uuid.UUID `db:"consultant_id" json:"consultant_id"`
+	LastMessage   *string   `db:"last_message" json:"last_message"`
+	LastMessageAt time.Time `db:"last_message_at" json:"last_message_at"`
+
+	// Extra fields for UI (Joined via SQL)
+	// name for the one that you are communicated with
+	OtherUserName   string  `db:"other_user_name" json:"other_user_name"`
+	OtherUserAvatar *string `db:"other_user_avatar" json:"other_user_avatar"`
+}
+
+type Message struct {
+	ID             int       `db:"id" json:"id"`
+	ConversationID uuid.UUID `db:"conversation_id" json:"conversation_id"`
+	SenderID       uuid.UUID `db:"sender_id" json:"sender_id"`
+	Content        string    `db:"content" json:"content"`
+	CreatedAt      time.Time `db:"created_at" json:"created_at"`
+	// must have, othewise, error would be caused
+	IsRead bool `db:"is_read" json:"is_read"`
+	IsMe   bool `db:"-" json:"is_me"` // Helper for frontend
+}
+
+type ChatRepository struct {
+	DB *sqlx.DB
+}
+
+func NewChatRepository(db *sqlx.DB) *ChatRepository {
+	return &ChatRepository{DB: db}
+}
+
+// start or get existing Conversation
+func (r *ChatRepository) GetOrCreateConversation(travelerID uuid.UUID, consultantID uuid.UUID) (*Conversation, error) {
+	// check for existed
+	var conv Conversation
+	query := `SELECT id FROM conversations WHERE traveler_id = $1 AND consultant_id = $2`
+	err := r.DB.Get(&conv, query, travelerID, consultantID)
+
+	if err == nil {
+		return &conv, nil // Found it
+	}
+
+	// Create new
+	query = `INSERT INTO conversations (traveler_id, consultant_id) VALUES ($1, $2) RETURNING id`
+	err = r.DB.QueryRowx(query, travelerID, consultantID).Scan(&conv.ID)
+	return &conv, err
+}
+
+// create message method
+func (r *ChatRepository) CreateMessage(conversationID uuid.UUID, senderID uuid.UUID, content string) error {
+	tx, err := r.DB.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Insert Message
+	_, err = tx.Exec(`INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)`,
+		conversationID, senderID, content)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Update Conversation "Last Message" (for inbox sorting)
+	_, err = tx.Exec(`UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2`,
+		content, conversationID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// get message of chat
+func (r *ChatRepository) GetMessages(conversationID uuid.UUID) ([]Message, error) {
+	var msgs []Message
+	query := `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`
+	err := r.DB.Select(&msgs, query, conversationID)
+	return msgs, err
+}
+
+// check inbox
+func (r *ChatRepository) GetInbox(userID uuid.UUID) ([]Conversation, error) {
+	// must check the role of other person to determine
+	// traveler to consultant (User linked to Consultant)
+	// consultant to traveler
+
+	query := `
+        SELECT 
+            c.id, 
+            c.traveler_id,   -- <--- ADD THIS
+            c.consultant_id, -- <--- ADD THIS
+            c.last_message, 
+            c.last_message_at,
+            CASE 
+                WHEN c.traveler_id = $1 THEN u_cons.full_name 
+                ELSE u_trav.full_name 
+            END as other_user_name,
+            CASE 
+                WHEN c.traveler_id = $1 THEN u_cons.avatar_url 
+                ELSE u_trav.avatar_url 
+            END as other_user_avatar
+        FROM conversations c
+        JOIN users u_trav ON c.traveler_id = u_trav.id
+        JOIN consultants cons ON c.consultant_id = cons.id
+        JOIN users u_cons ON cons.user_id = u_cons.id
+        WHERE c.traveler_id = $1 OR cons.user_id = $1
+        ORDER BY c.last_message_at DESC
+    `
+	var convs []Conversation
+	err := r.DB.Select(&convs, query, userID)
+	return convs, err
+}
+
+// set message as "read"
+func (r *ChatRepository) MarkAsRead(conversationID uuid.UUID, readerID uuid.UUID) error {
+	query := `
+		UPDATE messages
+		SET is_read = TRUE
+		WHERE conversation_id = $1
+			AND sender_id != $2
+			AND is_read = FALSE	
+	`
+
+	_, err := r.DB.Exec(query, conversationID, readerID)
+	if err != nil {
+		log.Printf("[DB] Query error, detail: %v", err)
+		return err
+	}
+	return nil
+}

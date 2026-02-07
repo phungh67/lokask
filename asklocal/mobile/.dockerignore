@@ -1,0 +1,20 @@
+# mobile/.dockerignore
+
+# Ignore local build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Ignore Git files
+.git/
+.gitignore
+
+# Ignore IDE files
+.idea/
+.vscode/
+*.iml
+
+# Ignore dependency locks (Optional, but often safer to regen in Docker)
+# pubspec.lock
