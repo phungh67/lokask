@@ -29,12 +29,11 @@ func NewConsultantRepository(db *sqlx.DB) *ConsultantRepository {
 }
 
 func (r *ConsultantRepository) CreateConsultantTx(tx *sqlx.Tx, c *Consultant) error {
-	// create new consultant (by register)
 	query := `INSERT INTO consultants (user_id, city_id) VALUES ($1, $2) RETURNING id`
 	return tx.QueryRow(query, c.UserID, c.CityID).Scan(&c.ID)
 }
 
-// get consultant profile by ID, fetches city and user info
+// GetProfileByID fetches full profile including new fields (Quote, Cover, HelpedCount)
 func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID) (*domain.ConsultantProfile, error) {
 	profile := &domain.ConsultantProfile{}
 
@@ -44,9 +43,12 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 				u.full_name,
 				COALESCE(u.avatar_url, '') as avatar_url,
 				COALESCE(c.bio, '') as bio,
+				COALESCE(c.quote, '') as quote,         
+				COALESCE(c.cover_url, '') as cover_url, 
+				COALESCE(c.helped_count, 0) as helped_count,                        
 				COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate, 
-				c.rating_avg::FLOAT as rating_avg,
-				c.is_verified,
+				COALESCE(c.rating_avg, 0)::FLOAT as rating_avg,
+				COALESCE(c.is_verified, false) as is_verified,
 				ci.name as city_name,
 				COALESCE(ci.country_code, '') as country_code,
 				COALESCE(c.languages, 'English') as languages,
@@ -63,6 +65,12 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		return nil, fmt.Errorf("[ERROR][DB] Error fetching profile: %w", err)
 	}
 
+	// temp removal reviews field
+	// profile.Reviews = []domain.Review{}
+	profile.Tags = []string{}
+	profile.GalleryImages = []string{}
+
+	// 1. Fetch Reviews
 	var reviews []domain.Review
 	reviewQuery := `
 		SELECT 
@@ -79,70 +87,64 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		ORDER BY r.created_at DESC 
 		LIMIT 5
 	`
-
 	_ = r.DB.SelectContext(ctx, &reviews, reviewQuery, id)
+	// if reviews != nil {
+	// 	profile.Reviews = reviews
+	// }
 
-	if reviews == nil {
-		profile.Reviews = []domain.Review{}
-	} else {
-		profile.Reviews = reviews
-	}
-	// ------------------------------------------------
-
-	// fetching details of that consultant (hobbies, images,...)
-	var niches []string
-	nicheQuery := `
+	// 2. Fetch Tags (mapped from Niches table)
+	var tags []string
+	tagQuery := `
 			SELECT n.display_name
 			FROM consultant_niches cn
 			JOIN niches n ON cn.niche_id = n.id
 			WHERE cn.consultant_id = $1
 	`
+	_ = r.DB.SelectContext(ctx, &tags, tagQuery, id)
 
-	err = r.DB.SelectContext(ctx, &niches, nicheQuery, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if niches == nil {
-		profile.Niches = []string{}
+	if tags != nil {
+		profile.Tags = tags
+		// Populate singular 'Tag' for Compact Card
+		if len(tags) > 0 {
+			profile.Tag = tags[0]
+		} else {
+			profile.Tag = "Local"
+		}
 	} else {
-		profile.Niches = niches
+		profile.Tag = "Local"
 	}
 
-	// fetch image
+	// 3. Fetch Images (Map to GalleryImages)
 	var images []string
 	imgQuery := `SELECT image_url FROM portfolio_items WHERE consultant_id = $1 LIMIT 6`
-	err = r.DB.SelectContext(ctx, &images, imgQuery, id)
+	_ = r.DB.SelectContext(ctx, &images, imgQuery, id)
 
-	if err != nil {
-		return nil, err
+	if images != nil {
+		profile.GalleryImages = images
 	}
 
-	if images == nil {
-		profile.Portfolio = []string{}
-	} else {
-		profile.Portfolio = images
-	}
-
+	// 4. Calculate Badges
 	profile.Badges = calculateBadges(profile)
 
 	return profile, nil
 }
 
-// get a user by userID (and this case applies for an user also a consultant)
+// GetProfileByUserID fetches profile by UserID
 func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uuid.UUID) (*domain.ConsultantProfile, error) {
 	profile := &domain.ConsultantProfile{}
 
-	// Query is almost identical to GetProfileByID, but WHERE is c.user_id
 	query := `
 			SELECT
 				c.id,
 				u.full_name,
 				COALESCE(u.avatar_url, '') as avatar_url,
 				COALESCE(c.bio, '') as bio,
+				COALESCE(c.quote, '') as quote,         
+				COALESCE(c.cover_url, '') as cover_url, 
+				COALESCE(c.helped_count, 0) as helped_count,                         
 				COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate, 
-				c.rating_avg::FLOAT as rating_avg,
-				c.is_verified,
+				COALESCE(c.rating_avg, 0)::FLOAT as rating_avg,
+				COALESCE(c.is_verified, false) as is_verified,
 				ci.name as city_name,
 				COALESCE(ci.country_code, '') as country_code,
 				COALESCE(c.languages, 'English') as languages,
@@ -156,45 +158,54 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 
 	err := r.DB.GetContext(ctx, profile, query, userID)
 	if err != nil {
-		return nil, err // Returns error if user is NOT a consultant
+		return nil, err
 	}
 
-	// --- Initialize empty slices so JSON doesn't return "null" ---
-	profile.Reviews = []domain.Review{}
-	profile.Niches = []string{}
-	profile.Portfolio = []string{}
+	// Initialize slices
+	// profile.Reviews = []domain.Review{}
+	profile.Tags = []string{}
+	profile.GalleryImages = []string{}
 
-	// --- Optional: Fetch Extra Data (Niches, etc.) ---
-	// Since we now have profile.ID, we can reuse the logic to fetch niches
-	var niches []string
-	nicheQuery := `
+	// Fetch Tags (using profile.ID retrieved from above query)
+	var tags []string
+	tagQuery := `
 			SELECT n.display_name
 			FROM consultant_niches cn
 			JOIN niches n ON cn.niche_id = n.id
 			WHERE cn.consultant_id = $1
 	`
-	_ = r.DB.SelectContext(ctx, &niches, nicheQuery, profile.ID)
-	if niches != nil {
-		profile.Niches = niches
+	_ = r.DB.SelectContext(ctx, &tags, tagQuery, profile.ID)
+
+	if tags != nil {
+		profile.Tags = tags
+		if len(tags) > 0 {
+			profile.Tag = tags[0]
+		} else {
+			profile.Tag = "Local"
+		}
+	} else {
+		profile.Tag = "Local"
 	}
 
-	// Calculate Badges
 	profile.Badges = calculateBadges(profile)
-
 	return profile, nil
 }
 
-// query all existings consultants
+// ListConsultants fetches list for Explore page
 func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string) ([]domain.ConsultantProfile, error) {
+	// 🟢 Updated Query
 	sql := `
 		SELECT 
 			c.id, 
 			u.full_name, 
 			COALESCE(u.avatar_url, '') as avatar_url,
 			COALESCE(c.bio, '') as bio,
+			COALESCE(c.quote, '') as quote,        
+			COALESCE(c.cover_url, '') as cover_url, 
+			COALESCE(c.helped_count, 0) as helped_count,                        
 			COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate,
-			c.rating_avg::FLOAT as rating_avg, 
-			c.is_verified, 
+			COALESCE(c.rating_avg, 0)::FLOAT as rating_avg, 
+			COALESCE(c.is_verified, false) as is_verified, 
 			ci.name as city_name, 
 			COALESCE(ci.country_code, '') as country_code,
 			c.created_at
@@ -207,7 +218,6 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	args := []interface{}{}
 	argId := 1
 
-	// filtered with cities (e.g. Rome, Paris,...)
 	if city != "" {
 		sql += fmt.Sprintf(" AND ci.name ILIKE $%d", argId)
 		args = append(args, "%"+city+"%")
@@ -215,8 +225,6 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	}
 
 	if country != "" {
-		// approach: assumed that city is referenced with city code (2 characters)
-		// eg. Thailan = TH
 		sql += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
 		args = append(args, country)
 		argId++
@@ -228,39 +236,45 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var consultants []domain.ConsultantProfile
 	for rows.Next() {
 		var p domain.ConsultantProfile
 		if err := rows.StructScan(&p); err != nil {
-			return nil, err
+			return nil, err // If this fails, check if struct fields match DB columns
 		}
 
-		var niches []string
-		nicheQuery := `
+		// 🟢 Fix: Fetch tags for EACH consultant in the list
+		// This is N+1 query, but for LIMIT 20 it is acceptable for now.
+		var tags []string
+		tagQuery := `
 			SELECT n.display_name 
 			FROM consultant_niches cn
 			JOIN niches n ON cn.niche_id = n.id
 			WHERE cn.consultant_id = $1
 		`
-		_ = r.DB.SelectContext(ctx, &niches, nicheQuery, p.ID)
+		_ = r.DB.SelectContext(ctx, &tags, tagQuery, p.ID)
 
-		if niches == nil {
-			p.Niches = []string{}
+		if tags == nil {
+			p.Tags = []string{}
+			p.Tag = "Local"
 		} else {
-			p.Niches = niches
+			p.Tags = tags
+			if len(tags) > 0 {
+				p.Tag = tags[0]
+			} else {
+				p.Tag = "Local"
+			}
 		}
-		p.Portfolio = []string{}
 
+		p.GalleryImages = []string{} // Initialize empty
 		consultants = append(consultants, p)
 	}
 
 	return consultants, nil
 }
 
-// ListNiches fetches all available filter options
 func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, error) {
 	var niches []domain.Niche
 	query := `SELECT id, slug, display_name FROM niches ORDER BY display_name ASC`
@@ -272,82 +286,40 @@ func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, 
 	return niches, nil
 }
 
-// calculated internal properties to give badges
+// calculateBadges logic remains largely the same, but uses Tags
 func calculateBadges(profile *domain.ConsultantProfile) []domain.Badge {
 	var badges []domain.Badge
 
+	// Tenure
 	yearsActive := time.Since(profile.JoinedAt).Hours() / 24 / 365
-
-	// rate seniority
 	if yearsActive > 3 {
-		badges = append(badges, domain.Badge{
-			ID:          "tenure_gold",
-			IconName:    "calendar_today",
-			Title:       fmt.Sprintf("%.0f+ Years on LokaAsk", yearsActive),
-			Description: fmt.Sprintf("Member since %d. Experienced local guide.", profile.JoinedAt.Year()),
-		})
-	} else if yearsActive >= 1 {
-		badges = append(badges, domain.Badge{
-			ID:          "tenure_silver",
-			IconName:    "calendar_today",
-			Title:       "Rising Talent",
-			Description: fmt.Sprintf("Joined in %d. Building a strong reputation.", profile.JoinedAt.Year()),
-		})
-	} else {
-		badges = append(badges, domain.Badge{
-			ID:          "new_member",
-			IconName:    "fiber_new",
-			Title:       "New Local",
-			Description: "Just joined! Be one of the first to book.",
-		})
+		badges = append(badges, domain.Badge{ID: "tenure_gold", IconName: "calendar_today", Title: fmt.Sprintf("%.0f+ Years", yearsActive), Description: "Experienced local."})
 	}
 
-	// rating logic (based on reviewer)
+	// Rating
 	if profile.Rating >= 4.8 {
-		badges = append(badges, domain.Badge{
-			ID:          "local_master",
-			IconName:    "emoji_events",
-			Title:       "Local Master",
-			Description: "Top 5% of locals based on traveler ratings.",
-		})
-	} else if profile.Rating >= 4.5 {
-		badges = append(badges, domain.Badge{
-			ID:          "traveler_fav",
-			IconName:    "thumb_up",
-			Title:       "Traveler Favorite",
-			Description: "Consistently high ratings from guests.",
-		})
+		badges = append(badges, domain.Badge{ID: "local_master", IconName: "emoji_events", Title: "Local Master", Description: "Top 5% of locals."})
 	}
 
-	// verification Logic
-	if profile.IsVerified {
-		badges = append(badges, domain.Badge{
-			ID:          "verified_identity",
-			IconName:    "fingerprint",
-			Title:       "Identity Verified",
-			Description: "Personal info confirmed. You're in safe hands.",
-		})
+	// Verification
+	if profile.IsHighlyTrusted {
+		badges = append(badges, domain.Badge{ID: "verified_identity", IconName: "fingerprint", Title: "Verified", Description: "Identity confirmed."})
 	}
 
-	// expert Logic (if they have niches)
-	if len(profile.Niches) > 0 {
+	// Expert (Using Tags)
+	if len(profile.Tags) > 0 {
 		badges = append(badges, domain.Badge{
 			ID:          "expert",
 			IconName:    "verified_user",
 			Title:       "Certified Expert",
-			Description: fmt.Sprintf("Expertise in %s", profile.Niches[0]),
+			Description: fmt.Sprintf("Expertise in %s", profile.Tags[0]),
 		})
 	}
 
-	// response Time Logic
+	// Response Time
 	if strings.Contains(strings.ToLower(profile.ResponseTime), "hour") ||
 		strings.Contains(strings.ToLower(profile.ResponseTime), "instant") {
-		badges = append(badges, domain.Badge{
-			ID:          "quick_responder",
-			IconName:    "bolt",
-			Title:       "Quick Responder",
-			Description: "Usually replies within 1 hour.",
-		})
+		badges = append(badges, domain.Badge{ID: "quick_responder", IconName: "bolt", Title: "Quick Responder", Description: "Replies fast."})
 	}
 
 	return badges

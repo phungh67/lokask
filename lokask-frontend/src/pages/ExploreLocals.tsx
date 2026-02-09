@@ -3,13 +3,27 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
+import { useQuery } from "@tanstack/react-query";
+import { getConsultants } from "@/lib/api";
+import { Consultant } from "@/types/consultant";
 import { consultants, whoFilterOptions } from "@/data/mockData";
+
+// for loading content
+import { Loader2 } from "lucide-react";
 
 const ExploreLocals = () => {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
+  // fetch real data from consultant data type
+  const { data: consultants = [], isLoading, error } = useQuery({
+    queryKey: ["consultants", "all"],
+    queryFn: () => getConsultants(),
+  });
+
   const filteredConsultants = selectedFilter
-    ? consultants.filter((c) => c.tag.toLowerCase().includes(selectedFilter.toLowerCase()))
+    ? consultants.filter((c: Consultant) => 
+        c.tags && c.tags.some(tag => tag.toLowerCase() === selectedFilter.toLowerCase())
+      )
     : consultants;
 
   return (
@@ -28,11 +42,10 @@ const ExploreLocals = () => {
           <div className="flex flex-wrap gap-3 mb-10">
             <button
               onClick={() => setSelectedFilter(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                !selectedFilter
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!selectedFilter
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+                }`}
             >
               All
             </button>
@@ -40,16 +53,29 @@ const ExploreLocals = () => {
               <button
                 key={option}
                 onClick={() => setSelectedFilter(option)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedFilter === option
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedFilter === option
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                  }`}
               >
                 {option}
               </button>
             ))}
           </div>
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-16 text-red-500">
+              Failed to load locals. Please try again later.
+            </div>
+          )}
 
           {/* Consultants Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -58,7 +84,8 @@ const ExploreLocals = () => {
             ))}
           </div>
 
-          {filteredConsultants.length === 0 && (
+          {/* Empty State */}
+          {!isLoading && !error && filteredConsultants.length === 0 && (
             <div className="text-center py-16">
               <p className="text-muted-foreground">No locals found for this filter.</p>
             </div>
