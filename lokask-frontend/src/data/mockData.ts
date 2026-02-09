@@ -16,6 +16,26 @@ export interface Consultant {
   galleryImages?: string[];
 }
 
+// top local to test Jane local
+export const topLocals = [
+  {
+    id: "jane-1",
+    name: "Jane Local",
+    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jane", // Or your local image
+    coverUrl: "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=400&q=80",
+    bio: "I know every coffee shop in the city.",
+    quote: "Live like a local, not a tourist.",
+    rating: 5.0,
+    helpedCount: 150,
+    isHighlyTrusted: true,
+    tag: "quick",
+    tags: ["Coffee", "Photography"],
+    city: "Heraklion",
+    country: "Greece"
+  },
+  // ... add other top locals (Alessandro, Sakura, etc.) here
+];
+
 // Gallery images by city for consultants
 const cityGalleryImages: Record<string, string[]> = {
   "Rome": [

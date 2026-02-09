@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Star, Heart, MessageCircleQuestion } from "lucide-react";
-import { Consultant } from "@/data/mockData";
+// import { Consultant } from "@/data/mockData";
+import { Consultant } from "@/types/consultant";
 import { Button } from "@/components/ui/button";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";

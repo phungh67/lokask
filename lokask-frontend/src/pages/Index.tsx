@@ -5,7 +5,7 @@ import LocalsCarousel from "@/components/LocalsCarousel";
 import IdeasGrid from "@/components/IdeasGrid";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import { thailandConsultants, parisConsultants } from "@/data/mockData";
+import { thailandConsultants, parisConsultants, topLocals } from "@/data/mockData";
 
 const Index = () => {
   return (
@@ -14,6 +14,10 @@ const Index = () => {
       <main>
         <HeroSection />
         <DestinationGrid />
+        <LocalsCarousel
+          title="Top locals travellers trust"
+          consultants={topLocals}
+        />
         <LocalsCarousel title="Wonderful locals in Thailand" consultants={thailandConsultants} mostAskedLocalId="th-3" />
         <LocalsCarousel title="Most asked local in Paris" consultants={parisConsultants} showMostAskedBadge={true} />
         <IdeasGrid />

@@ -1,4 +1,5 @@
 import { ConversationSummary } from "@/components/chat/types";
+import { Consultant } from "@/types/consultant";
 
 // Scheduled Call interface
 export interface ScheduledCall {
@@ -46,6 +47,23 @@ export interface DashboardConversation {
   summary: ConversationSummary;
   scheduledCalls?: ScheduledCall[];
 }
+
+export const mockConsultants: Consultant[] = [
+  {
+    id: "uuid-1",
+    name: "Jane Local",
+    avatarUrl: "/avatars/jane.jpg",
+    coverUrl: "/covers/paris.jpg",
+    bio: "Expert in hidden gems...",
+    quote: "Paris is not just the Eiffel Tower.",
+    rating: 4.9,
+    helpedCount: 120,
+    isHighlyTrusted: true,
+    tag: "quick",
+    tags: ["Foodie", "History"], // Array
+    city: "Paris",
+  },  
+]
 
 export interface DashboardConsultant {
   id: string;

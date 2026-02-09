@@ -9,29 +9,40 @@ import (
 // consultant object
 type ConsultantProfile struct {
 	// basic data for a consultant profile
-	ID         uuid.UUID `json:"id" db:"id"`
-	FullName   string    `json:"full_name" db:"full_name"`
-	AvatarURL  string    `json:"avatar_url" db:"avatar_url"`
-	Bio        string    `json:"bio" db:"bio"`
-	HourlyRate float64   `json:"hourly_rate" db:"hourly_rate"`
-	Rating     float64   `json:"rating" db:"rating_avg"`
-	IsVerified bool      `json:"is_verified" db:"is_verified"`
+	// ID and basic info
+	ID   uuid.UUID `json:"id" db:"id"`
+	Name string    `json:"full_name" db:"full_name"`
+
+	// media file, avatar,...
+	AvatarURL     string   `json:"avatarUrl" db:"avatar_url"`
+	CoverURL      string   `json:"coverUrl" db:"cover_url"`
+	GalleryImages []string `json:"galleryImages,omitempty" db:"-"`
+
+	// content
+	Bio   string `json:"bio" db:"bio"`
+	Quote string `json:"quote" db:"quote"`
+
+	// Statics
+	Rating      float64 `json:"rating" db:"rating_avg"`
+	HelpedCount int     `json:"helpedCount" db:"helped_count"`
+
+	// verification
+	IsHighlyTrusted bool    `json:"isHighlyTrusted" db:"is_verified"`
+	HourlyRate      float64 `json:"hourly_rate" db:"hourly_rate"`
 
 	// location infor
 	City    string `json:"city" db:"city_name"`
-	Country string `json:"country" db:"country_code"`
+	Country string `json:"country,omitempty" db:"country_code"`
 
-	// more fields
-	Languages    string `json:"languages" db:"languages"`
-	ResponseTime string `json:"response_time" db:"response_time"`
+	// tags/niches
+	Tag  string   `json:"tag" db:"-"`
+	Tags []string `json:"tags" db:"-"`
 
-	Badges []Badge `json:"badges"`
-
-	// character's field
-	Reviews   []Review  `json:"reviews"`
-	Niches    []string  `json:"niches"`    // e.g. ["Foodie", "History"]
-	Portfolio []string  `json:"portfolio"` // Array of Image URLs
-	JoinedAt  time.Time `json:"joined_at" db:"created_at"`
+	// timestamp and extra information
+	Languages    []string  `json:"languages,omitempty" db:"-"`
+	ResponseTime string    `json:"responseTime,omitempty" db:"response_time"`
+	JoinedAt     time.Time `json:"joinedAt" db:"created_at"`
+	Badges       []Badge   `json:"badges"`
 }
 
 // for mapping the review to consultant (e.g review from previous clients)
