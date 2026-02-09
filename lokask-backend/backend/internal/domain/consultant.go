@@ -11,7 +11,7 @@ type ConsultantProfile struct {
 	// basic data for a consultant profile
 	// ID and basic info
 	ID   uuid.UUID `json:"id" db:"id"`
-	Name string    `json:"full_name" db:"full_name"`
+	Name string    `json:"name" db:"full_name"`
 
 	// media file, avatar,...
 	AvatarURL     string   `json:"avatarUrl" db:"avatar_url"`
