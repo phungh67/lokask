@@ -58,3 +58,15 @@ export async function getConsultantById(id:string): Promise<Consultant>{
         tag: data.tags && data.tags.length > 0 ? data.tags[0]: "Local",
     };
 }
+
+// get niches (tags)
+export interface Niche {
+  id: number;
+  slug: string;
+  display_name: string; // matches Go JSON tag "display_name"
+}
+
+export async function getNiches(): Promise<Niche[]> {
+  const data = await fetchJson<Niche[]>("/niches"); // Assumes endpoint is /api/v1/niches
+  return data || [];
+}

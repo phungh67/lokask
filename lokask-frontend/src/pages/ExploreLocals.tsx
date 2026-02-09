@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/api";
+import { getConsultants, Niche, getNiches } from "@/lib/api";
 import { Consultant } from "@/types/consultant";
 import { consultants, whoFilterOptions } from "@/data/mockData";
 
@@ -15,16 +15,25 @@ const ExploreLocals = () => {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   // fetch real data from consultant data type
-  const { data: consultants = [], isLoading, error } = useQuery({
+  const { data: consultants = [], isLoading: loadingConsultants, error: errorConsultants } = useQuery({
     queryKey: ["consultants", "all"],
     queryFn: () => getConsultants(),
   });
 
+  // fetch real niches (tags) from database
+  const { data: niches = [], isLoading: loadingNiches } = useQuery({
+    queryKey: ["niches"],
+    queryFn: () => getNiches(),
+  });
+
   const filteredConsultants = selectedFilter
-    ? consultants.filter((c: Consultant) => 
-        c.tags && c.tags.some(tag => tag.toLowerCase() === selectedFilter.toLowerCase())
-      )
+    ? consultants.filter((c: Consultant) =>
+      c.tags && c.tags.some(tag => tag.toLowerCase() === selectedFilter.toLowerCase())
+    )
     : consultants;
+
+  const isLoading = loadingConsultants || loadingNiches;
+  const error = errorConsultants;
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,22 +52,24 @@ const ExploreLocals = () => {
             <button
               onClick={() => setSelectedFilter(null)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!selectedFilter
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
             >
               All
             </button>
-            {whoFilterOptions.map((option) => (
+
+            {/* dynamic Filter Buttons */}
+            {niches.map((n: Niche) => (
               <button
-                key={option}
-                onClick={() => setSelectedFilter(option)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedFilter === option
+                key={n.id}
+                onClick={() => setSelectedFilter(n.display_name)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedFilter === n.display_name
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
               >
-                {option}
+                {n.display_name}
               </button>
             ))}
           </div>

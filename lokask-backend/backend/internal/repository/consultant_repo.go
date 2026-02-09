@@ -277,12 +277,27 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 
 func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, error) {
 	var niches []domain.Niche
-	query := `SELECT id, slug, display_name FROM niches ORDER BY display_name ASC`
+	query := `
+        SELECT 
+            n.id, 
+            n.slug, 
+            n.display_name 
+        FROM niches n
+        JOIN consultant_niches cn ON n.id = cn.niche_id
+        GROUP BY n.id, n.slug, n.display_name
+        ORDER BY COUNT(cn.consultant_id) DESC, n.display_name ASC
+    `
 
 	err := r.DB.SelectContext(ctx, &niches, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing niches: %w", err)
 	}
+
+	// handle empty result(s)
+	if niches == nil {
+		return []domain.Niche{}, nil
+	}
+
 	return niches, nil
 }
 
