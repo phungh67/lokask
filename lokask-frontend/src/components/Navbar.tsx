@@ -24,8 +24,10 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  return <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft">
-      <div className="container mx-auto px-6">
+  return (
+    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft w-full border-b border-border/40">
+      {/* Replace "container" with fluid max-width logic */}
+      <div className="w-full max-w-[2400px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
@@ -113,7 +115,8 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && <div className="md:hidden py-4 border-t border-border animate-fade-in">
+        {isOpen && (
+          <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
               <Link to="/wishlist" className="flex items-center gap-3 text-sm font-medium text-foreground/80 hover:text-foreground py-2" onClick={() => setIsOpen(false)}>
                 <Heart className="w-5 h-5" />
@@ -153,7 +156,8 @@ const Navbar = () => {
                 </button>
               </div>
             </div>
-          </div>}
+          </div>
+        )}
 
         {/* Auth Dialog */}
         <AuthPromptDialog
@@ -166,6 +170,8 @@ const Navbar = () => {
           onFacebookAuth={() => console.log("Facebook auth")}
         />
       </div>
-    </nav>;
+    </nav>
+  );
 };
+
 export default Navbar;

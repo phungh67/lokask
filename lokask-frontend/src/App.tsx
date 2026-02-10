@@ -17,6 +17,7 @@ import SignupTraveller from "./pages/SignupTraveller";
 import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
 import NotFound from "./pages/NotFound";
+import Layout from "./components/Layout"; // 🟢 Ensure this is imported
 
 const queryClient = new QueryClient();
 
@@ -28,18 +29,24 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/explore-locals" element={<ExploreLocals />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/destinations/:slug" element={<DestinationPage />} />
-            <Route path="/consultants/:id" element={<ConsultantPage />} />
-            <Route path="/become-local" element={<BecomeLocal />} />
+            {/* Public Pages */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/explore-locals" element={<ExploreLocals />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/destinations/:slug" element={<DestinationPage />} />
+              <Route path="/consultants/:id" element={<ConsultantPage />} />
+              <Route path="/become-local" element={<BecomeLocal />} />
+            </Route>
+
+            {/* Auth & Dashboard */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signup/traveller" element={<SignupTraveller />} />
             <Route path="/signup/consultant" element={<SignupConsultant />} />
             <Route path="/dashboard" element={<ConsultantDashboard />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            
+            {/* 404 Page */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
