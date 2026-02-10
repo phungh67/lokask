@@ -193,11 +193,13 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 
 // ListConsultants fetches list for Explore page
 func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string) ([]domain.ConsultantProfile, error) {
-	// 🟢 Updated Query
+	// updated Query #1: reflect new React FrontEnd
+	// updated Query #2: using short name for smarter display
 	sql := `
 		SELECT 
 			c.id, 
 			u.full_name, 
+			COALESCE(NULLIF(u.alias, ''), SPLIT_PART(u.full_name, ' ', 1)) as display_name,
 			COALESCE(u.avatar_url, '') as avatar_url,
 			COALESCE(c.bio, '') as bio,
 			COALESCE(c.quote, '') as quote,        
@@ -245,7 +247,7 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 			return nil, err // If this fails, check if struct fields match DB columns
 		}
 
-		// 🟢 Fix: Fetch tags for EACH consultant in the list
+		// Fetch tags for EACH consultant in the list
 		// This is N+1 query, but for LIMIT 20 it is acceptable for now.
 		var tags []string
 		tagQuery := `

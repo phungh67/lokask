@@ -1,6 +1,7 @@
 export interface Consultant {
   id: string;
-  name: string;
+  name: string; // full name
+  displayName: string; // display name
   city: string;
   country: string;
   tag: string;           // Used in the compact card
@@ -10,7 +11,7 @@ export interface Consultant {
   helpedCount: number;
   avatarUrl: string;
   coverUrl: string;
-  
+
   // Optional fields (matching the ? in your interface)
   isHighlyTrusted?: boolean;
   bio?: string;

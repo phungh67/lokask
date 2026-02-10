@@ -13,6 +13,9 @@ type ConsultantProfile struct {
 	ID   uuid.UUID `json:"id" db:"id"`
 	Name string    `json:"name" db:"full_name"`
 
+	// for better display
+	DisplayName string `json:"displayName" db:"display_name"`
+
 	// media file, avatar,...
 	AvatarURL     string   `json:"avatarUrl" db:"avatar_url"`
 	CoverURL      string   `json:"coverUrl" db:"cover_url"`

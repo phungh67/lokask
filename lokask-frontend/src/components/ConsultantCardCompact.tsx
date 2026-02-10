@@ -1,6 +1,6 @@
 import { Star, Heart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import type { Consultant } from "@/data/mockData";
+import type { Consultant } from "@/types/consultant";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";
 
@@ -33,7 +33,8 @@ const ConsultantCardCompact = ({
         {/* Name with Wishlist */}
         <div className="flex items-center justify-between w-full gap-2">
           <h3 className="font-bold text-[18px] text-foreground leading-tight font-sans">
-            {consultant.name}
+            {/* logic to only display short name, falls back to full name if missing */}
+            {consultant.displayName || consultant.name}
           </h3>
           <button 
             className="p-1 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
