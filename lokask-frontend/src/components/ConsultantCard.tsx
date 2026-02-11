@@ -18,10 +18,9 @@ const ConsultantCard = ({
   const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
 
   return (
-    // 🟢 Fix 1: Added 'h-full' and 'flex flex-col' to stretch card
     <div className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 w-full max-w-[280px] cursor-pointer group h-full flex flex-col">
       
-      {/* Badge Logic (Unchanged) */}
+      {/* Badge Logic */}
       {showMostAskedBadge ? (
         <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-[#F2A93B] text-white rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-md z-10">
           <MessageCircleQuestion className="w-3 h-3" />
@@ -51,11 +50,10 @@ const ConsultantCard = ({
       <div className="mb-2 text-center">
         <div className="flex items-center justify-center gap-2 relative">
           <h3 className="font-bold text-xl text-foreground font-sans truncate px-4">
-            {/* 🟢 Fix 2: Use Display Name */}
             {consultant.displayName || consultant.name}
           </h3>
           
-          {/* Heart Button Positioned Absolute to right of name area */}
+          {/* Heart Button */}
           <button 
             className="absolute right-0 p-1.5 rounded-full hover:bg-gray-100 transition-all"
             onClick={(e) => {
@@ -70,14 +68,14 @@ const ConsultantCard = ({
         <p className="text-sm text-muted-foreground">{consultant.city}</p>
       </div>
 
-      {/* 🟢 Fix 3: Fixed Height for Quote (Prevents jumping) */}
+      {/* Quote */}
       <div className="min-h-[60px] flex items-center justify-center mb-4">
         <p className="text-sm text-muted-foreground italic text-center line-clamp-3">
           "{consultant.quote}"
         </p>
       </div>
 
-      {/* 🟢 Fix 4: Fixed Height for Tags (Reserves space even if empty) */}
+      {/* Tags */}
       <div className="h-[32px] mb-4 flex justify-center">
         {consultant.tags && consultant.tags[0] && (
           <span className={`rounded-full px-3 py-1 text-xs inline-block ${
@@ -92,7 +90,7 @@ const ConsultantCard = ({
         )}
       </div>
 
-      {/* Rating Stats - Pushed to bottom */}
+      {/* Rating Stats */}
       <div className="mt-auto">
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1">
@@ -110,14 +108,11 @@ const ConsultantCard = ({
         </Link>
       </div>
 
+      {/* 🟢 FIXED: Removed obsolete props (onLogin, onSignup, etc.) */}
       <AuthPromptDialog
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
-        onLogin={() => navigate('/login')}
-        onSignup={() => navigate('/signup')}
-        onGoogleAuth={() => navigate('/login')}
-        onFacebookAuth={() => navigate('/login')}
       />
     </div>
   );

@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/config"
 	"asklocal/internal/repository"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -33,7 +34,8 @@ type RegisterRequest struct {
 	Role string `json:"role"` // Expected: "traveler" or "consultant"
 
 	// Required ONLY if Role == "consultant"
-	CityID int `json:"city_id"`
+	CityID   int    `json:"city_id"`
+	CityName string `json:"city"`
 }
 
 // a login request
@@ -52,8 +54,18 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	// validation logic
-	if req.Role == "consultant" && req.CityID == 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "Consultants must select a city"})
+	if req.Role == "consultant" {
+		if req.CityName == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Consultants must provide a city name"})
+		}
+
+		// Look up the ID based on the name provided in the form
+		err := h.DB.Get(&req.CityID, "SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1", req.CityName)
+		if err == sql.ErrNoRows {
+			return c.Status(400).JSON(fiber.Map{"error": "City not supported yet. Please choose a supported city."})
+		} else if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Database error checking city"})
+		}
 	}
 
 	// begin transaction
