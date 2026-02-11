@@ -45,7 +45,7 @@ const Index = () => {
         <LocalsCarousel
           title="Wonderful locals in Thailand"
           consultants={thailandConsultants}
-          mostAskedLocalId={thailandConsultants[0]?.id}
+          showMostAskedBadge={true}
         />
       )}
 
@@ -57,7 +57,6 @@ const Index = () => {
         <LocalsCarousel
           title="Wonderful locals in Paris"
           consultants={parisConsultants}
-          mostAskedLocalId={parisConsultants[0]?.id}
           showMostAskedBadge={true}
         />
       )}

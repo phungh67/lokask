@@ -31,13 +31,19 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 interface ConsultantFilters {
   city?: string;
   country?: string;
+  page?: number;
 }
 
 // endpoint for fetching the consultant
-export async function getConsultants(filters?: { city?: string, country?: string, }): Promise<Consultant[]> {
+export async function getConsultants(filters?: {
+    page?: number; city?: string, country?: string, 
+}): Promise<Consultant[]> {
     const params = new URLSearchParams();
     if (filters?.city) params.append("city", filters.city);
     if (filters?.country) params.append("country", filters.country);
+
+    // limit page
+    if (filters?.page) params.append("page", filters.page.toString());
 
     // returned result
     const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);

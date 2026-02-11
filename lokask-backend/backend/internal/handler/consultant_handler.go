@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
 	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -37,7 +38,13 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 	cityFilter := c.Query("city") // Reads ?city=... from URL
 	countryFilter := c.Query("country")
 
-	consultants, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter)
+	pageStr := c.Query("page")
+	page := 1
+	if val, err := strconv.Atoi(pageStr); err == nil && val > 0 {
+		page = val
+	}
+
+	consultants, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, page, 12)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

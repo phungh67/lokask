@@ -192,7 +192,16 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 }
 
 // ListConsultants fetches list for Explore page
-func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string) ([]domain.ConsultantProfile, error) {
+func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string, page int, limit int) ([]domain.ConsultantProfile, error) {
+	// limit on display
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 12
+	} // Default to 12 (divides nicely by 2,3,4,6 cols)
+	offset := (page - 1) * limit
+
 	// updated Query #1: reflect new React FrontEnd
 	// updated Query #2: using short name for smarter display
 	sql := `
@@ -227,14 +236,13 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	}
 
 	if country != "" {
-		// We assume input is Country Code (like 'TH') for simplicity,
-		// but you can join a 'countries' table if you want full names later.
-		sqlQuery += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
+		sql += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
 		args = append(args, country)
 		argId++
 	}
 
-	sql += " ORDER BY c.rating_avg DESC LIMIT 20"
+	sql += fmt.Sprintf(" ORDER BY c.rating_avg DESC, c.id ASC LIMIT $%d OFFSET $%d", argId, argId+1)
+	args = append(args, limit, offset)
 
 	rows, err := r.DB.QueryxContext(ctx, sql, args...)
 	if err != nil {
