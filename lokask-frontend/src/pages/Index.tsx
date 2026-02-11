@@ -19,6 +19,16 @@ const Index = () => {
     queryFn: () => getConsultants(),
   });
 
+  const { data: thailandConsultants = [], isLoading: loadingThai } = useQuery({
+    queryKey: ["consultants", "thailand"], // Unique key
+    queryFn: () => getConsultants({ country: "TH" }), // Pass filter
+  });
+
+  const { data: parisConsultants = [], isLoading: LoadingParis } = useQuery({
+    queryKey: ["consultants", "paris"], // Unique key
+    queryFn: () => getConsultants({ country: "FR" }), // Pass filter
+  });
+
   return (
     // Remove min-h-screen (Layout handles it) and use w-full
     <div className="w-full flex flex-col gap-10">
@@ -27,22 +37,30 @@ const Index = () => {
 
       <DestinationGrid />
 
-      <LocalsCarousel
-        title="Top locals travellers trust"
-        consultants={topLocals}
-      />
+      {loadingThai ? (
+        <div className="h-64 flex items-center justify-center">
+          <span className="text-muted-foreground">Loading Thailand locals...</span>
+        </div>
+      ) : (
+        <LocalsCarousel
+          title="Wonderful locals in Thailand"
+          consultants={thailandConsultants}
+          mostAskedLocalId={thailandConsultants[0]?.id}
+        />
+      )}
 
-      <LocalsCarousel
-        title="Wonderful locals in Thailand"
-        consultants={thailandConsultants}
-        mostAskedLocalId="th-3"
-      />
-
-      <LocalsCarousel
-        title="Most asked local in Paris"
-        consultants={parisConsultants}
-        showMostAskedBadge={true}
-      />
+      {LoadingParis ? (
+        <div className="h-64 flex items-center justify-center">
+          <span className="text-muted-foreground">Loading Paris locals...</span>
+        </div>
+      ) : (
+        <LocalsCarousel
+          title="Wonderful locals in Paris"
+          consultants={parisConsultants}
+          mostAskedLocalId={parisConsultants[0]?.id}
+          showMostAskedBadge={true}
+        />
+      )}
 
       <IdeasGrid />
 

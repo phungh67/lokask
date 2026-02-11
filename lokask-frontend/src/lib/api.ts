@@ -27,6 +27,12 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     return res.json();
 }
 
+// using filter logic
+interface ConsultantFilters {
+  city?: string;
+  country?: string;
+}
+
 // endpoint for fetching the consultant
 export async function getConsultants(filters?: { city?: string, country?: string, }): Promise<Consultant[]> {
     const params = new URLSearchParams();
@@ -37,7 +43,7 @@ export async function getConsultants(filters?: { city?: string, country?: string
     const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);
 
     // data transform step(s)
-    return data.map((c) => ({
+    return data.map((c: any) => ({
         ...c,
         tags: c.tags || [],
         tag: c.tag && c.tags.length > 0 ? c.tags[0] : "Local",

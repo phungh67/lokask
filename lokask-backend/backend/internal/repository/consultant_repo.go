@@ -227,7 +227,9 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	}
 
 	if country != "" {
-		sql += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
+		// We assume input is Country Code (like 'TH') for simplicity,
+		// but you can join a 'countries' table if you want full names later.
+		sqlQuery += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
 		args = append(args, country)
 		argId++
 	}

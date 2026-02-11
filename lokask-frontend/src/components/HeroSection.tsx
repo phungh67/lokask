@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query"; 
+import { getConsultants } from "@/lib/api";      
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
-import { consultants } from "@/data/mockData";
 import heroDesertPoster from "@/assets/hero-desert-poster.jpg";
+
 const slides = [{
   video: "https://videos.pexels.com/video-files/3015488/3015488-uhd_2560_1440_24fps.mp4",
   poster: heroDesertPoster,
@@ -25,12 +27,23 @@ const slides = [{
   location: "Santorini, Greece",
   description: "Whitewashed villages perched above the deep blue Aegean Sea."
 }];
+
 const HeroSection = () => {
   const [activeSlide, setActiveSlide] = useState(0);
+
+  // 🟢 Fetch Real Data
+  const { data: consultants = [], isLoading } = useQuery({
+    queryKey: ["consultants", "top"], 
+    queryFn: () => getConsultants(),
+  });
+
+  // Take the top 4 for the hero section
   const topConsultants = consultants.slice(0, 4);
-  return <section className="relative min-h-[calc(100vh-64px)]">
+
+  return (
+    <section className="relative min-h-[calc(100vh-64px)]">
       <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
-        {/* Left Column - Video Panel (40%) - Starts from left edge */}
+        {/* Left Column - Video Panel (40%) */}
         <div className="lg:w-[42%] relative">
           <div className="rounded-tr-[64px] lg:rounded-tr-[96px] overflow-hidden relative h-[450px] lg:h-full lg:min-h-[calc(100vh-64px)]">
             {/* Video */}
@@ -64,7 +77,14 @@ const HeroSection = () => {
 
             {/* Slide dots */}
             <div className="absolute bottom-8 left-1/2 lg:left-auto lg:right-8 -translate-x-1/2 lg:translate-x-0 flex gap-2">
-              {slides.map((_, index) => <button key={index} onClick={() => setActiveSlide(index)} className={`w-2.5 h-2.5 rounded-full transition-all ${index === activeSlide ? "bg-white w-6" : "bg-white/40 hover:bg-white/60"}`} aria-label={`Go to slide ${index + 1}`} />)}
+              {slides.map((_, index) => (
+                <button 
+                  key={index} 
+                  onClick={() => setActiveSlide(index)} 
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${index === activeSlide ? "bg-white w-6" : "bg-white/40 hover:bg-white/60"}`} 
+                  aria-label={`Go to slide ${index + 1}`} 
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -91,12 +111,27 @@ const HeroSection = () => {
             <h2 className="text-lg font-semibold text-foreground mb-5 font-sans">
               Top locals travellers trust
             </h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {topConsultants.map(consultant => <ConsultantCardCompact key={consultant.id} consultant={consultant} />)}
-            </div>
+            
+            {/* 🟢 Loading State: Show Skeleton Cards */}
+            {isLoading ? (
+              <div className="flex gap-4 overflow-hidden pb-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-[200px] h-[260px] bg-muted/30 animate-pulse rounded-[20px] flex-shrink-0" />
+                ))}
+              </div>
+            ) : (
+              // 🟢 Real Data Grid
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {topConsultants.map(consultant => (
+                  <ConsultantCardCompact key={consultant.id} consultant={consultant} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default HeroSection;
