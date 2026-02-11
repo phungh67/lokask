@@ -165,6 +165,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
+	// check role (additional check)
+	var role string = "traveller"
+	var consultantID string
+	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
+	if err == nil && consultantID != "" {
+		role = "consultant"
+	}
+
 	// redis logic
 	// generate session token
 	sessionToken := uuid.New().String()
@@ -196,6 +204,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			"full_name":  user.FullName,
 			"email":      user.Email,
 			"avatar_url": user.AvatarURLJSON,
+			"role":       role,
 		},
 	})
 }

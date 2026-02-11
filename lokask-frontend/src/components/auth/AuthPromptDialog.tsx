@@ -19,7 +19,7 @@ interface AuthPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   message?: string;
-  defaultRole?: "traveller" | "consultant"; // 🟢 Added to know which signup to perform
+  defaultRole?: "traveller" | "consultant";
 }
 
 const AuthPromptDialog = ({
@@ -36,7 +36,7 @@ const AuthPromptDialog = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [city, setCity] = useState(""); // 🟢 For Consultant Signup
+  const [city, setCity] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   // Reset state when dialog opens/closes
@@ -53,30 +53,38 @@ const AuthPromptDialog = ({
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // 1. Initial Step: Check Email (Simplified for now to just go to Login/Signup selection)
-  // For this flow, we will just let them choose or default based on previous interaction
-  // But to stick to your UI, let's assume "Continue with Email" checks if they exist.
-  // For now, we'll mimic the logic: If they typed an email, we ask for password (Login)
-  // or details (Signup).
+  // 1. Initial Step Logic
   const handleContinueWithEmail = async () => {
     if (!isValidEmail(email)) return;
-    // In a real app, you'd check API if email exists. 
-    // For now, we'll default to the step matching their intent if possible, 
-    // or just 'login' as a default if unsure. 
-    // Let's force them to choose for clarity in this demo:
     setStep("login"); 
   };
 
-  // 2. Handle Login
+  // 🟢 2. Handle Login with Smart Redirect
   const handleLogin = async () => {
     setIsLoading(true);
     try {
       const res = await login({ email, password });
+      
       toast.success(`Welcome back, ${res.user.full_name}!`);
-      localStorage.setItem("token", res.token); // Save token
+      
+      // Save session
+      localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
-      onOpenChange(false);
-      navigate("/"); // Refresh or redirect
+      
+      onOpenChange(false); // Close dialog
+
+      // 🟢 REDIRECT LOGIC
+      // Note: We cast to 'any' to access 'role' until you update api.ts types
+      const userRole = (res.user as any).role;
+      
+      if (userRole === "consultant") {
+        console.log("Redirecting to Consultant Dashboard");
+        navigate("/dashboard"); 
+      } else {
+        console.log("Redirecting to Home");
+        navigate("/"); 
+      }
+
     } catch (error: any) {
       toast.error(error.message || "Login failed");
     } finally {
@@ -104,8 +112,7 @@ const AuthPromptDialog = ({
         });
         toast.success("Traveller account created! Please log in.");
       }
-      // After signup, usually we log them in or ask them to login. 
-      // Let's switch to login step for safety
+      // After signup, force login step
       setStep("login");
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
@@ -114,7 +121,8 @@ const AuthPromptDialog = ({
     }
   };
 
-  // Render Helpers
+  // --- Renders ---
+
   const renderInitialStep = () => (
     <>
       <DialogHeader className="text-left space-y-2">
@@ -132,7 +140,7 @@ const AuthPromptDialog = ({
         <Button 
           className="w-full h-12 rounded-full font-medium text-base"
           disabled={!isValidEmail(email)}
-          onClick={() => setStep("login")} // Default to login flow
+          onClick={() => setStep("login")}
         >
           Continue with email
         </Button>
@@ -203,7 +211,7 @@ const AuthPromptDialog = ({
           className="h-12 rounded-xl border-2 px-4"
         />
         
-        {/* 🟢 City Input - Only for Consultants */}
+        {/* City Input - Only for Consultants */}
         {defaultRole === "consultant" && (
            <Input 
              placeholder="City (e.g., Tokyo)" 

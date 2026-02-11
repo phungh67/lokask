@@ -106,6 +106,7 @@ const Navbar = () => {
         
         {/* 🟢 Auth Dialog Component */}
         <AuthPromptDialog
+        
           open={showAuthDialog}
           onOpenChange={setShowAuthDialog}
           defaultRole={authRole} // Pass the role we clicked
