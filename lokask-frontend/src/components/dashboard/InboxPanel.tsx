@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import ConversationCard from "./ConversationCard";
-import { DashboardConversation, getConversationCounts } from "@/data/dashboardMockData";
+
+// 🟢 Removed import of DashboardConversation and getConversationCounts from mock data
 
 interface InboxPanelProps {
-  conversations: DashboardConversation[];
+  // 🟢 Updated type to use the mapped conversation structure from your dashboard
+  conversations: any[]; 
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
 }
@@ -18,7 +20,12 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const counts = getConversationCounts();
+  // 🟢 Dynamically calculate counts instead of using mock data
+  const counts = {
+    all: conversations.length,
+    new: conversations.filter(c => c.unread > 0).length, // Example logic for 'new'
+    booked: 0, // Hardcoded for now until status exists in API
+  };
 
   const tabs: { id: FilterTab; label: string; count?: number }[] = [
     { id: "all", label: "All", count: counts.all },
@@ -29,7 +36,7 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
 
   // Filter conversations
   const filteredConversations = conversations.filter((conv) => {
-    // Filter by tab
+    // 🟢 Filter by tab - Updated to handle potential missing 'status' field from API
     if (activeTab !== "all" && conv.status !== activeTab) {
       return false;
     }
@@ -38,9 +45,9 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        conv.traveller.name.toLowerCase().includes(query) ||
-        conv.context.toLowerCase().includes(query) ||
-        conv.lastMessage.toLowerCase().includes(query)
+        // 🟢 Access nested traveller name as defined in your dashboard mapping
+        conv.traveller?.name.toLowerCase().includes(query) ||
+        conv.lastMessage?.toLowerCase().includes(query)
       );
     }
 

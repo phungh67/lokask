@@ -1,8 +1,34 @@
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns"; // 🟢 Replace mock helper with standard library
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Booking, serviceTypeLabels, formatRelativeTime } from "@/data/dashboardMockData";
 import { Video, Phone, MessageSquare, FileText } from "lucide-react";
+
+// 🟢 Define the Booking interface locally to remove mock dependency
+export interface Booking {
+  id: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  createdAt: string | Date;
+  scheduledAt: string | Date;
+  duration: number;
+  serviceType: "chat_only" | "video_call" | "voice_call" | "itinerary_review";
+  traveller: {
+    name: string;
+    avatar: string;
+    location: string;
+    tripDates: {
+      start: string | Date;
+      end: string | Date;
+    };
+  };
+}
+
+// 🟢 Define labels locally instead of importing from mock data
+const serviceTypeLabels: Record<Booking["serviceType"], string> = {
+  chat_only: "Chat",
+  video_call: "Video Call",
+  voice_call: "Voice Call",
+  itinerary_review: "Itinerary Review",
+};
 
 interface BookingCardProps {
   booking: Booking;
@@ -62,8 +88,8 @@ const BookingCard = ({ booking, isSelected, onClick }: BookingCardProps) => {
             </span>
             <span className="mx-0.5">·</span>
             <span>
-              {format(booking.traveller.tripDates.start, "MMM d")}-
-              {format(booking.traveller.tripDates.end, "d, yyyy")}
+              {format(new Date(booking.traveller.tripDates.start), "MMM d")}-
+              {format(new Date(booking.traveller.tripDates.end), "d, yyyy")}
             </span>
           </p>
 
@@ -76,13 +102,14 @@ const BookingCard = ({ booking, isSelected, onClick }: BookingCardProps) => {
               {statusLabel[booking.status]}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {formatRelativeTime(booking.createdAt)}
+              {/* 🟢 Using standard date-fns formatter */}
+              {formatDistanceToNow(new Date(booking.createdAt), { addSuffix: true })}
             </span>
           </div>
 
           {/* Schedule info */}
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-            {format(booking.scheduledAt, "MMM d")} · {format(booking.scheduledAt, "h:mm a")}
+            {format(new Date(booking.scheduledAt), "MMM d")} · {format(new Date(booking.scheduledAt), "h:mm a")}
             <span className="mx-0.5">·</span>
             {booking.duration} min
             <span className="mx-0.5">·</span>

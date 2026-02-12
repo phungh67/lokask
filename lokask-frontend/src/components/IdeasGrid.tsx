@@ -1,15 +1,49 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { ideas } from "@/data/mockData";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+
+// 🟢 Define hardcoded ideas locally to replace mockData imports
+const IDEAS = [
+  {
+    id: "1",
+    destination: "Thailand",
+    title: "Bangkok Street Food Tour",
+    desc: "Discover the best hidden street food stalls in Bangkok with a local expert.",
+    imageUrl: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop"
+  },
+  {
+    id: "2",
+    destination: "Paris",
+    title: "Hidden Arcades of Paris",
+    desc: "Explore the beautiful 19th-century covered passages away from the crowds.",
+    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop"
+  },
+  {
+    id: "3",
+    destination: "Rome",
+    title: "Testaccio Market Visit",
+    desc: "Experience the authentic Roman food scene in the heart of Testaccio.",
+    imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop"
+  },
+  {
+    id: "4",
+    destination: "Tokyo",
+    title: "Traditional Tea Ceremony",
+    desc: "Learn the art of Matcha in a historic tea house in Kyoto or Tokyo.",
+    imageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop"
+  }
+];
+
 const IdeasGrid = () => {
-  return <section className="py-10 lg:py-14 bg-secondary/30">
+  return (
+    <section className="py-10 lg:py-14 bg-secondary/30">
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
             Ideas locals often recommend
           </h2>
-          <Link to="/ideas" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap">
+          {/* 🟢 Updated link to real route */}
+          <Link to="/explore-locals" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap">
             See more
             <ArrowRight size={16} />
           </Link>
@@ -17,16 +51,24 @@ const IdeasGrid = () => {
 
         <div className="relative px-12">
           <Carousel opts={{
-          align: "start",
-          loop: true
-        }} className="w-full">
+            align: "start",
+            loop: true
+          }} className="w-full">
             <CarouselContent className="-ml-4">
-              {ideas.map((idea, index) => <CarouselItem key={idea.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
-                  <Link to={`/explore-locals?destination=${idea.destination.toLowerCase()}`} className="group block animate-fade-in" style={{
-                animationDelay: `${index * 100}ms`
-              }}>
+              {/* 🟢 Now mapping from local IDEAS array */}
+              {IDEAS.map((idea, index) => (
+                <CarouselItem key={idea.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <Link 
+                    to={`/explore-locals?destination=${idea.destination.toLowerCase()}`} 
+                    className="group block animate-fade-in" 
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
                     <article className="relative aspect-[3/4] rounded-2xl overflow-hidden">
-                      <img src={idea.imageUrl} alt={idea.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <img 
+                        src={idea.imageUrl} 
+                        alt={idea.title} 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-4">
                         <span className="bg-primary/90 text-primary-foreground text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
@@ -41,13 +83,16 @@ const IdeasGrid = () => {
                       </div>
                     </article>
                   </Link>
-                </CarouselItem>)}
+                </CarouselItem>
+              ))}
             </CarouselContent>
             <CarouselPrevious className="left-0" />
             <CarouselNext className="right-0" />
           </Carousel>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default IdeasGrid;

@@ -20,6 +20,11 @@ interface AuthPromptDialogProps {
   onOpenChange: (open: boolean) => void;
   message?: string;
   defaultRole?: "traveller" | "consultant";
+  // 🟢 Added missing props to fix type error
+  onLogin?: () => void;
+  onSignup?: () => void;
+  onGoogleAuth?: () => void;
+  onFacebookAuth?: () => void;
 }
 
 const AuthPromptDialog = ({
@@ -27,6 +32,8 @@ const AuthPromptDialog = ({
   onOpenChange,
   message = "Log in or sign up",
   defaultRole = "traveller",
+  onLogin,
+  onSignup,
 }: AuthPromptDialogProps) => {
   const navigate = useNavigate();
   const [step, setStep] = useState<AuthStep>("initial");
@@ -73,8 +80,10 @@ const AuthPromptDialog = ({
       
       onOpenChange(false); // Close dialog
 
+      // 🟢 Trigger external login callback if provided
+      if (onLogin) onLogin();
+
       // 🟢 REDIRECT LOGIC
-      // Note: We cast to 'any' to access 'role' until you update api.ts types
       const userRole = (res.user as any).role;
       
       if (userRole === "consultant") {
@@ -112,6 +121,10 @@ const AuthPromptDialog = ({
         });
         toast.success("Traveller account created! Please log in.");
       }
+      
+      // 🟢 Trigger external signup callback if provided
+      if (onSignup) onSignup();
+
       // After signup, force login step
       setStep("login");
     } catch (error: any) {

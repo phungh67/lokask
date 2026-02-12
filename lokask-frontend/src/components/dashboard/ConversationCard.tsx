@@ -1,18 +1,33 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { DashboardConversation, formatRelativeTime } from "@/data/dashboardMockData";
+import { formatDistanceToNow } from "date-fns"; // 🟢 Replace mock formatter with standard library
 
 interface ConversationCardProps {
-  conversation: DashboardConversation;
+  // 🟢 Updated to match the real data structure from ConsultantDashboard mapping
+  conversation: {
+    id: string;
+    traveller: {
+      name: string;
+      avatar: string;
+      isOnline?: boolean;
+    };
+    lastMessage: string;
+    time: string | Date;
+    unread: number;
+    status?: string;
+    context?: string;
+    isTyping?: boolean;
+  };
   isActive: boolean;
   onClick: () => void;
 }
 
 const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardProps) => {
-  const { traveller, context, lastMessage, status, isTyping, timestamp, unreadCount } = conversation;
+  const { traveller, lastMessage, time, unread, status, isTyping, context } = conversation;
 
   const getStatusBadge = () => {
+    if (!status) return null;
     switch (status) {
       case "active":
         return <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-xs">Active</Badge>;
@@ -43,32 +58,27 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
         isActive ? "bg-primary/5 border border-primary/20" : "hover:bg-secondary/50"
       )}
     >
-      {/* Circular avatar */}
       <div className="relative shrink-0">
         <Avatar className="h-12 w-12">
           <AvatarImage src={traveller.avatar} alt={traveller.name} />
           <AvatarFallback>{getInitials(traveller.name)}</AvatarFallback>
         </Avatar>
-        {/* Online indicator */}
         {traveller.isOnline && (
           <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-card" />
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Top row: name + timestamp */}
         <div className="flex items-center justify-between mb-0.5">
           <span className="font-medium text-sm truncate">{traveller.name}</span>
           <span className="text-xs text-muted-foreground shrink-0 ml-2">
-            {formatRelativeTime(timestamp)}
+            {/* 🟢 Real time formatting using date-fns */}
+            {formatDistanceToNow(new Date(time), { addSuffix: true })}
           </span>
         </div>
 
-        {/* Context */}
-        <p className="text-xs text-muted-foreground mb-1">{context}</p>
+        {context && <p className="text-xs text-muted-foreground mb-1">{context}</p>}
 
-        {/* Last message or typing indicator */}
         <p className="text-sm text-muted-foreground truncate">
           {isTyping ? (
             <span className="text-primary animate-pulse">typing...</span>
@@ -77,12 +87,11 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
           )}
         </p>
 
-        {/* Bottom row: status badge + unread count */}
         <div className="flex items-center gap-2 mt-2">
           {getStatusBadge()}
-          {unreadCount > 0 && (
+          {unread > 0 && (
             <span className="h-5 w-5 flex items-center justify-center bg-primary text-primary-foreground text-xs font-medium rounded-full">
-              {unreadCount}
+              {unread}
             </span>
           )}
         </div>

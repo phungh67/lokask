@@ -1,23 +1,36 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
-import { destinations, consultants } from "@/data/mockData";
+// 🟢 Logical imports
+import { useQuery } from "@tanstack/react-query";
+import { getConsultants } from "@/lib/api"; //
+import { Consultant } from "@/types/consultant"; //
+
+// Note: If you don't have a destinations API yet, you can keep a local 
+// constant for basic metadata, but the consultants must come from the DB.
+const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> = {
+  thailand: {
+    name: "Thailand",
+    imageUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
+  },
+  paris: {
+    name: "Paris",
+    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
+  },
+};
 
 const DestinationPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const destination = destinations.find((d) => d.slug === slug);
+  const destination = slug ? DESTINATION_METADATA[slug.toLowerCase()] : null;
 
-  // Filter consultants by destination (or show all for demo)
-  const destinationConsultants = consultants.filter(
-    (c) => c.city.toLowerCase() === destination?.name.toLowerCase()
-  );
-
-  // Fallback to showing some consultants if none match
-  const displayConsultants = destinationConsultants.length > 0 
-    ? destinationConsultants 
-    : consultants.slice(0, 4);
+  // 🟢 1. Fetch real consultants based on destination name
+  const { data: displayConsultants = [], isLoading } = useQuery({
+    queryKey: ["consultants", slug],
+    queryFn: () => getConsultants({ city: destination?.name }), //
+    enabled: !!destination, // Only run if destination is valid
+  });
 
   if (!destination) {
     return (
@@ -75,11 +88,24 @@ const DestinationPage = () => {
             Connect with locals who live in {destination.name} and get insider tips for your trip.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {displayConsultants.map((consultant) => (
-              <ConsultantCardCompact key={consultant.id} consultant={consultant} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Finding local experts...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {displayConsultants.length > 0 ? (
+                displayConsultants.map((consultant: Consultant) => (
+                  <ConsultantCardCompact key={consultant.id} consultant={consultant} />
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-xl">
+                  <p className="text-muted-foreground">No locals found for this destination yet.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
       <Footer />

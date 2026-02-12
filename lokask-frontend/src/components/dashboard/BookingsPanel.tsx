@@ -1,17 +1,31 @@
 import { useState, useMemo } from "react";
-import { mockBookings, Booking } from "@/data/dashboardMockData";
+// 🟢 Remove mock imports
 import { toast } from "@/hooks/use-toast";
 import BookingList, { BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
 
+// 🟢 Define the Booking interface locally to replace mockData imports
+export interface Booking {
+  id: string;
+  status: "confirmed" | "pending" | "cancelled" | "completed";
+  scheduledAt: Date;
+  traveller: {
+    id: string;
+    name: string;
+    location: string;
+    avatar?: string;
+  };
+  consultantNotes?: string[];
+}
+
 const BookingsPanel = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
-  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(
-    mockBookings[0] || null
-  );
+  
+  // 🟢 Initialize as an empty array instead of using mockBookings
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   // Filter by status + search
   const filteredBookings = useMemo(() => {
@@ -111,13 +125,19 @@ const BookingsPanel = () => {
       />
 
       {/* Center: Booking Detail */}
-      <BookingDetail
-        booking={selectedBooking}
-        onConfirm={handleConfirm}
-        onReschedule={handleReschedule}
-        onCancel={handleCancel}
-        onUpdateNotes={handleUpdateNotes}
-      />
+      {selectedBooking ? (
+        <BookingDetail
+          booking={selectedBooking}
+          onConfirm={handleConfirm}
+          onReschedule={handleReschedule}
+          onCancel={handleCancel}
+          onUpdateNotes={handleUpdateNotes}
+        />
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground bg-white">
+          <p>Select a booking to view details</p>
+        </div>
+      )}
 
       {/* Right: Mini Calendar */}
       <BookingMiniCalendar

@@ -27,7 +27,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { ScheduledCall } from "@/data/dashboardMockData";
+import { ScheduledCall } from "@/types/chat";
 
 interface ScheduleCallDialogProps {
   travellerName: string;

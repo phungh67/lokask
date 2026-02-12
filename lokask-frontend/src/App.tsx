@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ChatProvider } from "@/context/ChatContext";
-import ChatWidget from "@/components/chat/ChatWidget";
+import ChatWidget from "./components/chat/ChatWidget";
 import Index from "./pages/Index";
 import ExploreLocals from "./pages/ExploreLocals";
 import HowItWorks from "./pages/HowItWorks";
@@ -20,6 +20,8 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout"; // 🟢 Ensure this is imported
 
 const queryClient = new QueryClient();
+
+// src/App.tsx
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -45,12 +47,12 @@ const App = () => (
             <Route path="/signup/traveller" element={<SignupTraveller />} />
             <Route path="/signup/consultant" element={<SignupConsultant />} />
             <Route path="/dashboard" element={<ConsultantDashboard />} />
-            
-            {/* 404 Page */}
+
             <Route path="*" element={<NotFound />} />
           </Routes>
+          {/* 🟢 Move ChatWidget inside BrowserRouter for better compatibility */}
+          <ChatWidget />
         </BrowserRouter>
-        <ChatWidget />
       </TooltipProvider>
     </ChatProvider>
   </QueryClientProvider>

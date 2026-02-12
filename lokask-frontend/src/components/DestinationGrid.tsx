@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { destinations } from "@/data/mockData";
 import {
   Carousel,
   CarouselContent,
@@ -8,6 +7,40 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+
+// 🟢 Define hardcoded destinations locally to replace mockData imports
+const DESTINATIONS = [
+  {
+    name: "Thailand",
+    slug: "thailand",
+    imageUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
+  },
+  {
+    name: "Paris",
+    slug: "paris",
+    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
+  },
+  {
+    name: "Rome",
+    slug: "rome",
+    imageUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&auto=format&fit=crop",
+  },
+  {
+    name: "Tokyo",
+    slug: "tokyo",
+    imageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+  },
+  {
+    name: "Bali",
+    slug: "bali",
+    imageUrl: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop",
+  },
+  {
+    name: "London",
+    slug: "london",
+    imageUrl: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&auto=format&fit=crop",
+  },
+];
 
 const DestinationGrid = () => {
   return (
@@ -18,7 +51,7 @@ const DestinationGrid = () => {
             Popular places travellers ask about
           </h2>
           <Link 
-            to="/destinations" 
+            to="/explore-locals" 
             className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
           >
             See more
@@ -35,7 +68,7 @@ const DestinationGrid = () => {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {destinations.map((destination, index) => (
+              {DESTINATIONS.map((destination, index) => (
                 <CarouselItem
                   key={destination.slug}
                   className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/6"

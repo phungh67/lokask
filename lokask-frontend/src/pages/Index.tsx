@@ -9,7 +9,6 @@ import Footer from "@/components/Footer";
 import { useQuery } from "@tanstack/react-query";
 import { getConsultants } from "@/lib/api";
 
-import { thailandConsultants, parisConsultants } from "@/data/mockData";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {

@@ -1,7 +1,7 @@
 import { format, isToday, isTomorrow, differenceInHours } from "date-fns";
 import { Video, Phone, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScheduledCall } from "@/data/dashboardMockData";
+import { ScheduledCall } from "@/types/chat";
 
 interface UpcomingCallBannerProps {
   scheduledCall: ScheduledCall;

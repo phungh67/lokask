@@ -12,12 +12,20 @@ export class ApiError extends Error {
 }
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const token = localStorage.getItem("token");
+
+    const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        ...options?.headers,
+    };
+
+    if (token) {
+        (headers as any)["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options?.headers,
-        },
+        headers, 
     });
 
     if (!res.ok) {
@@ -33,6 +41,12 @@ interface ConsultantFilters {
     country?: string;
     page?: number;
 }
+
+// Helper to generate a placeholder if the avatar is missing
+const getAvatar = (url: string, name: string) => {
+    if (url && url.trim() !== "") return url;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&background=random&color=fff`;
+};
 
 // endpoint for fetching the consultant
 export async function getConsultants(filters?: {
@@ -51,23 +65,42 @@ export async function getConsultants(filters?: {
     // data transform step(s)
     return data.map((c: any) => ({
         ...c,
+
+        name: c.full_name || c.name,
+        displayName: c.display_name || c.full_name,
+        city: c.city_name || c.city,
+        country: c.country_code || c.country || "",
+        coverUrl: c.cover_url || c.coverUrl || "",
+
+        avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name),
+
+        rating: Number(c.rating_avg) || Number(c.rating) || 0,
+        helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
+        hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
+
         tags: c.tags || [],
-        tag: c.tag && c.tags.length > 0 ? c.tags[0] : "Local",
-        // safety check to ensure these number data is
-        // actual "numberical"
-        rating: Number(c.rating) || 0,
-        helpedCount: Number(c.helpedCount) || 0,
-    }))
+        tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
+    }));
 }
 
 // function to get a specific consultant by 
 // looking in the consultant id
 export async function getConsultantById(id: string): Promise<Consultant> {
-    const data = await fetchJson<Consultant>(`/consultants/${id}`);
+    const c = await fetchJson<any>(`/consultants/${id}`);
     return {
-        ...data,
-        tags: data.tags || [],
-        tag: data.tags && data.tags.length > 0 ? data.tags[0] : "Local",
+        id: c.id,
+        name: c.full_name,
+        displayName: c.display_name || c.full_name,
+        avatarUrl: c.avatar_url,
+        coverUrl: c.cover_url || "", // 🟢 Added
+        city: c.city_name,
+        country: c.country_code || "",
+        bio: c.bio || "",
+        quote: c.quote || "",
+        tags: c.tags || [],
+        tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
+        rating: Number(c.rating_avg) || 0,
+        helpedCount: Number(c.helped_count) || 0,
     };
 }
 
@@ -147,4 +180,61 @@ export async function login(data: LoginData) {
         method: "POST",
         body: JSON.stringify(data),
     });
+}
+
+// begin development for chat function
+// ----- chat function -----
+
+// data type
+
+export interface ChatMessage {
+    id: number,
+    conversation_id: string,
+    sender_id: string, // mapped with DB uuid
+    content: string,
+    is_read: boolean,
+    created_at: string, // mapped with DB timestamp
+
+    // helper, for future development
+    type?: "text" | "image" | "map";
+    imageUrl?: string;
+}
+
+export interface Conversation {
+    id: string,
+    traveler_id: string,
+    consultant_id: string,
+    last_message?: string;
+    last_message_at?: String
+}
+
+// API call
+
+// begin conversations
+// POST /api/v1/conversations
+export async function startChat(consultantId: string): Promise<Conversation> {
+    return fetchJson<Conversation>("/conversations", {
+        method: "POST",
+        body: JSON.stringify({ consultant_id: consultantId })
+    })
+}
+
+// get message from a specific conversation
+// GET /api/v1/conversations/:id/messages
+export async function getChatHistory(conversationId: string): Promise<ChatMessage[]> {
+    return fetchJson<ChatMessage[]>(`/conversations/${conversationId}/messages`);
+}
+
+// send a message
+// POST /api/v1/conversations/:id/messages
+export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
+    return fetchJson<ChatMessage>(`/conversations/${conversationId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+    });
+}
+
+// get inbox
+export async function getInbox(): Promise<Conversation[]> {
+    return fetchJson<Conversation[]>("/conversations");
 }
