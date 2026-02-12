@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sparkles, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConversationSummary } from "@/components/chat/types";
+import { ConversationSummary } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
 interface FloatingAISummaryProps {
@@ -12,21 +12,27 @@ const FloatingAISummary = ({ summary }: FloatingAISummaryProps) => {
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // 🟢 FIX 1: Guard clause to prevent "undefined" crash
+  if (!summary) {
+    return null; // Or return a small loading state/placeholder
+  }
+
   const handleCopy = () => {
+    // 🟢 FIX 2: Optional chaining to safely access properties
     const summaryText = `
 AI Conversation Summary
 
 Focus:
-${summary.preferences.map((p) => `• ${p}`).join("\n")}
+${summary.preferences?.map((p) => `• ${p}`).join("\n") || ""}
 
 Places mentioned:
-${summary.placesmentioned.map((p) => `• ${p}`).join("\n")}
+${summary.placesmentioned?.map((p) => `• ${p}`).join("\n") || ""}
 
 Decisions:
-${summary.decisions.map((d) => `• ${d}`).join("\n")}
+${summary.decisions?.map((d) => `• ${d}`).join("\n") || ""}
 
 Next steps:
-${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
+${summary.nextSteps?.map((n) => `• ${n}`).join("\n") || ""}
     `.trim();
 
     navigator.clipboard.writeText(summaryText);
@@ -36,7 +42,6 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
 
   return (
     <div className="w-72 bg-card rounded-2xl shadow-soft border border-border overflow-hidden">
-      {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
@@ -52,7 +57,6 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
         )}
       </button>
 
-      {/* Content */}
       <div
         className={cn(
           "overflow-hidden transition-all duration-200",
@@ -60,8 +64,8 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
         )}
       >
         <div className="px-4 pb-4 space-y-3">
-          {/* Preferences/Focus */}
-          {summary.preferences.length > 0 && (
+          {/* Preferences/Focus - Added optional chaining */}
+          {summary.preferences?.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-1">Focus</p>
               <ul className="space-y-1">
@@ -75,8 +79,8 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
             </div>
           )}
 
-          {/* Decisions */}
-          {summary.decisions.length > 0 && (
+          {/* Decisions - Added optional chaining */}
+          {summary.decisions?.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-1">Decisions</p>
               <ul className="space-y-1">
@@ -90,8 +94,8 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
             </div>
           )}
 
-          {/* Next steps */}
-          {summary.nextSteps.length > 0 && (
+          {/* Next steps - Added optional chaining */}
+          {summary.nextSteps?.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-1">Next steps</p>
               <ul className="space-y-1">
@@ -105,7 +109,6 @@ ${summary.nextSteps.map((n) => `• ${n}`).join("\n")}
             </div>
           )}
 
-          {/* Copy button */}
           <Button
             variant="outline"
             size="sm"

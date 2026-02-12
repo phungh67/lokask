@@ -1,16 +1,32 @@
 import { Phone, Video, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { DashboardTraveller, ScheduledCall } from "@/data/dashboardMockData";
 import ScheduleCallDialog from "./chat/ScheduleCallDialog";
 
 interface ChatPanelHeaderProps {
-  traveller: DashboardTraveller;
-  onScheduleCall: (callData: Omit<ScheduledCall, "id" | "conversationId" | "createdAt">) => void;
+  otherUser: {
+    name: string;
+    avatar: string;
+    isOnline?: boolean;
+  };
+  onScheduleCall: (callData: any) => void;
 }
 
-const ChatPanelHeader = ({ traveller, onScheduleCall }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = ({ otherUser, onScheduleCall }: ChatPanelHeaderProps) => {
+  // 🟢 GUARD: Prevent "undefined" property access crash
+  if (!otherUser) {
+    return (
+      <div className="h-16 px-4 flex items-center border-b border-border bg-card shrink-0">
+        <div className="animate-pulse flex space-x-3 items-center">
+          <div className="rounded-full bg-slate-200 h-10 w-10"></div>
+          <div className="h-2 w-24 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   const getInitials = (name: string) => {
+    if (!name) return "?";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -24,17 +40,17 @@ const ChatPanelHeader = ({ traveller, onScheduleCall }: ChatPanelHeaderProps) =>
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={traveller.avatar} alt={traveller.name} />
-            <AvatarFallback>{getInitials(traveller.name)}</AvatarFallback>
+            <AvatarImage src={otherUser.avatar} alt={otherUser.name} />
+            <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
           </Avatar>
-          {traveller.isOnline && (
+          {otherUser.isOnline && (
             <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-card" />
           )}
         </div>
         <div>
-          <h2 className="font-medium text-sm">{traveller.name}</h2>
+          <h2 className="font-medium text-sm">{otherUser.name}</h2>
           <p className="text-xs text-muted-foreground">
-            {traveller.isOnline ? (
+            {otherUser.isOnline ? (
               <span className="text-green-600">Online</span>
             ) : (
               "Offline"
@@ -52,7 +68,7 @@ const ChatPanelHeader = ({ traveller, onScheduleCall }: ChatPanelHeaderProps) =>
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
         <ScheduleCallDialog 
-          travellerName={traveller.name} 
+          travellerName={otherUser.name}
           onSchedule={onScheduleCall} 
         />
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">

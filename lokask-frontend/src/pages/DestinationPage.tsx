@@ -1,15 +1,11 @@
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+// 🟢 Navbar and Footer removed because they are handled by Layout in App.tsx
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
-// 🟢 Logical imports
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/api"; //
-import { Consultant } from "@/types/consultant"; //
+import { getConsultants } from "@/lib/api"; 
+import { Consultant } from "@/types/consultant"; 
 
-// Note: If you don't have a destinations API yet, you can keep a local 
-// constant for basic metadata, but the consultants must come from the DB.
 const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> = {
   thailand: {
     name: "Thailand",
@@ -25,36 +21,29 @@ const DestinationPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const destination = slug ? DESTINATION_METADATA[slug.toLowerCase()] : null;
 
-  // 🟢 1. Fetch real consultants based on destination name
   const { data: displayConsultants = [], isLoading } = useQuery({
     queryKey: ["consultants", slug],
-    queryFn: () => getConsultants({ city: destination?.name }), //
-    enabled: !!destination, // Only run if destination is valid
+    queryFn: () => getConsultants({ city: destination?.name }),
+    enabled: !!destination, 
   });
 
   if (!destination) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="py-16">
-          <div className="container mx-auto px-6 text-center">
-            <h1 className="text-4xl font-display font-bold text-foreground mb-4">
-              Destination not found
-            </h1>
-            <Link to="/" className="text-primary hover:underline">
-              Go back home
-            </Link>
-          </div>
-        </main>
-        <Footer />
+      <div className="py-16">
+        <div className="container mx-auto px-6 text-center">
+          <h1 className="text-4xl font-display font-bold text-foreground mb-4">
+            Destination not found
+          </h1>
+          <Link to="/" className="text-primary hover:underline">
+            Go back home
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      
       {/* Hero Image */}
       <div className="relative h-[300px] lg:h-[400px]">
         <img
@@ -108,7 +97,6 @@ const DestinationPage = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

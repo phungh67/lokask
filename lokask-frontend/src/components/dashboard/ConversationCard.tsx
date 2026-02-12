@@ -1,13 +1,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns"; // 🟢 Replace mock formatter with standard library
+import { formatDistanceToNow } from "date-fns";
 
 interface ConversationCardProps {
-  // 🟢 Updated to match the real data structure from ConsultantDashboard mapping
   conversation: {
     id: string;
-    traveller: {
+    // 🟢 Changed from 'traveller' to 'otherUser' to support dual roles
+    otherUser: {
       name: string;
       avatar: string;
       isOnline?: boolean;
@@ -24,7 +24,8 @@ interface ConversationCardProps {
 }
 
 const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardProps) => {
-  const { traveller, lastMessage, time, unread, status, isTyping, context } = conversation;
+  // 🟢 Destructure otherUser instead of traveller
+  const { otherUser, lastMessage, time, unread, status, isTyping, context } = conversation;
 
   const getStatusBadge = () => {
     if (!status) return null;
@@ -60,19 +61,20 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
     >
       <div className="relative shrink-0">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={traveller.avatar} alt={traveller.name} />
-          <AvatarFallback>{getInitials(traveller.name)}</AvatarFallback>
+          {/* 🟢 Updated to use otherUser details */}
+          <AvatarImage src={otherUser.avatar} alt={otherUser.name} />
+          <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
         </Avatar>
-        {traveller.isOnline && (
+        {otherUser.isOnline && (
           <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-card" />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <span className="font-medium text-sm truncate">{traveller.name}</span>
+          {/* 🟢 Correctly displays the other participant's name */}
+          <span className="font-medium text-sm truncate">{otherUser.name}</span>
           <span className="text-xs text-muted-foreground shrink-0 ml-2">
-            {/* 🟢 Real time formatting using date-fns */}
             {formatDistanceToNow(new Date(time), { addSuffix: true })}
           </span>
         </div>
