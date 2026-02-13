@@ -195,6 +195,17 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		user.AvatarURLJSON = user.AvatarURL.String
 	}
 
+	// cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_id",
+		Value:    sessionToken,
+		Expires:  time.Now().Add(6 * time.Hour),
+		HTTPOnly: true,  // Prevents XSS access to the token
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
 	// generate jwt (of course, this step, user must be existed)
 	// only five minutes !!!
 	return c.JSON(fiber.Map{
@@ -206,10 +217,12 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			"avatar_url": user.AvatarURLJSON,
 			"role":       role,
 		},
+		"message": "Logged in",
 	})
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	c.ClearCookie("session_id")
 	return c.JSON(fiber.Map{
 		"message": "Logged out successfully",
 	})
@@ -220,15 +233,14 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 
 	if rawID == nil {
 		return c.Status(401).JSON(fiber.Map{
-			"error": "Unauthorized: Session missing",
+			"authenticated": false,
+			"error":         "Unauthorized: Session missing",
 		})
 	}
 
 	userID, ok := rawID.(string)
 	if !ok {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Internal Error: User ID is not a string",
-		})
+		return c.Status(500).JSON(fiber.Map{"error": "Internal Error"})
 	}
 
 	user, err := h.UserRepo.GetByID(userID)
@@ -236,10 +248,19 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
+	// 🟢 Check role so Navbar knows whether to show "Dashboard"
+	role := "traveller"
+	var consultantID string
+	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
+	if err == nil && consultantID != "" {
+		role = "consultant"
+	}
+
 	return c.JSON(fiber.Map{
 		"id":         user.ID,
 		"full_name":  user.FullName,
 		"email":      user.Email,
 		"avatar_url": user.AvatarURLJSON,
+		"role":       role,
 	})
 }

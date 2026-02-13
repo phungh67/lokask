@@ -242,6 +242,11 @@ export async function login(data: LoginData) {
     });
 }
 
+// getme 
+export async function getMe() {
+    return fetchJson<any>("/auth/me");
+}
+
 // begin development for chat function
 // ----- chat function -----
 
