@@ -18,14 +18,14 @@ const Index = () => {
     queryFn: () => getConsultants(),
   });
 
-  const { data: thailandConsultants = [], isLoading: loadingThai } = useQuery({
-    queryKey: ["consultants", "thailand"], // Unique key
-    queryFn: () => getConsultants({ country: "TH" }), // Pass filter
+  const { data: thailandRes, isLoading: loadingThai } = useQuery({
+    queryKey: ["consultants", "thailand"],
+    queryFn: () => getConsultants({ country: "TH" }),
   });
 
-  const { data: parisConsultants = [], isLoading: LoadingParis } = useQuery({
-    queryKey: ["consultants", "paris"], // Unique key
-    queryFn: () => getConsultants({ country: "FR" }), // Pass filter
+  const { data: parisRes, isLoading: loadingParis } = useQuery({
+    queryKey: ["consultants", "paris"],
+    queryFn: () => getConsultants({ country: "FR" }),
   });
 
   return (
@@ -43,19 +43,19 @@ const Index = () => {
       ) : (
         <LocalsCarousel
           title="Wonderful locals in Thailand"
-          consultants={thailandConsultants}
+          consultants={thailandRes?.data || []}
           showMostAskedBadge={true}
         />
       )}
 
-      {LoadingParis ? (
+      {loadingParis ? (
         <div className="h-64 flex items-center justify-center">
           <span className="text-muted-foreground">Loading Paris locals...</span>
         </div>
       ) : (
         <LocalsCarousel
           title="Wonderful locals in Paris"
-          consultants={parisConsultants}
+          consultants={parisRes?.data || []}
           showMostAskedBadge={true}
         />
       )}

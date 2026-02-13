@@ -7,6 +7,14 @@ import (
 	"github.com/lib/pq"
 )
 
+// pagination
+type PaginatedConsultants struct {
+	Data       []ConsultantProfile `json:"data"`
+	TotalCount int                 `json:"total_count"`
+	Page       int                 `json:"page"`
+	Limit      int                 `json:"limit"`
+}
+
 // consultant object
 type ConsultantProfile struct {
 	// basic data for a consultant profile

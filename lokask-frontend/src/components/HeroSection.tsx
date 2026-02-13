@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Play, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"; 
-import { getConsultants } from "@/lib/api";      
+import { useQuery } from "@tanstack/react-query";
+import { getConsultants } from "@/lib/api";
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
 import heroDesertPoster from "@/assets/hero-desert-poster.jpg";
@@ -31,14 +31,15 @@ const slides = [{
 const HeroSection = () => {
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // 🟢 Fetch Real Data
-  const { data: consultants = [], isLoading } = useQuery({
-    queryKey: ["consultants", "top"], 
-    queryFn: () => getConsultants(),
+  const { data: response, isLoading } = useQuery({
+    queryKey: ["consultants", "hero-search"],
+    queryFn: () => getConsultants({ limit: 100 }), // Fetching a larger set for search
   });
 
   // Take the top 4 for the hero section
-  const topConsultants = consultants.slice(0, 4);
+  const consultants = response?.data || [];
+
+  const displayedConsultants = consultants.slice(0, 5);
 
   return (
     <section className="relative min-h-[calc(100vh-64px)]">
@@ -78,11 +79,11 @@ const HeroSection = () => {
             {/* Slide dots */}
             <div className="absolute bottom-8 left-1/2 lg:left-auto lg:right-8 -translate-x-1/2 lg:translate-x-0 flex gap-2">
               {slides.map((_, index) => (
-                <button 
-                  key={index} 
-                  onClick={() => setActiveSlide(index)} 
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${index === activeSlide ? "bg-white w-6" : "bg-white/40 hover:bg-white/60"}`} 
-                  aria-label={`Go to slide ${index + 1}`} 
+                <button
+                  key={index}
+                  onClick={() => setActiveSlide(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${index === activeSlide ? "bg-white w-6" : "bg-white/40 hover:bg-white/60"}`}
+                  aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
             </div>
@@ -111,7 +112,7 @@ const HeroSection = () => {
             <h2 className="text-lg font-semibold text-foreground mb-5 font-sans">
               Top locals travellers trust
             </h2>
-            
+
             {/* 🟢 Loading State: Show Skeleton Cards */}
             {isLoading ? (
               <div className="flex gap-4 overflow-hidden pb-4">
@@ -122,7 +123,7 @@ const HeroSection = () => {
             ) : (
               // 🟢 Real Data Grid
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {topConsultants.map(consultant => (
+                {consultants.map(consultant => (
                   <ConsultantCardCompact key={consultant.id} consultant={consultant} />
                 ))}
               </div>

@@ -44,7 +44,7 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 		page = val
 	}
 
-	consultants, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, page, 12)
+	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, page, 12)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -54,7 +54,12 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 		consultants = []domain.ConsultantProfile{}
 	}
 
-	return c.JSON(consultants)
+	return c.JSON(fiber.Map{
+		"data":        consultants,
+		"total_count": totalCount,
+		"page":        page,
+		"limit":       12,
+	})
 }
 
 // get by user id

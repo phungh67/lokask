@@ -26,5 +26,5 @@ export interface Consultant {
   responseTime?: string;
   isOnline?: boolean;
   galleryImages?: string[]; // Matches the gallery images field
-  badges?: Badge[];
+  badges?: Badge [];
 }

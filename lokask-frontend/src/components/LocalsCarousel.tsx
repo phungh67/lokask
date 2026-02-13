@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
 import ConsultantCard from "@/components/ConsultantCard";
-import { Consultant } from "@/data/mockData";
+import { Consultant } from "@/types/consultant";
 
 interface LocalsCarouselProps {
   title: string;
@@ -13,6 +13,8 @@ interface LocalsCarouselProps {
 }
 
 const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", showMostAskedBadge = false, mostAskedLocalId }: LocalsCarouselProps) => {
+  const safeConsultants = Array.isArray(consultants) ? consultants : [];
+
   return (
     <section className="py-10 lg:py-14">
       <div className="container px-6">
@@ -21,8 +23,8 @@ const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", s
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
             {title}
           </h2>
-          <Link 
-            to={seeMoreLink} 
+          <Link
+            to={seeMoreLink}
             className="hidden md:flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
           >
             See more
@@ -42,9 +44,9 @@ const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", s
             <CarouselContent className="-ml-4">
               {consultants.map((consultant) => (
                 <CarouselItem key={consultant.id} className="pl-4 basis-[270px] shrink-0">
-                  <ConsultantCard 
-                    consultant={consultant} 
-                    showMostAskedBadge={showMostAskedBadge || consultant.id === mostAskedLocalId} 
+                  <ConsultantCard
+                    consultant={consultant}
+                    showMostAskedBadge={showMostAskedBadge || consultant.id === mostAskedLocalId}
                   />
                 </CarouselItem>
               ))}
@@ -55,8 +57,8 @@ const LocalsCarousel = ({ title, consultants, seeMoreLink = "/explore-locals", s
         </div>
 
         {/* Mobile See More */}
-        <Link 
-          to={seeMoreLink} 
+        <Link
+          to={seeMoreLink}
           className="flex md:hidden items-center justify-center gap-2 mt-8 text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
           See more

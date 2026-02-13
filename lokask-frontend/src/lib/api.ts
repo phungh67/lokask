@@ -116,16 +116,25 @@ const mapConsultant = (c: any): Consultant => ({
 // }
 
 export async function getConsultants(filters?: {
-    page?: number; city?: string, country?: string,
-}): Promise<Consultant[]> {
+    page?: number; 
+    city?: string; 
+    country?: string;
+    limit?: number; 
+}): Promise<PaginatedConsultants> {
     const params = new URLSearchParams();
     if (filters?.city) params.append("city", filters.city);
     if (filters?.country) params.append("country", filters.country);
     if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const data = await fetchJson<any[]>("/consultants?" + params.toString());
-    // Apply unified mapping
-    return data.map(mapConsultant);
+    const response = await fetchJson<any>("/consultants?" + params.toString());
+    
+    return {
+        data: (response.data || []).map(mapConsultant),
+        total_count: response.total_count || 0,
+        page: response.page || filters?.page || 1,
+        limit: response.limit || 12
+    };
 }
 
 // function to get a specific consultant by 
@@ -289,3 +298,12 @@ export async function sendMessage(conversationId: string, content: string): Prom
 export async function getInbox(): Promise<Conversation[]> {
     return fetchJson<Conversation[]>("/conversations");
 }
+
+// for dynamicall page number
+export interface PaginatedConsultants {
+    data: Consultant[];
+    total_count: number;
+    page: number;
+    limit: number;
+}
+
