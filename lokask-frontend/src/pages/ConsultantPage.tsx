@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, Globe, Heart, MapPin, Users, Play, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ReviewCard from "@/components/ReviewCard";
+import ReviewCardCompact from "@/components/ReviewCardCompact";
 import LocalsCarousel from "@/components/LocalsCarousel";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// 🟢 Use real API helpers
 import { getConsultantById, getConsultants } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
@@ -16,11 +18,11 @@ const ConsultantPage = () => {
   const navigate = useNavigate();
   const { openChat } = useChat();
   const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
-  
+
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // 🟢 1. Fetch real Consultant details by ID
-  // Renamed isLoading to isProfileLoading to match your conditional check below
   const { data: consultant, isLoading: isProfileLoading } = useQuery({
     queryKey: ["consultant", id],
     queryFn: () => getConsultantById(id!),
@@ -45,25 +47,21 @@ const ConsultantPage = () => {
 
   if (!consultant) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <Navbar />
-        <div className="flex-1 container mx-auto px-6 py-20 text-center">
-          <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
-          <Link to="/" className="text-primary hover:underline">← Back to home</Link>
-        </div>
-        <Footer />
+      <div className="container mx-auto px-6 py-20 text-center">
+        <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
+        <Link to="/" className="text-primary hover:underline">← Back to home</Link>
       </div>
     );
   }
 
-  // 🟢 4. Gallery logic using mapped real data
-  const galleryImages = consultant.galleryImages?.length 
-    ? consultant.galleryImages 
+  // 🟢 4. Gallery Logic using mapped backend data
+  const galleryImages = consultant.galleryImages?.length
+    ? consultant.galleryImages
     : [consultant.coverUrl, consultant.coverUrl, consultant.coverUrl];
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      {/* 🟢 REMOVED <Navbar /> - Handled by Layout in App.tsx */}
 
       <section className="relative min-h-[650px] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative">
@@ -73,11 +71,10 @@ const ConsultantPage = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-20 items-center max-w-5xl mx-auto">
-            {/* Left: Consultant Profile Card */}
+            {/* Profile Card */}
             <div className="relative max-w-md mx-auto lg:ml-auto lg:mr-0">
-              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px] transition-all">
+              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px] transition-all duration-300 hover:shadow-2xl">
                 <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
-                  {/* 🟢 Correctly using avatarUrl from api.ts mapping */}
                   <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover" />
                   <div className="absolute top-3 left-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center">
                     <Play className="w-4 h-4 text-white fill-white" />
@@ -109,7 +106,7 @@ const ConsultantPage = () => {
                   <span className="text-xs text-muted-foreground">{consultant.helpedCount}+ helped</span>
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => requireAuth(
                     () => openChat(consultant),
                     { actionType: 'ask', consultantName: consultant.name }
@@ -121,17 +118,17 @@ const ConsultantPage = () => {
               </div>
             </div>
 
-            {/* Right: AI Content */}
+            {/* AI Summary Section */}
             <div className="relative flex flex-col justify-center">
-              <button 
+              <button
                 onClick={() => requireAuth(
                   () => setIsWishlisted(!isWishlisted),
                   { actionType: 'wishlist', consultantName: consultant.name }
-                )} 
-                className="absolute -top-8 right-0 flex items-center gap-2 font-extrabold"
+                )}
+                className="absolute -top-8 right-0 flex items-center gap-2"
               >
                 <Heart size={18} className={isWishlisted ? "fill-red-500 text-red-500" : ""} />
-                <span className="text-sm underline">{isWishlisted ? "Saved" : "Add to wishlist"}</span>
+                <span className="text-sm underline font-extrabold">{isWishlisted ? "Saved" : "Add to wishlist"}</span>
               </button>
 
               <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground mb-4">
@@ -144,43 +141,47 @@ const ConsultantPage = () => {
                 <span className="text-sm italic text-lime-600">AI-generated summary of reviews</span>
               </div>
 
-              <p className="text-lg text-muted-foreground mb-8 max-w-lg">
-                {consultant.bio || "Consistently described as a passionate local expert."}
+              <p className="text-lg text-muted-foreground mb-8 max-w-lg leading-relaxed">
+                {consultant.bio || "Travellers consistently describe this local as friendly, patient, and easy to talk to."}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Info Sections */}
+      {/* Info Section */}
       <section className="py-16 bg-secondary/30">
         <div className="container mx-auto px-6 max-w-3xl">
           <h2 className="text-2xl font-semibold mb-6">About {consultant.name}</h2>
-          <p className="text-foreground/80 mb-8">{consultant.bio}</p>
+          <p className="text-foreground/80 mb-8 leading-relaxed">{consultant.bio}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-card rounded-xl p-4">
-              <Globe size={20} className="text-primary mb-2" />
-              <p className="text-xs text-muted-foreground uppercase">Languages</p>
-              <p className="text-sm font-medium">{consultant.languages?.join(", ") || "English"}</p>
+            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
+              <Globe size={20} className="text-primary" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Languages</p>
+                <p className="text-sm font-medium">{consultant.languages?.join(", ") || "English"}</p>
+              </div>
             </div>
-            <div className="bg-card rounded-xl p-4">
-              <Clock size={20} className="text-primary mb-2" />
-              <p className="text-xs text-muted-foreground uppercase">Response time</p>
-              <p className="text-sm font-medium">{consultant.responseTime || "Within an hour"}</p>
+            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
+              <Clock size={20} className="text-primary" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Response time</p>
+                <p className="text-sm font-medium">{consultant.responseTime || "Within an hour"}</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Gallery Section */}
+      {/* Gallery */}
       <section className="py-16">
         <div className="container mx-auto px-6">
           <h2 className="text-2xl font-semibold mb-6">Experience {consultant.city}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px]">
-            <img src={galleryImages[0]} className="lg:col-span-2 w-full h-full object-cover rounded-xl" alt="Gallery 1" />
+            <img src={galleryImages[0]} className="lg:col-span-2 w-full h-full object-cover rounded-xl" alt="Gallery" />
             <div className="grid grid-rows-2 gap-4">
-              <img src={galleryImages[1]} className="w-full h-full object-cover rounded-xl" alt="Gallery 2" />
-              <img src={galleryImages[2]} className="w-full h-full object-cover rounded-xl" alt="Gallery 3" />
+              <img src={galleryImages[1]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
+              <img src={galleryImages[2]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
             </div>
           </div>
         </div>
@@ -190,16 +191,34 @@ const ConsultantPage = () => {
       {relatedConsultants.length > 0 && (
         <section className="py-16 bg-secondary/30">
           <div className="container mx-auto px-6">
-            <LocalsCarousel 
-              title={`Other locals in ${consultant.city}`} 
-              consultants={relatedConsultants.filter(c => c.id !== id)} 
-            />
+            <LocalsCarousel title={`Other locals in ${consultant.city}`} consultants={relatedConsultants.filter(c => c.id !== id)} />
           </div>
         </section>
       )}
 
-      <Footer />
-      
+      {/* 🟢 New Section: Final "Ask Now" CTA */}
+      <section className="py-20 border-t border-border">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="text-3xl font-extrabold mb-4 text-foreground">
+            Ready to explore {consultant.city} with {consultant.displayName || consultant.name}?
+          </h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
+            Send a message to start planning your authentic local experience directly with {consultant.displayName || consultant.name}.
+          </p>
+          <Button
+            size="lg"
+            className="rounded-full gap-2 px-10 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+            onClick={() => requireAuth(
+              () => openChat(consultant),
+              { actionType: 'ask', consultantName: consultant.name }
+            )}
+          >
+            <MessageCircle size={20} />
+            Ask {consultant.displayName || consultant.name} now
+          </Button>
+        </div>
+      </section>
+
       <AuthPromptDialog
         open={showPrompt}
         onOpenChange={setShowPrompt}
