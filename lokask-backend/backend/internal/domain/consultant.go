@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // consultant object
@@ -42,10 +43,10 @@ type ConsultantProfile struct {
 	Tags []string `json:"tags" db:"-"`
 
 	// timestamp and extra information
-	Languages    []string  `json:"languages,omitempty" db:"-"`
-	ResponseTime string    `json:"responseTime,omitempty" db:"response_time"`
-	JoinedAt     time.Time `json:"joinedAt" db:"created_at"`
-	Badges       []Badge   `json:"badges"`
+	Languages    pq.StringArray `db:"languages" json:"languages"`
+	ResponseTime string         `db:"response_time" json:"response_time"`
+	JoinedAt     time.Time      `json:"joinedAt" db:"created_at"`
+	Badges       []Badge        `json:"badges"`
 }
 
 // for mapping the review to consultant (e.g review from previous clients)

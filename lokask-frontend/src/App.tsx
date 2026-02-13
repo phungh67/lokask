@@ -17,11 +17,9 @@ import SignupTraveller from "./pages/SignupTraveller";
 import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
 import NotFound from "./pages/NotFound";
-import Layout from "./components/Layout"; // 🟢 Ensure this is imported
+import Layout from "./components/Layout"; 
 
 const queryClient = new QueryClient();
-
-// src/App.tsx
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,17 +29,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public Pages */}
+            {/* Public Pages wrapped in Layout (Navbar/Footer) */}
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/explore-locals" element={<ExploreLocals />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/destinations/:slug" element={<DestinationPage />} />
+              
+              {/* route to individual consultant */}
               <Route path="/consultants/:id" element={<ConsultantPage />} />
               <Route path="/become-local" element={<BecomeLocal />} />
             </Route>
 
-            {/* Auth & Dashboard */}
+            {/* Auth & Dashboard (No Layout wrapper) */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signup/traveller" element={<SignupTraveller />} />
@@ -50,7 +50,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
-          {/* 🟢 Move ChatWidget inside BrowserRouter for better compatibility */}
+          
           <ChatWidget />
         </BrowserRouter>
       </TooltipProvider>

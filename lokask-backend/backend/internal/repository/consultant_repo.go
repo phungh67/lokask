@@ -4,11 +4,13 @@ import (
 	"asklocal/internal/domain"
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type Consultant struct {
@@ -51,7 +53,7 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 				COALESCE(c.is_verified, false) as is_verified,
 				ci.name as city_name,
 				COALESCE(ci.country_code, '') as country_code,
-				COALESCE(c.languages, 'English') as languages,
+				c.languages[1:array_length(c.languages, 1)] as languages,
 				COALESCE(c.response_time, 'Within 24h') as response_time,
 				c.created_at
 			FROM consultants c
@@ -63,6 +65,10 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	err := r.DB.GetContext(ctx, profile, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("[ERROR][DB] Error fetching profile: %w", err)
+	}
+
+	if len(profile.Languages) == 0 {
+		profile.Languages = pq.StringArray{"English"}
 	}
 
 	// temp removal reviews field
@@ -137,6 +143,7 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 			SELECT
 				c.id,
 				u.full_name,
+				COALESCE(NULLIF(u.alias, ''), SPLIT_PART(u.full_name, ' ', 1)) as display_name,
 				COALESCE(u.avatar_url, '') as avatar_url,
 				COALESCE(c.bio, '') as bio,
 				COALESCE(c.quote, '') as quote,         
@@ -147,7 +154,6 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 				COALESCE(c.is_verified, false) as is_verified,
 				ci.name as city_name,
 				COALESCE(ci.country_code, '') as country_code,
-				COALESCE(c.languages, 'English') as languages,
 				COALESCE(c.response_time, 'Within 24h') as response_time,
 				c.created_at
 			FROM consultants c
@@ -159,6 +165,12 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 	err := r.DB.GetContext(ctx, profile, query, userID)
 	if err != nil {
 		return nil, err
+	}
+
+	log.Printf("DEBUG: Profile ID: %v, Name: %s, DisplayName: %s\n", profile.ID, profile.Name, profile.DisplayName)
+
+	if len(profile.Languages) == 0 {
+		profile.Languages = []string{"English"}
 	}
 
 	// Initialize slices

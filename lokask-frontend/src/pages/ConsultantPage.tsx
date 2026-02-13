@@ -1,16 +1,11 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, Share2, Sparkles, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play, Loader2 } from "lucide-react";
+import { ArrowLeft, Star, Globe, Heart, MapPin, Users, Play, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import ReviewCard from "@/components/ReviewCard";
-import ReviewCardCompact from "@/components/ReviewCardCompact";
 import LocalsCarousel from "@/components/LocalsCarousel";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// 🟢 Replace mock imports with real API helpers
 import { getConsultantById, getConsultants } from "@/lib/api";
-import { Consultant } from "@/types/consultant";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
@@ -22,10 +17,10 @@ const ConsultantPage = () => {
   const { openChat } = useChat();
   const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
   
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // 🟢 1. Fetch real Consultant details by ID
+  // Renamed isLoading to isProfileLoading to match your conditional check below
   const { data: consultant, isLoading: isProfileLoading } = useQuery({
     queryKey: ["consultant", id],
     queryFn: () => getConsultantById(id!),
@@ -39,7 +34,7 @@ const ConsultantPage = () => {
     enabled: !!consultant?.city,
   });
 
-  // 🟢 3. Handle Loading State
+  // 🟢 3. Loading & Error States
   if (isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -50,9 +45,9 @@ const ConsultantPage = () => {
 
   if (!consultant) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white flex flex-col">
         <Navbar />
-        <div className="container mx-auto px-6 py-20 text-center">
+        <div className="flex-1 container mx-auto px-6 py-20 text-center">
           <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
           <Link to="/" className="text-primary hover:underline">← Back to home</Link>
         </div>
@@ -61,7 +56,7 @@ const ConsultantPage = () => {
     );
   }
 
-  // Gallery logic using real data (fallback to city-themed images if empty)
+  // 🟢 4. Gallery logic using mapped real data
   const galleryImages = consultant.galleryImages?.length 
     ? consultant.galleryImages 
     : [consultant.coverUrl, consultant.coverUrl, consultant.coverUrl];
@@ -82,6 +77,7 @@ const ConsultantPage = () => {
             <div className="relative max-w-md mx-auto lg:ml-auto lg:mr-0">
               <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px] transition-all">
                 <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
+                  {/* 🟢 Correctly using avatarUrl from api.ts mapping */}
                   <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover" />
                   <div className="absolute top-3 left-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center">
                     <Play className="w-4 h-4 text-white fill-white" />
@@ -176,15 +172,15 @@ const ConsultantPage = () => {
         </div>
       </section>
 
-      {/* Gallery */}
+      {/* Gallery Section */}
       <section className="py-16">
         <div className="container mx-auto px-6">
           <h2 className="text-2xl font-semibold mb-6">Experience {consultant.city}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px]">
-            <img src={galleryImages[0]} className="lg:col-span-2 w-full h-full object-cover rounded-xl" alt="Gallery" />
+            <img src={galleryImages[0]} className="lg:col-span-2 w-full h-full object-cover rounded-xl" alt="Gallery 1" />
             <div className="grid grid-rows-2 gap-4">
-              <img src={galleryImages[1]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
-              <img src={galleryImages[2]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
+              <img src={galleryImages[1]} className="w-full h-full object-cover rounded-xl" alt="Gallery 2" />
+              <img src={galleryImages[2]} className="w-full h-full object-cover rounded-xl" alt="Gallery 3" />
             </div>
           </div>
         </div>
@@ -194,12 +190,16 @@ const ConsultantPage = () => {
       {relatedConsultants.length > 0 && (
         <section className="py-16 bg-secondary/30">
           <div className="container mx-auto px-6">
-            <LocalsCarousel title={`Other locals in ${consultant.city}`} consultants={relatedConsultants.filter(c => c.id !== id)} />
+            <LocalsCarousel 
+              title={`Other locals in ${consultant.city}`} 
+              consultants={relatedConsultants.filter(c => c.id !== id)} 
+            />
           </div>
         </section>
       )}
 
       <Footer />
+      
       <AuthPromptDialog
         open={showPrompt}
         onOpenChange={setShowPrompt}

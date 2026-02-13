@@ -48,60 +48,105 @@ const getAvatar = (url: string, name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&background=random&color=fff`;
 };
 
+// prototype for an unified form of returned object
+const mapConsultant = (c: any): Consultant => ({
+    ...c,
+    id: c.id,
+    name: c.full_name || c.name || "User",
+    displayName: c.display_name || c.full_name || c.name || "User",
+    city: c.city_name || c.city || "",
+    country: c.country_code || c.country || "",
+    // Ensure both snake_case and camelCase fallbacks
+    coverUrl: c.cover_url || c.coverUrl || "", 
+    avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name || c.name),
+    
+    rating: Number(c.rating_avg) || Number(c.rating) || 0,
+    helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
+    hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
+    
+    tags: c.tags || [],
+    tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
+    bio: c.bio || "",
+    quote: c.quote || "",
+    languages: c.languages || ["English"],
+    responseTime: c.response_time || c.responseTime || "1 hour",
+    isOnline: c.is_online ?? false,
+    galleryImages: c.gallery_images || []
+});
+
 // endpoint for fetching the consultant
+// export async function getConsultants(filters?: {
+//     page?: number; city?: string, country?: string,
+// }): Promise<Consultant[]> {
+//     const params = new URLSearchParams();
+//     if (filters?.city) params.append("city", filters.city);
+//     if (filters?.country) params.append("country", filters.country);
+
+//     // limit page
+//     if (filters?.page) params.append("page", filters.page.toString());
+
+//     // returned result
+//     const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);
+
+//     // data transform step(s)
+//     return data.map((c: any) => ({
+//         ...c,
+
+//         name: c.full_name || c.name,
+//         displayName: c.display_name || c.full_name,
+//         city: c.city_name || c.city,
+//         country: c.country_code || c.country || "",
+//         coverUrl: c.cover_url || c.coverUrl || "",
+
+//         avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name),
+
+//         rating: Number(c.rating_avg) || Number(c.rating) || 0,
+//         helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
+//         hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
+
+//         tags: c.tags || [],
+//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
+//     }));
+// }
+
 export async function getConsultants(filters?: {
     page?: number; city?: string, country?: string,
 }): Promise<Consultant[]> {
     const params = new URLSearchParams();
     if (filters?.city) params.append("city", filters.city);
     if (filters?.country) params.append("country", filters.country);
-
-    // limit page
     if (filters?.page) params.append("page", filters.page.toString());
 
-    // returned result
-    const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);
-
-    // data transform step(s)
-    return data.map((c: any) => ({
-        ...c,
-
-        name: c.full_name || c.name,
-        displayName: c.display_name || c.full_name,
-        city: c.city_name || c.city,
-        country: c.country_code || c.country || "",
-        coverUrl: c.cover_url || c.coverUrl || "",
-
-        avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name),
-
-        rating: Number(c.rating_avg) || Number(c.rating) || 0,
-        helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
-        hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
-
-        tags: c.tags || [],
-        tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-    }));
+    const data = await fetchJson<any[]>("/consultants?" + params.toString());
+    // Apply unified mapping
+    return data.map(mapConsultant);
 }
 
 // function to get a specific consultant by 
 // looking in the consultant id
+// export async function getConsultantById(id: string): Promise<Consultant> {
+//     const c = await fetchJson<any>(`/consultants/${id}`);
+//     return {
+//         id: c.id,
+//         name: c.full_name,
+//         displayName: c.display_name || c.full_name,
+//         avatarUrl: c.avatar_url,
+//         coverUrl: c.cover_url || "", // 🟢 Added
+//         city: c.city_name,
+//         country: c.country_code || "",
+//         bio: c.bio || "",
+//         quote: c.quote || "",
+//         tags: c.tags || [],
+//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
+//         rating: Number(c.rating_avg) || 0,
+//         helpedCount: Number(c.helped_count) || 0,
+//     };
+// }
+
 export async function getConsultantById(id: string): Promise<Consultant> {
-    const c = await fetchJson<any>(`/consultants/${id}`);
-    return {
-        id: c.id,
-        name: c.full_name,
-        displayName: c.display_name || c.full_name,
-        avatarUrl: c.avatar_url,
-        coverUrl: c.cover_url || "", // 🟢 Added
-        city: c.city_name,
-        country: c.country_code || "",
-        bio: c.bio || "",
-        quote: c.quote || "",
-        tags: c.tags || [],
-        tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-        rating: Number(c.rating_avg) || 0,
-        helpedCount: Number(c.helped_count) || 0,
-    };
+    const data = await fetchJson<any>(`/consultants/${id}`);
+    // Apply the exact same transformation logic
+    return mapConsultant(data);
 }
 
 // get niches (tags)
