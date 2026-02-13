@@ -1,3 +1,10 @@
+export interface Badge {
+  id: string;
+  icon_name: string; // Matches Go JSON tag if using snake_case, or IconName
+  title: string;
+  description: string;
+}
+
 export interface Consultant {
   id: string;
   name: string; // full name
@@ -19,4 +26,5 @@ export interface Consultant {
   responseTime?: string;
   isOnline?: boolean;
   galleryImages?: string[]; // Matches the gallery images field
+  badges?: Badge[];
 }

@@ -174,14 +174,65 @@ const ConsultantPage = () => {
       </section>
 
       {/* Gallery */}
-      <section className="py-16">
+      <section className="py-10 border-b">
         <div className="container mx-auto px-6">
-          <h2 className="text-2xl font-semibold mb-6">Experience {consultant.city}</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px]">
-            <img src={galleryImages[0]} className="lg:col-span-2 w-full h-full object-cover rounded-xl" alt="Gallery" />
-            <div className="grid grid-rows-2 gap-4">
-              <img src={galleryImages[1]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
-              <img src={galleryImages[2]} className="w-full h-full object-cover rounded-xl" alt="Gallery" />
+          {/* Main Badge Card */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">🏆</span>
+              <div className="font-bold text-rose-600 leading-tight">LOCAL<br />FAVORITE</div>
+              <span className="text-2xl">🏆</span>
+              <p className="text-sm text-muted-foreground font-bold ml-4 max-w-[260px]">One of the most loved locals on Lokask, according to travelers</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-center"><p className="text-2xl font-bold">{consultant.rating}</p><div className="flex text-amber-400"><Star size={12} fill="currentColor" /></div></div>
+              <div className="h-12 w-px bg-border" />
+              <div className="text-center"><p className="text-2xl font-bold">{consultant.helpedCount}</p><p className="text-xs text-muted-foreground">Reviews</p></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Achievements List */}
+            <div className="space-y-6">
+              {consultant.badges && consultant.badges.length > 0 ? (
+                consultant.badges.map((badge) => (
+                  <div key={badge.id} className="flex items-start gap-4 transition-all hover:translate-x-1">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      {/* Using the IconName from Go backend logic */}
+                      <Award className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{badge.title}</p>
+                      <p className="text-sm text-muted-foreground">{badge.description}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No specific achievements listed yet.</p>
+              )}
+
+              {/* Static Verification items remain below dynamic badges */}
+              <div className="flex items-start gap-4">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <div>
+                  <p className="font-semibold">Identity verified</p>
+                  <p className="text-sm text-muted-foreground">Personal info confirmed.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo Gallery */}
+            <div className="grid grid-cols-[2fr_1fr] gap-2 h-[380px] rounded-xl overflow-hidden">
+              <img src={galleryImages[0]} className="w-full h-full object-cover" alt="Gallery 1" />
+              <div className="flex flex-col gap-2">
+                <img src={galleryImages[1]} className="h-1/2 w-full object-cover" alt="Gallery 2" />
+                <div className="relative h-1/2">
+                  <img src={galleryImages[2]} className="w-full h-full object-cover" alt="Gallery 3" />
+                  <button className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    <Images size={14} /> {galleryImages.length}+
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -71,6 +71,12 @@ const mapConsultant = (c: any): Consultant => ({
     languages: c.languages || ["English"],
     responseTime: c.response_time || c.responseTime || "1 hour",
     isOnline: c.is_online ?? false,
+    badges: c.badges ? c.badges.map((b: any) => ({
+        id: b.id,
+        icon_name: b.icon_name || b.iconName,
+        title: b.title,
+        description: b.description
+    })) : [],
     galleryImages: c.gallery_images || []
 });
 
