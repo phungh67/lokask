@@ -222,8 +222,16 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	// 1. Get the token from cookie or header
+	token := c.Cookies("session_id")
+
+	if token != "" {
+		config.RedisClient.Del(c.Context(), "session:"+token)
+	}
+
 	c.ClearCookie("session_id")
-	return c.JSON(fiber.Map{
+
+	return c.Status(200).JSON(fiber.Map{
 		"message": "Logged out successfully",
 	})
 }

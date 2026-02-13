@@ -56,8 +56,12 @@ const Navbar = () => {
     } catch (e) {
       console.error("Logout request failed");
     } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
       setUser(null);
-      navigate("/");
+
+      window.location.href = "/";
     }
   };
 

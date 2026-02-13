@@ -216,7 +216,7 @@ const ConsultantDashboard = () => {
 
   return (
     <div className="h-screen flex flex-col bg-[#F5F2EE]">
-      <DashboardHeader consultant={consultantProfile as any} />
+      <DashboardHeader />
 
       <div className="flex-1 flex overflow-hidden">
         <DashboardSidebar
