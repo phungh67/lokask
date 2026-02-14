@@ -1,4 +1,5 @@
 import { Consultant } from "@/types/consultant";
+import { BookingData } from "@/types/bookig";
 
 // configure so that the port here should matched with
 // API port and API definition in main.go 
@@ -312,3 +313,15 @@ export interface PaginatedConsultants {
     limit: number;
 }
 
+// booking
+export async function createBooking(data: BookingData) {
+    return fetchJson<any>("/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+            consultant_id: data.consultantId,
+            start_time: data.startTime,
+            end_time: data.endTime,
+            user_notes: data.notes
+        }),
+    });
+}
