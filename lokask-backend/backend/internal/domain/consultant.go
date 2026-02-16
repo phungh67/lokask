@@ -19,8 +19,9 @@ type PaginatedConsultants struct {
 type ConsultantProfile struct {
 	// basic data for a consultant profile
 	// ID and basic info
-	ID   uuid.UUID `json:"id" db:"id"`
-	Name string    `json:"name" db:"full_name"`
+	ID     uuid.UUID `json:"id" db:"id"`
+	UserID uuid.UUID `db:"user_id" json:"user_id"`
+	Name   string    `json:"name" db:"full_name"`
 
 	// for better display
 	DisplayName string `json:"displayName" db:"display_name"`

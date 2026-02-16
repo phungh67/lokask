@@ -71,6 +71,10 @@ func main() {
 	chatRepo := repository.NewChatRepository(db)
 	chatHandler := &handler.ChatHandler{Repo: chatRepo}
 
+	// booking
+	bookRepo := repository.NewBookingRepository(db)
+	bookHandler := &handler.BlogHandler{Repo: (*repository.BlogRepository)(bookRepo)}
+
 	// auth handler
 	authHandler := &handler.AuthHandler{
 		UserRepo:       userRepo,
@@ -153,6 +157,9 @@ func main() {
 	protected.Get("/conversations/:id/messages", chatHandler.GetHistory)
 	protected.Post("/users/avatar", userHandler.UploadAvatar)
 	protected.Post("/blogs", blogHandler.Create)
+	protected.Post("/book", bookHandler.Create)
+	protected.Get("/books", blogHandler.List)
+	protected.Get("/book/:id", bookHandler.Get)
 
 	// start server
 	port := getEnv("PORT", "8080")

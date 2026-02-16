@@ -12,10 +12,19 @@ type BookingEntry struct {
 	EndTime   time.Time `db:"end_time" json:"end_time"`
 
 	// Management
-	Status     string  `db:"status" json:"status"` // pending, confirmed, cancelled
-	TotalPrice float64 `db:"total_price" json:"total_price"`
-	UserNotes  string  `db:"user_notes" json:"user_notes"`
+	ServiceType string  `db:"service_type" json:"service_type"`
+	Status      string  `db:"status" json:"status"` // pending, confirmed, cancelled
+	TotalPrice  float64 `db:"total_price" json:"total_price"`
+	UserNotes   string  `db:"user_notes" json:"user_notes"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type CreateBookingRequest struct {
+	ConsultantID string  `json:"consultant_id"`
+	StartTime    string  `json:"start_time"`   // Received as ISO string from frontend
+	ServiceType  string  `json:"service_type"` // e.g., 'video_call'
+	UserNotes    string  `json:"user_notes"`
+	TotalPrice   float64 `json:"total_price"`
 }

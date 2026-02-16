@@ -10,8 +10,16 @@ import (
 
 type ConsultantBookingView struct {
 	domain.BookingEntry
-	TravellerName   string `db:"traveller_name" json:"traveller_name"`
-	TravellerAvatar string `db:"traveller_avatar" json:"traveller_avatar"`
+	TravellerName     string `db:"traveller_name" json:"traveller_name"`
+	TravellerAvatar   string `db:"traveller_avatar" json:"traveller_avatar"`
+	TravellerLocation string `db:"traveller_location" json:"traveller_location"`
+}
+
+type UserBookingView struct {
+	domain.BookingEntry
+	ConsultantName   string `db:"consultant_name" json:"consultant_name"`
+	ConsultantAvatar string `db:"consultant_avatar" json:"consultant_avatar"`
+	CityName         string `db:"city_name" json:"city_name"`
 }
 
 type BookingRepository struct {
@@ -55,12 +63,34 @@ func (r *BookingRepository) GetConsultantBookings(ctx context.Context, consultan
         SELECT 
             b.*, 
             u.full_name AS traveller_name, 
-            u.avatar_url AS traveller_avatar
+            u.avatar_url AS traveller_avatar,
+            c.city_name AS consultant_city
         FROM bookings b
         JOIN users u ON b.user_id = u.id
+        JOIN consultants c ON b.consultant_id = c.id
         WHERE b.consultant_id = $1
         ORDER BY b.start_time DESC
     `
 	err := r.DB.SelectContext(ctx, &bookings, query, consultantID)
+	return bookings, err
+}
+
+// get booking by userID
+func (r *BookingRepository) GetUserBookings(ctx context.Context, userID uuid.UUID) ([]UserBookingView, error) {
+	var bookings []UserBookingView
+	query := `
+        SELECT 
+            b.*, 
+            u.full_name AS consultant_name, 
+            u.avatar_url AS consultant_avatar,
+            c.city_name
+        FROM bookings b
+        JOIN consultants c ON b.consultant_id = c.id
+        JOIN users u ON c.user_id = u.id
+        WHERE b.user_id = $1
+        ORDER BY b.start_time DESC
+    `
+	// sqlx maps the results into the slice of structs
+	err := r.DB.SelectContext(ctx, &bookings, query, userID)
 	return bookings, err
 }

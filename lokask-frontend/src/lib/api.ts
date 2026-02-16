@@ -1,5 +1,6 @@
 import { Consultant } from "@/types/consultant";
-import { BookingData } from "@/types/bookig";
+import { Booking } from "@/types/booking";
+import { CreateBookingRequest } from "@/types/booking";
 
 // configure so that the port here should matched with
 // API port and API definition in main.go 
@@ -314,14 +315,40 @@ export interface PaginatedConsultants {
 }
 
 // booking
-export async function createBooking(data: BookingData) {
-    return fetchJson<any>("/bookings", {
-        method: "POST",
-        body: JSON.stringify({
-            consultant_id: data.consultantId,
-            start_time: data.startTime,
-            end_time: data.endTime,
-            user_notes: data.notes
-        }),
-    });
+/**
+ * Fetch bookings for a consultant's dashboard
+ */
+export async function getConsultantBookings(consultantId: string) {
+  // Uses the endpoint we discussed for the backend repository
+  return fetchJson<Booking[]>(`/bookings/consultant/${consultantId}`);
+}
+
+/**
+ * Create a new booking
+ */
+export async function createBooking(data: CreateBookingRequest) {
+  return fetchJson<Booking>("/bookings", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Update booking status (Confirm/Cancel)
+ */
+export async function updateBookingStatus(id: string, status: "confirmed" | "cancelled") {
+  return fetchJson<Booking>(`/bookings/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+// src/lib/api.ts
+
+/**
+ * Fetch bookings where the current user is the traveller
+ */
+export async function getMyTrips() {
+    // Note: No ID needed in URL because backend gets UserID from JWT token
+    return fetchJson<Booking[]>("/bookings/my-trips");
 }
