@@ -108,8 +108,16 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// if the user want to register as a consultant
 	if req.Role == "consultant" {
+		uID, err := uuid.Parse(user.ID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Internal ID conversion error",
+				"details": err.Error(),
+			})
+		}
+
 		consultant := &repository.Consultant{
-			UserID: user.ID,
+			UserID: uID,
 			CityID: req.CityID,
 		}
 

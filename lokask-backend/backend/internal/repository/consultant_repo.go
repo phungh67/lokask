@@ -14,9 +14,9 @@ import (
 )
 
 type Consultant struct {
-	ID     string `db:"id"`
-	UserID string `db:"user_id"`
-	CityID int    `db:"city_id"`
+	ID     uuid.UUID `db:"id"`
+	UserID uuid.UUID `db:"user_id"`
+	CityID int       `db:"city_id"`
 
 	Bio        *string  `db:"bio"`
 	HourlyRate *float64 `db:"hourly_rate"`
@@ -42,6 +42,7 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	query := `
 			SELECT
 				c.id,
+				c.user_id,
 				u.full_name,
 				COALESCE(u.avatar_url, '') as avatar_url,
 				COALESCE(c.bio, '') as bio,
@@ -142,6 +143,7 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 	query := `
 			SELECT
 				c.id,
+				c.user_id,
 				u.full_name,
 				COALESCE(NULLIF(u.alias, ''), SPLIT_PART(u.full_name, ' ', 1)) as display_name,
 				COALESCE(u.avatar_url, '') as avatar_url,
