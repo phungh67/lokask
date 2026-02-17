@@ -7,7 +7,7 @@ import ChatPanel from "@/components/dashboard/ChatPanel";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
 import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react"; // 🟢 Added for restricted notices
+import { AlertCircle } from "lucide-react";
 import {
   getInbox,
   getChatHistory,
@@ -39,15 +39,11 @@ const fallbackProfile: Consultant = {
 };
 
 const mapConversationToDashboard = (apiConv: any, currentUserId: string | null) => {
-  // Determine if the "other person" is the consultant or the traveler
-  // If the current user is the consultant, we want to show the traveler's info
-  // If the current user is the traveler, we want to show the consultant's info
   const isCurrentUserConsultant = apiConv.consultant_id === currentUserId;
 
   return {
     id: apiConv.id,
     otherUser: {
-      // 🟢 Show the name of the person you are NOT
       name: isCurrentUserConsultant
         ? (apiConv.traveler_name || "Traveler")
         : (apiConv.consultant_name || "Local Expert"),
@@ -58,12 +54,10 @@ const mapConversationToDashboard = (apiConv: any, currentUserId: string | null) 
     lastMessage: apiConv.last_message || "Started a conversation",
     time: apiConv.last_message_at || new Date().toISOString(),
     unread: apiConv.unread_count || 0,
-    // Pass original IDs for reference
     travelerId: apiConv.traveler_id,
     consultantId: apiConv.consultant_id
   };
 };
-
 
 const ConsultantDashboard = () => {
   const navigate = useNavigate();
@@ -71,64 +65,69 @@ const ConsultantDashboard = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [currentMessages, setCurrentMessages] = useState<any[]>([]);
-  const [userRole, setUserRole] = useState<string | null>(null); // 🟢 Added role state
-
-  const handleScheduleCall = async (callData: any) => {
-  if (!activeConversationId) return;
-
-  try {
-    // 🟢 Replace with your real API call (e.g., in api.ts)
-    // await createScheduledCall(activeConversationId, callData);
-    
-    toast({
-      title: "Success",
-      description: `Call scheduled for ${new Date(callData.scheduledAt).toLocaleString()}`,
-    });
-
-    // Optionally refresh history or inbox to show the "Call Scheduled" message
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: "Failed to schedule the call. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
-
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // 🟢 Effect 1: Initial Auth & Identity Fetching
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      navigate("/login");
-      return;
-    }
+    const loadIdentity = async () => {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
 
-    try {
-      const user = JSON.parse(storedUser);
-      setUserRole(user.role); // 🟢 Store user role
+      if (!storedUser || !token) {
+        navigate("/login");
+        return;
+      }
 
-      setConsultantProfile({
-        ...fallbackProfile,
-        id: user.id,
-        name: user.full_name || user.name || "User",
-        displayName: user.full_name || user.name || "User",
-        avatarUrl: user.avatar_url || "",
-        coverUrl: (user as any).cover_url || "",
-      });
-    } catch (error) {
-      console.error("Error parsing user data", error);
-      navigate("/login");
-    }
+      try {
+        const user = JSON.parse(storedUser);
+        setUserRole(user.role);
+
+        // If the user is a consultant, fetch their specific Consultant UUID
+        if (user.role === "consultant") {
+          const response = await fetch(`http://localhost:8080/api/v1/users/${user.id}/consultant`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+
+          if (response.ok) {
+            const consultantData = await response.json();
+            // 🟢 This ID is now the REAL consultant UUID (e.g. CONS_456)
+            setConsultantProfile(consultantData); 
+          } else {
+            // Fallback if consultant record isn't found yet
+            setConsultantProfile({
+              ...fallbackProfile,
+              id: user.id,
+              name: user.full_name || "User",
+            });
+          }
+        } else {
+          // Standard traveler fallback
+          setConsultantProfile({
+            ...fallbackProfile,
+            id: user.id,
+            name: user.full_name || "User",
+          });
+        }
+      } catch (error) {
+        console.error("Dashboard Identity Error:", error);
+        navigate("/login");
+      } finally {
+        setIsProfileLoading(false);
+      }
+    };
+
+    loadIdentity();
   }, [navigate]);
 
+  // 🟢 Effect 2: Load Inbox
   useEffect(() => {
     const loadInbox = async () => {
-      if (!consultantProfile?.id) return;
+      if (!consultantProfile?.id || isProfileLoading) return;
       try {
         const data = await getInbox();
-        // 🟢 Pass current profile ID to the mapper
         const mapped = data.map((apiConv: any) =>
           mapConversationToDashboard(apiConv, consultantProfile.id)
         );
@@ -141,10 +140,11 @@ const ConsultantDashboard = () => {
       }
     };
     loadInbox();
-  }, [consultantProfile?.id]);
+  }, [consultantProfile?.id, isProfileLoading]);
 
+  // 🟢 Effect 3: Poll Messages
   useEffect(() => {
-    if (!activeConversationId || !consultantProfile) return;
+    if (!activeConversationId || !consultantProfile || isProfileLoading) return;
 
     const fetchMessages = async () => {
       try {
@@ -165,10 +165,10 @@ const ConsultantDashboard = () => {
     fetchMessages();
     pollInterval.current = setInterval(fetchMessages, 3000);
     return () => { if (pollInterval.current) clearInterval(pollInterval.current); };
-  }, [activeConversationId, consultantProfile]);
+  }, [activeConversationId, consultantProfile, isProfileLoading]);
 
   const handleSendMessage = async (content: string) => {
-    if (!activeConversationId) return;
+    if (!activeConversationId || !consultantProfile) return;
     const tempId = Date.now().toString();
     const optimisticMsg = { id: tempId, content, sender: "consultant", timestamp: new Date(), type: "text" };
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
@@ -181,7 +181,6 @@ const ConsultantDashboard = () => {
     }
   };
 
-  // 🟢 Helper for Role-Based Feature Gating
   const renderConsultantOnly = (component: React.ReactNode) => {
     if (userRole === "consultant") return component;
 
@@ -191,7 +190,6 @@ const ConsultantDashboard = () => {
         <h2 className="text-xl font-bold mb-2">Consultant Feature Only</h2>
         <p className="text-muted-foreground max-w-sm mb-6">
           Managing bookings and schedules is only available for local consultants.
-          Want to share your expertise?
         </p>
         <button
           onClick={() => navigate("/become-local")}
@@ -203,10 +201,7 @@ const ConsultantDashboard = () => {
     );
   };
 
-  const foundConversation = conversations.find((c) => c.id === activeConversationId);
-  const activeConversationData = foundConversation ? { ...foundConversation, messages: currentMessages } : null;
-
-  if (!consultantProfile) {
+  if (isProfileLoading || !consultantProfile) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F5F2EE]">
         <div className="animate-pulse text-xl font-semibold text-gray-500">Loading Dashboard...</div>
@@ -214,18 +209,21 @@ const ConsultantDashboard = () => {
     );
   }
 
+  const foundConversation = conversations.find((c) => c.id === activeConversationId);
+  const activeConversationData = foundConversation ? { ...foundConversation, messages: currentMessages } : null;
+
   return (
     <div className="h-screen flex flex-col bg-[#F5F2EE]">
       <DashboardHeader />
 
       <div className="flex-1 flex overflow-hidden">
         <DashboardSidebar
-          consultant={consultantProfile as any}
+          consultant={consultantProfile}
           activeSection={activeSection}
           onSectionChange={setActiveSection}
-          userRole={userRole} // 🟢 Pass role to sidebar if needed later
+          userRole={userRole}
         />
-        <main className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex overflow-hidden bg-white">
           {activeSection === "inbox" && (
             <>
               <InboxPanel
@@ -241,18 +239,20 @@ const ConsultantDashboard = () => {
                   onCancelCall={() => { }}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground bg-white">
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   Select a conversation to start chatting
                 </div>
               )}
             </>
           )}
-          {/* 🟢 Restricted Section */}
-          {activeSection === "bookings" && renderConsultantOnly(<BookingsPanel />)}
+
+          {activeSection === "bookings" &&
+            renderConsultantOnly(<BookingsPanel consultantId={consultantProfile.id} />)
+          }
 
           {activeSection === "profile" && (
             <ProfilePanel
-              consultant={consultantProfile as any}
+              consultant={consultantProfile}
               onSave={(updates) => setConsultantProfile((prev) => prev ? ({ ...prev, ...updates }) : null)}
             />
           )}

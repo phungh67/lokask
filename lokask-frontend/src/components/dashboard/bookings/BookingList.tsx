@@ -1,11 +1,10 @@
-import { Search, Settings } from "lucide-react";
+import React from 'react';
+import BookingCard from './BookingCard'; // 🟢 Correct named import
+import { Booking } from '@/types/booking'; // 🟢 Use centralized types
+import { Loader2, CalendarX, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Booking } from "@/data/dashboardMockData";
-import BookingCard from "./BookingCard";
 
-export type BookingStatusFilter = "upcoming" | "pending" | "completed" | "cancelled";
+export type BookingStatusFilter = "upcoming" | "pending" | "confirmed" | "completed" | "cancelled";
 
 interface BookingListProps {
   bookings: Booking[];
@@ -15,82 +14,62 @@ interface BookingListProps {
   onSearchChange: (query: string) => void;
   activeStatus: BookingStatusFilter;
   onStatusChange: (status: BookingStatusFilter) => void;
+  isLoading?: boolean;
+  consultantId: string;
 }
 
-const BookingList = ({
-  bookings,
-  selectedId,
-  onSelect,
-  searchQuery,
+// 🟢 Use the props passed from BookingsPanel instead of internal state
+export const BookingList: React.FC<BookingListProps> = ({ 
+  bookings, 
+  selectedId, 
+  onSelect, 
+  searchQuery, 
   onSearchChange,
-  activeStatus,
-  onStatusChange,
-}: BookingListProps) => {
-  const statusTabs: { key: BookingStatusFilter; label: string }[] = [
-    { key: "upcoming", label: "Upcoming" },
-    { key: "pending", label: "Pending" },
-    { key: "completed", label: "Completed" },
-    { key: "cancelled", label: "Cancelled" },
-  ];
+  isLoading 
+}) => {
+
+  if (isLoading) {
+    return (
+      <div className="w-[350px] border-r flex flex-col items-center justify-center text-slate-500 bg-white">
+        <Loader2 className="h-8 w-8 animate-spin mb-2" />
+        <p>Loading schedule...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-[320px] border-r border-border bg-card flex flex-col">
-      {/* Status Tabs */}
-      <div className="p-3 border-b border-border">
-        <div className="flex gap-1 flex-wrap">
-          {statusTabs.map((tab) => (
-            <Button
-              key={tab.key}
-              variant={activeStatus === tab.key ? "default" : "ghost"}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => onStatusChange(tab.key)}
-            >
-              {tab.label}
-            </Button>
-          ))}
+    <div className="w-[350px] border-r flex flex-col bg-white overflow-hidden">
+      {/* Search Header */}
+      <div className="p-4 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            className="pl-9" 
+            placeholder="Search travelers..." 
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="p-3 border-b border-border">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search bookings..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9 h-9"
-            />
+      {/* Bookings Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {bookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <CalendarX className="h-10 w-10 text-slate-300 mb-3" />
+            <p className="text-sm text-slate-500">No bookings found</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
+        ) : (
+          bookings.map((booking) => (
+            <BookingCard 
+              key={booking.id} 
+              booking={booking} 
+              isSelected={selectedId === booking.id}
+              onClick={() => onSelect(booking)}
+            />
+          ))
+        )}
       </div>
-
-      {/* Booking Cards List */}
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
-          {bookings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">No bookings found</p>
-            </div>
-          ) : (
-            bookings.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                isSelected={booking.id === selectedId}
-                onClick={() => onSelect(booking)}
-              />
-            ))
-          )}
-        </div>
-      </ScrollArea>
     </div>
   );
 };
-
-export default BookingList;
