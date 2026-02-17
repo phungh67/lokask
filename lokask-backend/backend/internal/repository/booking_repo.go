@@ -94,3 +94,17 @@ func (r *BookingRepository) GetUserBookings(ctx context.Context, userID uuid.UUI
 	err := r.DB.SelectContext(ctx, &bookings, query, userID)
 	return bookings, err
 }
+
+// delete a booking slot
+func (r *BookingRepository) DeleteBooking(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM bookings WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, id)
+	return err
+}
+
+// update booking status
+func (r *BookingRepository) UpdateBookingStatus(ctx context.Context, id uuid.UUID, status string) error {
+	query := `UPDATE bookings SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := r.DB.ExecContext(ctx, query, status, id)
+	return err
+}

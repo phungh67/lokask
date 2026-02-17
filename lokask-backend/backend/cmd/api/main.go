@@ -73,7 +73,7 @@ func main() {
 
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
-	bookHandler := &handler.BlogHandler{Repo: (*repository.BlogRepository)(bookRepo)}
+	bookHandler := handler.NewBookingHandler(bookRepo, consultantRepo, db)
 
 	// auth handler
 	authHandler := &handler.AuthHandler{
@@ -157,9 +157,11 @@ func main() {
 	protected.Get("/conversations/:id/messages", chatHandler.GetHistory)
 	protected.Post("/users/avatar", userHandler.UploadAvatar)
 	protected.Post("/blogs", blogHandler.Create)
-	protected.Post("/book", bookHandler.Create)
-	protected.Get("/books", blogHandler.List)
-	protected.Get("/book/:id", bookHandler.Get)
+	protected.Post("/bookings", bookHandler.CreateBooking)        // Create a trip
+	protected.Get("/bookings/my-trips", bookHandler.GetUserTrips) // View my trips
+	protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
+	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
+	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
 
 	// start server
 	port := getEnv("PORT", "8080")

@@ -140,3 +140,36 @@ func (h *BookingHandler) GetUserTrips(c *fiber.Ctx) error {
 
 	return c.JSON(trips)
 }
+
+func (h *BookingHandler) DeleteBooking(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	bookingID, _ := uuid.Parse(idStr)
+	// userID := c.Locals("user_id").(string)
+
+	// TODO: checking
+	err := h.BookingRepo.DeleteBooking(c.Context(), bookingID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete booking"})
+	}
+
+	return c.SendStatus(204) // No Content
+}
+
+func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	bookingID, _ := uuid.Parse(idStr)
+
+	var req struct {
+		Status string `json:"status"` // "confirmed", "cancelled", etc.
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	err := h.BookingRepo.UpdateBookingStatus(c.Context(), bookingID, req.Status)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update booking"})
+	}
+
+	return c.JSON(fiber.Map{"status": req.Status})
+}
