@@ -207,7 +207,7 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 
 // consultant per page
 // ListConsultants fetches list for Explore page
-func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string, page int, limit int) ([]domain.ConsultantProfile, int, error) {
+func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string, niche string, page int, limit int) ([]domain.ConsultantProfile, int, error) {
 	// sanitize input page
 	if page < 1 {
 		page = 1
@@ -222,6 +222,8 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 		FROM consultants c
     	JOIN users u ON c.user_id = u.id
     	JOIN cities ci ON c.city_id = ci.id
+		LEFT JOIN consultant_niches cn ON c.id = cn.consultant_id
+        LEFT JOIN niches n ON cn.niche_id = n.id
     	WHERE 1=1
 	`
 
@@ -242,8 +244,14 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 		argId++
 	}
 
+	if niche != "" {
+		filterSql += fmt.Sprintf(" AND n.display_name = $%d", argId)
+		args = append(args, niche)
+		argId++
+	}
+
 	var totalCount int
-	countSql := "SELECT COUNT(*)" + baseSql + filterSql
+	countSql := "SELECT COUNT(DISTINCT c.id) " + baseSql + filterSql
 	err := r.DB.GetContext(ctx, &totalCount, countSql, args...)
 	if err != nil {
 		return nil, 0, err
@@ -252,7 +260,7 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	// updated Query #1: reflect new React FrontEnd
 	// updated Query #2: using short name for smarter display
 	dataSql := `
-    SELECT 
+    SELECT DISTINCT 
         c.id, 
         u.full_name, 
         COALESCE(NULLIF(u.alias, ''), SPLIT_PART(u.full_name, ' ', 1)) as display_name,
@@ -267,7 +275,7 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
         ci.name as city_name, 
         COALESCE(ci.country_code, '') as country_code,
         c.created_at
-	` + baseSql + filterSql + fmt.Sprintf(" ORDER BY c.rating_avg DESC, c.id ASC LIMIT $%d OFFSET $%d", argId, argId+1)
+	` + baseSql + filterSql + fmt.Sprintf(" ORDER BY rating_avg DESC, c.id ASC LIMIT $%d OFFSET $%d", argId, argId+1)
 
 	// Add limit and offset to args for the data query
 	dataArgs := append(args, limit, offset)

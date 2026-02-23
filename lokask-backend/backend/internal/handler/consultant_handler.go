@@ -35,8 +35,9 @@ func (h *ConsultantHandler) GetProfile(c *fiber.Ctx) error {
 }
 
 func (h *ConsultantHandler) List(c *fiber.Ctx) error {
-	cityFilter := c.Query("city") // Reads ?city=... from URL
+	cityFilter := c.Query("city")
 	countryFilter := c.Query("country")
+	nicheFilter := c.Query("niche")
 
 	pageStr := c.Query("page")
 	page := 1
@@ -44,7 +45,7 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 		page = val
 	}
 
-	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, page, 12)
+	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, nicheFilter, page, 12)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

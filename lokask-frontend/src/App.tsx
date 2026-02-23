@@ -31,18 +31,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* 🟢 Group 1: Public Pages (Only ONE Layout wrapper here) */}
+            {/* public Pages */}
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/explore-locals" element={<ExploreLocals />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/destinations/:slug" element={<DestinationPage />} />
-              {/* 🟢 Move the consultant route here, inside the single Layout wrapper */}
+              {/* consultant */}
               <Route path="/consultant/:id" element={<ConsultantPage />} />
               <Route path="/become-local" element={<BecomeLocal />} />
+              <Route path="/consultants" element={<ExploreLocals />} />
             </Route>
 
-            {/* Group 2: Auth & Dashboard (No Layout wrapper) */}
+            {/* auth & dashboard */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signup/traveller" element={<SignupTraveller />} />

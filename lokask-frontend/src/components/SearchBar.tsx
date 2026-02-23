@@ -13,12 +13,21 @@ const WHO_FILTER_OPTIONS = [
   "Photography & Arts",
 ];
 
-const SearchBar = () => {
+interface SearchBarProps {
+  onSearch: (filters: { where: string; who: string }) => void;
+}
+
+const SearchBar = ({onSearch}:SearchBarProps) => {
   const [where, setWhere] = useState("");
   const [when, setWhen] = useState("");
   const [who, setWho] = useState("");
   const [isWhoOpen, setIsWhoOpen] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const handleSearchClick = () => {
+    // Pass the 'where' (City) and 'who' (Niche/Tag) to the parent
+    onSearch({ where, who });
+  };
 
   return (
     <div className="w-full">
@@ -112,7 +121,7 @@ const SearchBar = () => {
         </div>
 
         {/* Search Button */}
-        <button
+        <button onClick={handleSearchClick}
           className="flex items-center justify-center w-12 h-12 my-1 mr-1 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
           aria-label="Search for local consultants"
         >
@@ -176,7 +185,7 @@ const SearchBar = () => {
           )}
         </div>
 
-        <button
+        <button onClick={handleSearchClick}
           className="w-full py-3 rounded-full bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
           aria-label="Search for local consultants"
         >

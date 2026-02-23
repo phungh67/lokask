@@ -41,7 +41,9 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 interface ConsultantFilters {
     city?: string;
     country?: string;
+    niche?: string;
     page?: number;
+    limit?: number
 }
 
 // Helper to generate a placeholder if the avatar is missing
@@ -121,11 +123,13 @@ export async function getConsultants(filters?: {
     page?: number; 
     city?: string; 
     country?: string;
+    niche?: string;
     limit?: number; 
 }): Promise<PaginatedConsultants> {
     const params = new URLSearchParams();
     if (filters?.city) params.append("city", filters.city);
     if (filters?.country) params.append("country", filters.country);
+    if (filters?.niche) params.append("niche", filters.niche);
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 

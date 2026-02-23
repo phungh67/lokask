@@ -5,6 +5,7 @@ import { getConsultants } from "@/lib/api";
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
 import heroDesertPoster from "@/assets/hero-desert-poster.jpg";
+import { useNavigate } from "react-router-dom";
 
 const slides = [{
   video: "https://videos.pexels.com/video-files/3015488/3015488-uhd_2560_1440_24fps.mp4",
@@ -29,6 +30,15 @@ const slides = [{
 }];
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  const handleHeroSearch = (filters: { where: string; who: string }) => {
+    const params = new URLSearchParams();
+    if (filters.where) params.append("city", filters.where);
+    if (filters.who) params.append("niche", filters.who);
+
+    // Navigate to your main consultants directory with query strings
+    navigate(`/consultants?${params.toString()}`);
+  };
   const [activeSlide, setActiveSlide] = useState(0);
 
   const { data: response, isLoading } = useQuery({
@@ -104,7 +114,7 @@ const HeroSection = () => {
 
           {/* Search Bar */}
           <div className="mb-10 max-w-2xl">
-            <SearchBar />
+            <SearchBar onSearch={handleHeroSearch}/>
           </div>
 
           {/* Top Consultants */}
