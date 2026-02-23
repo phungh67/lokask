@@ -94,7 +94,7 @@ const ConsultantDashboard = () => {
           if (response.ok) {
             const consultantData = await response.json();
             // 🟢 This ID is now the REAL consultant UUID (e.g. CONS_456)
-            setConsultantProfile(consultantData); 
+            setConsultantProfile(consultantData);
           } else {
             // Fallback if consultant record isn't found yet
             setConsultantProfile({
@@ -126,12 +126,18 @@ const ConsultantDashboard = () => {
   useEffect(() => {
     const loadInbox = async () => {
       if (!consultantProfile?.id || isProfileLoading) return;
+
       try {
         const data = await getInbox();
-        const mapped = data.map((apiConv: any) =>
+
+        const safeData = data ?? [];
+
+        const mapped = safeData.map((apiConv: any) =>
           mapConversationToDashboard(apiConv, consultantProfile.id)
         );
+
         setConversations(mapped);
+
         if (!activeConversationId && mapped.length > 0) {
           setActiveConversationId(mapped[0].id);
         }
@@ -139,8 +145,9 @@ const ConsultantDashboard = () => {
         console.error("Failed to load inbox", error);
       }
     };
+
     loadInbox();
-  }, [consultantProfile?.id, isProfileLoading]);
+  }, [consultantProfile?.id, isProfileLoading, activeConversationId]);
 
   // 🟢 Effect 3: Poll Messages
   useEffect(() => {
