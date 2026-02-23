@@ -110,17 +110,30 @@ const ConsultantPage = () => {
                 </div>
 
                 <Button
-                  onClick={() => requireAuth(
-                    () => {
+                  onClick={() => {
+                    const isAuthenticated = !!localStorage.getItem("token");
+
+                    if (isAuthenticated) {
                       navigate("/dashboard", {
                         state: {
                           openChatWith: consultant.id,
                           consultantName: consultant.name
                         }
                       });
-                    },
-                    { actionType: 'ask', consultantName: consultant.name }
-                  )}
+                    } else {
+                      requireAuth(
+                        () => {
+                          navigate("/dashboard", {
+                            state: {
+                              openChatWith: consultant.id,
+                              consultantName: consultant.name
+                            }
+                          });
+                        },
+                        { actionType: 'ask', consultantName: consultant.name }
+                      );
+                    }
+                  }}
                   className="w-full bg-primary rounded-full"
                 >
                   Ask now
