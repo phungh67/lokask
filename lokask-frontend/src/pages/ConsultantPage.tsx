@@ -116,20 +116,13 @@ const ConsultantPage = () => {
                     if (isAuthenticated) {
                       navigate("/dashboard", {
                         state: {
-                          openChatWith: consultant.id,
-                          consultantName: consultant.name
+                          intent: "startChat",
+                          targetId: consultant.id
                         }
                       });
                     } else {
                       requireAuth(
-                        () => {
-                          navigate("/dashboard", {
-                            state: {
-                              openChatWith: consultant.id,
-                              consultantName: consultant.name
-                            }
-                          });
-                        },
+                        () => navigate("/dashboard", { state: { intent: "startChat", targetId: consultant.id } }),
                         { actionType: 'ask', consultantName: consultant.name }
                       );
                     }

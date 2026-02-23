@@ -70,6 +70,20 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	}
 	convID, _ := uuid.Parse(c.Params("id"))
 
+	var actingSenderID uuid.UUID
+	err = h.Repo.DB.Get(&actingSenderID, `
+        SELECT CASE 
+            WHEN cons.user_id = $1 THEN c.consultant_id 
+            ELSE c.traveler_id 
+        END
+        FROM conversations c
+        JOIN consultants cons ON c.consultant_id = cons.id
+        WHERE c.id = $2`, myID, convID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Identity lookup failed"})
+	}
+
 	var req struct {
 		Content string `json:"content"`
 	}
@@ -77,11 +91,14 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid content"})
 	}
 
-	if err := h.Repo.CreateMessage(convID, myID, req.Content); err != nil {
+	if err := h.Repo.CreateMessage(convID, actingSenderID, req.Content); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message"})
 	}
 
-	return c.JSON(fiber.Map{"status": "sent"})
+	return c.JSON(fiber.Map{
+		"status":    "sent",
+		"sender_id": actingSenderID,
+	})
 }
 
 // GET /conversations/:id/messages (Get History)

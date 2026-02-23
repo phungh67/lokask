@@ -44,7 +44,13 @@ func NewChatRepository(db *sqlx.DB) *ChatRepository {
 func (r *ChatRepository) GetOrCreateConversation(travelerID uuid.UUID, consultantID uuid.UUID) (*Conversation, error) {
 	// check for existed
 	var conv Conversation
-	query := `SELECT id FROM conversations WHERE traveler_id = $1 AND consultant_id = $2`
+	query := `
+    	SELECT c.id, u_cons.full_name as other_user_name, u_cons.avatar_url as other_user_avatar
+    	FROM conversations c
+    	JOIN consultants cons ON c.consultant_id = cons.id
+    	JOIN users u_cons ON cons.user_id = u_cons.id
+    	WHERE c.traveler_id = $1 AND c.consultant_id = $2
+		`
 	err := r.DB.Get(&conv, query, travelerID, consultantID)
 
 	if err == nil {
@@ -100,8 +106,8 @@ func (r *ChatRepository) GetInbox(userID uuid.UUID) ([]Conversation, error) {
 	query := `
         SELECT 
             c.id, 
-            c.traveler_id,   -- <--- ADD THIS
-            c.consultant_id, -- <--- ADD THIS
+            c.traveler_id,   
+            c.consultant_id,
             c.last_message, 
             c.last_message_at,
             CASE 
