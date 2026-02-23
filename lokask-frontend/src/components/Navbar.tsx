@@ -110,14 +110,10 @@ const Navbar = () => {
                     </span>
                   </div>
 
-                  {user.role === "consultant" && (
-                    <Link to="/dashboard" className="btn-outline-pill hover:bg-muted">
-                      <div className="flex items-center gap-2">
-                        <LayoutDashboard size={14} />
-                        <span>Dashboard</span>
-                      </div>
-                    </Link>
-                  )}
+                  <Link to="/dashboard" className="btn-outline-pill hover:bg-muted flex items-center gap-2">
+                    <LayoutDashboard size={14} />
+                    <span>Dashboard</span>
+                  </Link>
 
                   <button
                     onClick={handleLogout}

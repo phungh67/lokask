@@ -30,11 +30,16 @@ const ConsultantPage = () => {
   });
 
   // 🟢 2. Fetch related consultants in the same city
-  const { data: relatedConsultants = [] } = useQuery({
+  const { data: relatedResponse } = useQuery({
     queryKey: ["consultants", "related", consultant?.city],
     queryFn: () => getConsultants({ city: consultant?.city }),
     enabled: !!consultant?.city,
   });
+
+  // 🟢 Fix: Safely extract the data array from the paginated response
+  const relatedConsultants = Array.isArray(relatedResponse)
+    ? relatedResponse
+    : relatedResponse?.data || [];
 
   // 🟢 3. Loading & Error States
   if (isProfileLoading) {
@@ -61,8 +66,6 @@ const ConsultantPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 🟢 REMOVED <Navbar /> - Handled by Layout in App.tsx */}
-
       <section className="relative min-h-[650px] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative">
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
@@ -108,7 +111,14 @@ const ConsultantPage = () => {
 
                 <Button
                   onClick={() => requireAuth(
-                    () => openChat(consultant),
+                    () => {
+                      navigate("/dashboard", {
+                        state: {
+                          openChatWith: consultant.id,
+                          consultantName: consultant.name
+                        }
+                      });
+                    },
                     { actionType: 'ask', consultantName: consultant.name }
                   )}
                   className="w-full bg-primary rounded-full"
@@ -176,7 +186,6 @@ const ConsultantPage = () => {
       {/* Gallery */}
       <section className="py-10 border-b">
         <div className="container mx-auto px-6">
-          {/* Main Badge Card */}
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <span className="text-2xl">🏆</span>
@@ -192,13 +201,11 @@ const ConsultantPage = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Achievements List */}
             <div className="space-y-6">
               {consultant.badges && consultant.badges.length > 0 ? (
                 consultant.badges.map((badge) => (
                   <div key={badge.id} className="flex items-start gap-4 transition-all hover:translate-x-1">
                     <div className="p-2 bg-primary/10 rounded-lg">
-                      {/* Using the IconName from Go backend logic */}
                       <Award className="w-5 h-5 text-primary" />
                     </div>
                     <div>
@@ -211,7 +218,6 @@ const ConsultantPage = () => {
                 <p className="text-sm text-muted-foreground italic">No specific achievements listed yet.</p>
               )}
 
-              {/* Static Verification items remain below dynamic badges */}
               <div className="flex items-start gap-4">
                 <CheckCircle className="w-6 h-6 text-green-500" />
                 <div>
@@ -221,7 +227,6 @@ const ConsultantPage = () => {
               </div>
             </div>
 
-            {/* Photo Gallery */}
             <div className="grid grid-cols-[2fr_1fr] gap-2 h-[380px] rounded-xl overflow-hidden">
               <img src={galleryImages[0]} className="w-full h-full object-cover" alt="Gallery 1" />
               <div className="flex flex-col gap-2">
@@ -242,12 +247,15 @@ const ConsultantPage = () => {
       {relatedConsultants.length > 0 && (
         <section className="py-16 bg-secondary/30">
           <div className="container mx-auto px-6">
-            <LocalsCarousel title={`Other locals in ${consultant.city}`} consultants={relatedConsultants.filter(c => c.id !== id)} />
+            <LocalsCarousel
+              title={`Other locals in ${consultant.city}`}
+              consultants={relatedConsultants.filter((c: any) => c.id !== id)}
+            />
           </div>
         </section>
       )}
 
-      {/* 🟢 New Section: Final "Ask Now" CTA */}
+      {/* Final CTA */}
       <section className="py-20 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-extrabold mb-4 text-foreground">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
@@ -16,6 +16,11 @@ import {
 } from "@/lib/api";
 
 import { Consultant } from "@/types/consultant";
+
+interface DashboardLocationState {
+  openChatWith?: string;
+  consultantName?: string;
+}
 
 const fallbackProfile: Consultant = {
   id: "loading",
@@ -61,6 +66,8 @@ const mapConversationToDashboard = (apiConv: any, currentUserId: string | null) 
 
 const ConsultantDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as DashboardLocationState;
   const [activeSection, setActiveSection] = useState<"inbox" | "bookings" | "profile">("inbox");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -69,6 +76,24 @@ const ConsultantDashboard = () => {
   const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Navigate from "ask" to inbox
+  useEffect(() => {
+    if (location.state?.openChatWith && conversations.length > 0) {
+      const existingConv = conversations.find(c =>
+        c.consultantId === location.state.openChatWith ||
+        c.id === location.state.openChatWith
+      );
+
+      if (existingConv) {
+        setActiveConversationId(existingConv.id);
+        setActiveSection("inbox");
+      } else {
+        // Optional: Logic to create a NEW conversation if one doesn't exist
+        console.log("No existing conversation found for this consultant.");
+      }
+    }
+  }, [location.state, conversations]);
 
   // 🟢 Effect 1: Initial Auth & Identity Fetching
   useEffect(() => {
