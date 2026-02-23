@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { FilterIcon } from "@/components/ui/filter-icon";
+import { cn } from "@/lib/utils";
 
 // --- Sub-components for Sidebar ---
 
@@ -45,11 +47,13 @@ const ExploreSidebar = ({ onApply, onClear, initialFilters }: any) => {
   const ratings = [4.5, 4, 3.5, 3];
 
   return (
-    <div className="w-[320px] bg-white rounded-[14px] border border-[#E5E7EB] p-6 flex flex-col gap-12 sticky top-[121px] font-body">
+    <div
+      className="w-[320px] bg-white rounded-[14px] border border-[#E5E7EB] p-6 flex flex-col gap-12 font-body sticky top-[121px]">
+
+
       {/* Header Section */}
       <div className="flex justify-between items-center w-full">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* 🟢 Replaced Sliders with FilterIcon */}
           <div style={{ width: '20px', height: '20px', position: 'relative', overflow: 'hidden' }}>
             <FilterIcon size={20} />
           </div>
@@ -117,12 +121,12 @@ const ExploreSidebar = ({ onApply, onClear, initialFilters }: any) => {
                 border-radius: 33554400px !important;
               }
               .relative [class*="SliderRange"] {
-                background-color: #030213 !important; /* Filled track */
+                background-color: #030213 !important; 
                 height: 100% !important;
                 border-radius: 33554400px !important;
               }
               [role="slider"] {
-                background: #FFF !important; /* White pointer */
+                background: #FFF !important; 
                 border: 1px solid #030213 !important;
                 border-radius: 33554400px !important;
                 box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.10) !important;
@@ -150,7 +154,7 @@ const ExploreSidebar = ({ onApply, onClear, initialFilters }: any) => {
               <CustomCheckbox active={localFilters.minRating === r} onClick={() => { }} />
               <div className="flex items-center gap-1.5">
                 <span className="text-[#4A5565] text-[18px] font-normal leading-[28px]">{r.toFixed(1)}</span>
-                <StarIcon size={16} fill="#FDC700" color="transparent" /> {/* 🟢 Reusable yellow star */}
+                <StarIcon size={16} fill="#FDC700" color="transparent" />
                 <span className="text-[#4A5565] text-[18px] font-normal leading-[28px]">& up</span>
               </div>
             </div>
@@ -159,14 +163,21 @@ const ExploreSidebar = ({ onApply, onClear, initialFilters }: any) => {
       </div>
 
       {/* Languages Section */}
-      <div className="flex flex-col gap-3 flex-1">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Globe size={16} className="text-[#C77752]" />
           <span className={labelClassName}>Languages</span>
         </div>
-        <div className="max-h-40 overflow-y-auto flex flex-col gap-2 pr-1 scrollbar-hide">
+        <div className="flex flex-col gap-2 pr-1">
           {languages.map(l => (
-            <div key={l} className="flex items-center gap-2 cursor-pointer" onClick={() => setLocalFilters((prev: any) => ({ ...prev, languages: prev.languages.includes(l) ? prev.languages.filter((item: string) => item !== l) : [...prev.languages, l] }))}>
+            <div
+              key={l}
+              className="flex items-center gap-2 cursor-pointer group"
+              onClick={() => setLocalFilters((prev: any) => ({
+                ...prev,
+                languages: prev.languages.includes(l) ? prev.languages.filter((item: string) => item !== l) : [...prev.languages, l]
+              }))}
+            >
               <CustomCheckbox active={localFilters.languages.includes(l)} onClick={() => { }} />
               <span className="text-[#4A5565] text-[18px] font-normal leading-[28px]">{l}</span>
             </div>
@@ -217,27 +228,41 @@ const ExploreLocals = () => {
   return (
     <div className="min-h-screen bg-[#F5F3F0] font-body">
       <div className="max-w-[1440px] mx-auto pt-[121px] px-6 pb-12">
-        <div className="flex gap-8 items-start">
+        <div className="flex gap-8 items-start relative">
+
           {showFilters && (
-            <div className="hidden lg:block animate-in fade-in slide-in-from-left duration-300">
-              <ExploreSidebar
-                initialFilters={sidebarFilters}
-                onApply={(newFilters: any) => { setSidebarFilters(newFilters); setPage(1); }}
-                onClear={() => setSidebarFilters({ location: "", niches: [], priceRange: [0, 100], minRating: null, languages: [] })}
-              />
+            <div className="hidden lg:block">
+              <div className="w-[320px] sticky top-[121px] self-start animate-in fade-in slide-in-from-left duration-300">
+                <ExploreSidebar
+                  initialFilters={sidebarFilters}
+                  onApply={(newFilters: any) => {
+                    setSidebarFilters(newFilters);
+                    setPage(1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  onClear={() => setSidebarFilters({
+                    location: "",
+                    niches: [],
+                    priceRange: [0, 100],
+                    minRating: null,
+                    languages: []
+                  })}
+                />
+              </div>
             </div>
           )}
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start mb-8">
               <div className="flex-1">
                 <h1 className="text-[36px] font-bold text-[#101828] leading-[40px] mb-3 font-display tracking-tight">Explore locals</h1>
                 <p className="text-[18px] text-[#4A5565] leading-[28px]">Find real people who live in your destination and can give you honest, local advice.</p>
               </div>
+
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 h-9 bg-white"
+                className="flex items-center gap-2 h-9 bg-white border-[#D1D5DC] text-[#364153]"
               >
                 {showFilters ? <EyeOff size={16} /> : <SlidersHorizontal size={16} />}
                 {showFilters ? "Hide Filters" : "Show Filters"}
@@ -258,33 +283,77 @@ const ExploreLocals = () => {
                   {consultants.map(c => <ConsultantCardCompact key={c.id} consultant={c} />)}
                 </div>
 
-                {/* Pagination */}
                 <div className="mt-12 flex justify-center border-t border-[#DED9D3] pt-8">
                   <Pagination>
-                    <PaginationContent>
+                    <PaginationContent className="gap-2">
                       <PaginationItem>
                         <PaginationPrevious
                           onClick={() => setPage(p => Math.max(1, p - 1))}
-                          className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          className={cn(
+                            "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
+                            page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                          )}
                         />
                       </PaginationItem>
 
-                      {[...Array(totalPages)].map((_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            isActive={page === i + 1}
-                            onClick={() => setPage(i + 1)}
-                            className="cursor-pointer"
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
+                      {(() => {
+                        const pages = [];
+
+                        // 1. Show 2 previous pages + current page
+                        const start = Math.max(1, page - 2);
+                        for (let i = start; i <= page; i++) {
+                          pages.push(i);
+                        }
+
+                        return (
+                          <>
+                            {pages.map((p) => (
+                              <PaginationItem key={p}>
+                                <PaginationLink
+                                  isActive={page === p}
+                                  onClick={() => setPage(p)}
+                                  className={cn(
+                                    "w-10 h-10 rounded-lg flex items-center justify-center font-medium transition-colors cursor-pointer",
+                                    page === p
+                                      ? "bg-[#F9FAFB] border border-[#D1D5DC] text-[#1D2939]"
+                                      : "text-[#475467] hover:bg-gray-50"
+                                  )}
+                                >
+                                  {p}
+                                </PaginationLink>
+                              </PaginationItem>
+                            ))}
+
+                            {/* 2. Show Ellipsis if current page is not near the end */}
+                            {page < totalPages - 1 && (
+                              <PaginationItem>
+                                <PaginationEllipsis className="text-[#475467]" />
+                              </PaginationItem>
+                            )}
+
+                            {/* 3. Show Last Page */}
+                            {page < totalPages && (
+                              <PaginationItem>
+                                <PaginationLink
+                                  isActive={false}
+                                  onClick={() => setPage(totalPages)}
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center font-medium text-[#475467] hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                  {totalPages}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       <PaginationItem>
                         <PaginationNext
                           onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                          className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          className={cn(
+                            "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
+                            page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
+                          )}
                         />
                       </PaginationItem>
                     </PaginationContent>
@@ -297,6 +366,6 @@ const ExploreLocals = () => {
       </div>
     </div>
   );
-};
+}
 
 export default ExploreLocals;
