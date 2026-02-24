@@ -48,9 +48,9 @@ const fallbackProfile: Consultant = {
 
 const mapConversationToDashboard = (apiConv: any) => {
   const displayName = apiConv.other_user_name || "User";
-  
-  const displayAvatar = apiConv.other_user_avatar 
-    ? apiConv.other_user_avatar 
+
+  const displayAvatar = apiConv.other_user_avatar
+    ? apiConv.other_user_avatar
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
 
   return {
@@ -61,7 +61,7 @@ const mapConversationToDashboard = (apiConv: any) => {
     },
     lastMessage: apiConv.last_message || "Started a conversation",
     time: apiConv.last_message_at || new Date().toISOString(),
-    unread: apiConv.unread_count || 0, 
+    unread: apiConv.unread_count || 0,
     travelerId: apiConv.traveler_id,
     consultantId: apiConv.consultant_id
   };
@@ -116,13 +116,14 @@ const ConsultantDashboard = () => {
 
             // Map the newly created backend conversation to our frontend UI format
             const mappedNewConv = mapConversationToDashboard(
-              newConvApi,
-              accountUserId,
-              consultantProfile?.id || ""
+              newConvApi
             );
 
             // Inject it into the top of our inbox list and switch to it
-            setConversations((prev) => [mappedNewConv, ...prev]);
+            setConversations((prev) => {
+              if (prev.some(c => c.id === mappedNewConv.id)) return prev;
+              return [mappedNewConv, ...prev];
+            });
             setActiveConversationId(mappedNewConv.id);
             setActiveSection("inbox");
 
@@ -197,13 +198,15 @@ const ConsultantDashboard = () => {
 
         // Pass BOTH IDs to correctly map the "Other User"
         const mapped = safeData.map((apiConv: any) =>
-          mapConversationToDashboard(apiConv, accountUserId, consultantProfile.id)
+          mapConversationToDashboard(apiConv)
         );
+
+        const uniqueConversations = Array.from(new Map(mapped.map((item: any) => [item.id, item])).values());
 
         setConversations(mapped);
 
-        if (!activeConversationId && mapped.length > 0) {
-          setActiveConversationId(mapped[0].id);
+        if (!activeConversationId && uniqueConversations.length > 0) {
+          setActiveConversationId(uniqueConversations[0].id);
         }
       } catch (error) {
         console.error("Failed to load inbox", error);
