@@ -181,7 +181,11 @@ const ConsultantDashboard = () => {
     const fetchMessages = async () => {
       try {
         const history = await getChatHistory(activeConversationId);
-        const uiMessages = history.map((m: ChatMessage) => ({
+
+        // 🟢 FIX: Handle cases where history is null or undefined
+        const safeHistory = history ?? [];
+
+        const uiMessages = safeHistory.map((m: ChatMessage) => ({
           id: m.id.toString(),
           content: m.content,
           sender: m.sender_id === consultantProfile.id ? "consultant" : "traveler",
@@ -201,8 +205,17 @@ const ConsultantDashboard = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!activeConversationId || !consultantProfile) return;
+
     const tempId = Date.now().toString();
-    const optimisticMsg = { id: tempId, content, sender: "consultant", timestamp: new Date(), type: "text" };
+
+    const optimisticMsg = {
+      id: tempId,
+      content,
+      sender: userRole === "consultant" ? "consultant" : "traveler",
+      timestamp: new Date(),
+      type: "text"
+    };
+
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
 
     try {
