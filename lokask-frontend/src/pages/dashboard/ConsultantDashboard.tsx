@@ -12,12 +12,15 @@ import {
   getInbox,
   getChatHistory,
   sendMessage,
+  startChat,
   ChatMessage
 } from "@/lib/api";
 
 import { Consultant } from "@/types/consultant";
 
 interface DashboardLocationState {
+  intent?: string;
+  targetId?: string;
   openChatWith?: string;
   consultantName?: string;
 }
@@ -43,24 +46,22 @@ const fallbackProfile: Consultant = {
   galleryImages: []
 };
 
-// Check the "other_user_id" to correctly display the avatar and name instead of hardcode these things
-const mapConversationToDashboard = (apiConv: any, accountId: string | null, consultantId: string | null) => {
-  // Check if my ID pair matches the consultant_id of this conversation
-  const amIConsultant = apiConv.consultant_id === accountId || apiConv.consultant_id === consultantId;
+const mapConversationToDashboard = (apiConv: any) => {
+  const displayName = apiConv.other_user_name || "User";
+  
+  const displayAvatar = apiConv.other_user_avatar 
+    ? apiConv.other_user_avatar 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
 
   return {
     id: apiConv.id,
     otherUser: {
-      name: amIConsultant
-        ? (apiConv.traveler_name || "Traveler")
-        : (apiConv.consultant_name || "Local Expert"),
-      avatar: amIConsultant
-        ? (apiConv.traveler_avatar || `https://ui-avatars.com/api/?name=Traveler&background=random`)
-        : (apiConv.consultant_avatar || `https://ui-avatars.com/api/?name=Local&background=random`),
+      name: displayName,
+      avatar: displayAvatar,
     },
     lastMessage: apiConv.last_message || "Started a conversation",
     time: apiConv.last_message_at || new Date().toISOString(),
-    unread: apiConv.unread_count || 0,
+    unread: apiConv.unread_count || 0, 
     travelerId: apiConv.traveler_id,
     consultantId: apiConv.consultant_id
   };
@@ -85,22 +86,65 @@ const ConsultantDashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Navigate from "ask" to inbox
+  // 🟢 Smart Navigation: Handles jumping to existing chats OR creating new ones
   useEffect(() => {
-    if (location.state?.openChatWith && conversations.length > 0) {
-      const existingConv = conversations.find(c =>
-        c.consultantId === location.state.openChatWith ||
-        c.id === location.state.openChatWith
-      );
+    const handleIncomingChatIntent = async () => {
+      const state = location.state as DashboardLocationState;
 
-      if (existingConv) {
-        setActiveConversationId(existingConv.id);
-        setActiveSection("inbox");
+      // If no intent, or profiles are still loading, do nothing
+      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
+
+      const targetConsultantId = state.targetId || state.openChatWith;
+
+      if (state.intent === "startChat" || targetConsultantId) {
+        // 1. Check if we already have an active conversation with this consultant
+        const existingConv = conversations.find(
+          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId
+        );
+
+        if (existingConv) {
+          // If it exists, just open it
+          setActiveConversationId(existingConv.id);
+          setActiveSection("inbox");
+
+          // Clear the router state so it doesn't re-trigger on refresh
+          window.history.replaceState({}, document.title);
+        } else if (targetConsultantId && accountUserId) {
+          // 2. If it DOES NOT exist, we must create a new chat via the API
+          try {
+            const newConvApi = await startChat(targetConsultantId);
+
+            // Map the newly created backend conversation to our frontend UI format
+            const mappedNewConv = mapConversationToDashboard(
+              newConvApi,
+              accountUserId,
+              consultantProfile?.id || ""
+            );
+
+            // Inject it into the top of our inbox list and switch to it
+            setConversations((prev) => [mappedNewConv, ...prev]);
+            setActiveConversationId(mappedNewConv.id);
+            setActiveSection("inbox");
+
+            // Clear the router state
+            window.history.replaceState({}, document.title);
+          } catch (error) {
+            console.error("Failed to start new chat:", error);
+            toast({
+              title: "Error",
+              description: "Could not start a chat with this expert.",
+              variant: "destructive"
+            });
+          }
+        }
       }
-    }
-  }, [location.state, conversations]);
+    };
 
-  // 🟢 1. Check the stored ID pair (Updated Traveler Fallback)
+    // We only want to run this once the initial conversations list has loaded
+    handleIncomingChatIntent();
+  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
+
+  // 1. Check the stored ID pair (Updated Traveler Fallback)
   useEffect(() => {
     const loadIdentity = async () => {
       const storedUser = localStorage.getItem("user");
@@ -128,7 +172,7 @@ const ConsultantDashboard = () => {
             setConsultantProfile({ ...fallbackProfile, id: user.id, name: user.full_name || "User" });
           }
         } else {
-          // 🟢 FIX 1: Clean state for travelers (empty ID instead of duplicated User ID)
+          // Clean state for travelers (empty ID instead of duplicated User ID)
           setConsultantProfile({ ...fallbackProfile, id: "", name: user.full_name || "User" });
         }
       } catch (error) {
@@ -142,10 +186,9 @@ const ConsultantDashboard = () => {
     loadIdentity();
   }, [navigate]);
 
-  // 🟢 2. Load inbox (Updated Guard)
+  // 2. Load inbox
   useEffect(() => {
     const loadInbox = async () => {
-      // 🟢 FIX 2: Gate purely on accountUserId and consultantProfile existence (not truthy ID)
       if (!accountUserId || !consultantProfile || isProfileLoading) return;
 
       try {
@@ -170,7 +213,7 @@ const ConsultantDashboard = () => {
     loadInbox();
   }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
 
-  // Poll message
+  // 3. Poll message
   useEffect(() => {
     if (!activeConversationId || !accountUserId || !consultantProfile || isProfileLoading) return;
 
@@ -181,10 +224,7 @@ const ConsultantDashboard = () => {
 
         const uiMessages = safeHistory.map((m: any) => {
           const actualSenderId = m.sender_id || m.senderId || m.SenderID || m.SenderId;
-
           const isMe = actualSenderId === accountUserId || actualSenderId === consultantProfile.id;
-
-          console.log(`[POLL] Msg: "${m.content}" | Backend ID: ${actualSenderId} | isMe: ${isMe}`);
 
           return {
             id: (m.id || Date.now()).toString(),
@@ -206,14 +246,13 @@ const ConsultantDashboard = () => {
     return () => { if (pollInterval.current) clearInterval(pollInterval.current); };
   }, [activeConversationId, consultantProfile, accountUserId, isProfileLoading]);
 
-  // 🟢 4. Handle Send Message (Updated Guard)
+  // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
     console.log("[DEBUG] Attempting to send message...");
     console.log("  - Active Conv ID:", activeConversationId);
     console.log("  - My Account ID:", accountUserId);
     console.log("  - My Consultant ID:", consultantProfile?.id);
 
-    // 🟢 FIX 4: Gate entirely on accountUserId, which every user guarantees to have.
     if (!activeConversationId || !accountUserId) {
       toast({ title: "Error", description: "Missing active chat or profile." });
       return;
