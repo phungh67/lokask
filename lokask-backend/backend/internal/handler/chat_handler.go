@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/repository"
 	"fmt"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -61,7 +62,7 @@ func (h *ChatHandler) StartChat(c *fiber.Ctx) error {
 func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	myIDStr, err := getUserID(c)
 	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized", "detail": err.Error()})
 	}
 
 	myID, err := uuid.Parse(myIDStr)
@@ -70,18 +71,18 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	}
 	convID, _ := uuid.Parse(c.Params("id"))
 
-	var actingSenderID uuid.UUID
-	err = h.Repo.DB.Get(&actingSenderID, `
-        SELECT CASE 
-            WHEN cons.user_id = $1 THEN c.consultant_id 
-            ELSE c.traveler_id 
-        END
-        FROM conversations c
-        JOIN consultants cons ON c.consultant_id = cons.id
-        WHERE c.id = $2`, myID, convID)
+	var isParticipant bool
+	err = h.Repo.DB.Get(&isParticipant, `
+		SELECT EXISTS (
+			SELECT 1 FROM conversations c
+			LEFT JOIN consultants cons ON c.consultant_id = cons.id
+			WHERE c.id = $1 AND (c.traveler_id = $2 OR cons.user_id = $2)
+		)`, convID, myID)
 
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Identity lookup failed"})
+	log.Printf("[INFO] MyID: %s, conversation: %s", myID, convID)
+
+	if err != nil || !isParticipant {
+		return c.Status(403).JSON(fiber.Map{"error": "Forbidden: Not a participant of this conversation", "detail": err.Error()})
 	}
 
 	var req struct {
@@ -91,13 +92,13 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid content"})
 	}
 
-	if err := h.Repo.CreateMessage(convID, actingSenderID, req.Content); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message"})
+	if err := h.Repo.CreateMessage(convID, myID, req.Content); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "detail": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",
-		"sender_id": actingSenderID,
+		"sender_id": myID,
 	})
 }
 

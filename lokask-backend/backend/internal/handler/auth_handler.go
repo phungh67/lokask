@@ -179,6 +179,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
 	if err == nil && consultantID != "" {
 		role = "consultant"
+	} else {
+		consultantID = ""
 	}
 
 	// redis logic
@@ -219,11 +221,12 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"token": sessionToken,
 		"user": fiber.Map{
-			"id":         user.ID,
-			"full_name":  user.FullName,
-			"email":      user.Email,
-			"avatar_url": user.AvatarURLJSON,
-			"role":       role,
+			"id":            user.ID,
+			"consultant_id": consultantID,
+			"full_name":     user.FullName,
+			"email":         user.Email,
+			"avatar_url":    user.AvatarURLJSON,
+			"role":          role,
 		},
 		"message": "Logged in",
 	})

@@ -43,16 +43,18 @@ const fallbackProfile: Consultant = {
   galleryImages: []
 };
 
-const mapConversationToDashboard = (apiConv: any, currentUserId: string | null) => {
-  const isCurrentUserConsultant = apiConv.consultant_id === currentUserId;
+// Check the "other_user_id" to correctly display the avatar and name instead of hardcode these things
+const mapConversationToDashboard = (apiConv: any, accountId: string | null, consultantId: string | null) => {
+  // Check if my ID pair matches the consultant_id of this conversation
+  const amIConsultant = apiConv.consultant_id === accountId || apiConv.consultant_id === consultantId;
 
   return {
     id: apiConv.id,
     otherUser: {
-      name: isCurrentUserConsultant
+      name: amIConsultant
         ? (apiConv.traveler_name || "Traveler")
         : (apiConv.consultant_name || "Local Expert"),
-      avatar: isCurrentUserConsultant
+      avatar: amIConsultant
         ? (apiConv.traveler_avatar || `https://ui-avatars.com/api/?name=Traveler&background=random`)
         : (apiConv.consultant_avatar || `https://ui-avatars.com/api/?name=Local&background=random`),
     },
@@ -68,12 +70,18 @@ const ConsultantDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as DashboardLocationState;
+
   const [activeSection, setActiveSection] = useState<"inbox" | "bookings" | "profile">("inbox");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [currentMessages, setCurrentMessages] = useState<any[]>([]);
+
   const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Store both id, consultant ID and user ID
+  const [accountUserId, setAccountUserId] = useState<string | null>(null);
   const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
+
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -88,14 +96,11 @@ const ConsultantDashboard = () => {
       if (existingConv) {
         setActiveConversationId(existingConv.id);
         setActiveSection("inbox");
-      } else {
-        // Optional: Logic to create a NEW conversation if one doesn't exist
-        console.log("No existing conversation found for this consultant.");
       }
     }
   }, [location.state, conversations]);
 
-  // 🟢 Effect 1: Initial Auth & Identity Fetching
+  // 🟢 1. Check the stored ID pair (Updated Traveler Fallback)
   useEffect(() => {
     const loadIdentity = async () => {
       const storedUser = localStorage.getItem("user");
@@ -109,8 +114,8 @@ const ConsultantDashboard = () => {
       try {
         const user = JSON.parse(storedUser);
         setUserRole(user.role);
+        setAccountUserId(user.id); // userID
 
-        // If the user is a consultant, fetch their specific Consultant UUID
         if (user.role === "consultant") {
           const response = await fetch(`http://localhost:8080/api/v1/users/${user.id}/consultant`, {
             headers: { "Authorization": `Bearer ${token}` }
@@ -118,23 +123,13 @@ const ConsultantDashboard = () => {
 
           if (response.ok) {
             const consultantData = await response.json();
-            // 🟢 This ID is now the REAL consultant UUID (e.g. CONS_456)
-            setConsultantProfile(consultantData);
+            setConsultantProfile(consultantData); // consultantID
           } else {
-            // Fallback if consultant record isn't found yet
-            setConsultantProfile({
-              ...fallbackProfile,
-              id: user.id,
-              name: user.full_name || "User",
-            });
+            setConsultantProfile({ ...fallbackProfile, id: user.id, name: user.full_name || "User" });
           }
         } else {
-          // Standard traveler fallback
-          setConsultantProfile({
-            ...fallbackProfile,
-            id: user.id,
-            name: user.full_name || "User",
-          });
+          // 🟢 FIX 1: Clean state for travelers (empty ID instead of duplicated User ID)
+          setConsultantProfile({ ...fallbackProfile, id: "", name: user.full_name || "User" });
         }
       } catch (error) {
         console.error("Dashboard Identity Error:", error);
@@ -147,18 +142,19 @@ const ConsultantDashboard = () => {
     loadIdentity();
   }, [navigate]);
 
-  // 🟢 Effect 2: Load Inbox
+  // 🟢 2. Load inbox (Updated Guard)
   useEffect(() => {
     const loadInbox = async () => {
-      if (!consultantProfile?.id || isProfileLoading) return;
+      // 🟢 FIX 2: Gate purely on accountUserId and consultantProfile existence (not truthy ID)
+      if (!accountUserId || !consultantProfile || isProfileLoading) return;
 
       try {
         const data = await getInbox();
-
         const safeData = data ?? [];
 
+        // Pass BOTH IDs to correctly map the "Other User"
         const mapped = safeData.map((apiConv: any) =>
-          mapConversationToDashboard(apiConv, consultantProfile.id)
+          mapConversationToDashboard(apiConv, accountUserId, consultantProfile.id)
         );
 
         setConversations(mapped);
@@ -172,26 +168,33 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [consultantProfile?.id, isProfileLoading, activeConversationId]);
+  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
 
-  // 🟢 Effect 3: Poll Messages
+  // Poll message
   useEffect(() => {
-    if (!activeConversationId || !consultantProfile || isProfileLoading) return;
+    if (!activeConversationId || !accountUserId || !consultantProfile || isProfileLoading) return;
 
     const fetchMessages = async () => {
       try {
         const history = await getChatHistory(activeConversationId);
-
-        // 🟢 FIX: Handle cases where history is null or undefined
         const safeHistory = history ?? [];
 
-        const uiMessages = safeHistory.map((m: ChatMessage) => ({
-          id: m.id.toString(),
-          content: m.content,
-          sender: m.sender_id === consultantProfile.id ? "consultant" : "traveler",
-          timestamp: new Date(m.created_at),
-          type: "text",
-        }));
+        const uiMessages = safeHistory.map((m: any) => {
+          const actualSenderId = m.sender_id || m.senderId || m.SenderID || m.SenderId;
+
+          const isMe = actualSenderId === accountUserId || actualSenderId === consultantProfile.id;
+
+          console.log(`[POLL] Msg: "${m.content}" | Backend ID: ${actualSenderId} | isMe: ${isMe}`);
+
+          return {
+            id: (m.id || Date.now()).toString(),
+            content: m.content,
+            sender: isMe ? "user" : "other", // "user" guarantees right-side alignment
+            timestamp: new Date(m.created_at || m.createdAt || Date.now()),
+            type: m.type || "text",
+          };
+        });
+
         setCurrentMessages(uiMessages);
       } catch (error) {
         console.error("Failed to load history", error);
@@ -201,27 +204,42 @@ const ConsultantDashboard = () => {
     fetchMessages();
     pollInterval.current = setInterval(fetchMessages, 3000);
     return () => { if (pollInterval.current) clearInterval(pollInterval.current); };
-  }, [activeConversationId, consultantProfile, isProfileLoading]);
+  }, [activeConversationId, consultantProfile, accountUserId, isProfileLoading]);
 
+  // 🟢 4. Handle Send Message (Updated Guard)
   const handleSendMessage = async (content: string) => {
-    if (!activeConversationId || !consultantProfile) return;
+    console.log("[DEBUG] Attempting to send message...");
+    console.log("  - Active Conv ID:", activeConversationId);
+    console.log("  - My Account ID:", accountUserId);
+    console.log("  - My Consultant ID:", consultantProfile?.id);
 
-    const tempId = Date.now().toString();
+    // 🟢 FIX 4: Gate entirely on accountUserId, which every user guarantees to have.
+    if (!activeConversationId || !accountUserId) {
+      toast({ title: "Error", description: "Missing active chat or profile." });
+      return;
+    }
+
+    const tempId = "temp-" + Date.now();
 
     const optimisticMsg = {
       id: tempId,
       content,
-      sender: userRole === "consultant" ? "consultant" : "traveler",
+      sender: "user",
       timestamp: new Date(),
       type: "text"
     };
-
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       await sendMessage(activeConversationId, content);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+      console.log("[DEBUG] Message sent successfully to API!");
+    } catch (error: any) {
+      console.error("[DEBUG] Backend rejected the message:", error);
+      toast({
+        title: "Message Failed",
+        description: error.message || "The server rejected your message.",
+        variant: "destructive"
+      });
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };

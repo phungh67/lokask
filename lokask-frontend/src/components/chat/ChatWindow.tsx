@@ -111,7 +111,7 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     id: m.id.toString(),
     // LOGIC: If sender matches consultant ID, it's 'consultant'. 
     // Otherwise, it's 'user' (me).
-    sender: m.sender_id === consultant.id ? 'consultant' : 'user', 
+    sender: m.sender_id === currentUserId ? 'user' : 'consultant',
     content: m.content,
     type: m.type || 'text',
     timestamp: new Date(m.created_at),

@@ -202,6 +202,7 @@ export interface AuthResponse {
     token: string;
     user: {
         id: string;
+        consultant_id?: string;
         full_name: string;
         email: string;
         avatar_url: string;

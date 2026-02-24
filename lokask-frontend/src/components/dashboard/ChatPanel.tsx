@@ -9,7 +9,6 @@ import { format, isAfter, addHours } from "date-fns";
 interface ChatPanelProps {
   conversation: any | null; // Uses the mapped backend data
   onSendMessage: (message: string) => void;
-  // 🟢 Updated to accept real call data structure
   onScheduleCall: (callData: any) => void; 
   onCancelCall?: (callId: string) => void;
 }
@@ -39,8 +38,7 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
   }
 
   const renderMessage = (message: any) => {
-    // Check if sender is current user (could be 'me' or matches consultantProfile.id)
-    const isMe = message.sender === "consultant" || message.sender === "me";
+    const isMe = message.sender === "user";
 
     return (
       <div key={message.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
@@ -60,7 +58,6 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
   return (
     <div className="flex-1 flex flex-col bg-secondary/20 relative">
       <ChatPanelHeader 
-        // 🟢 Uses the otherUser object mapped in the dashboard
         otherUser={conversation.otherUser} 
         onScheduleCall={onScheduleCall}
       />
