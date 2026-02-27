@@ -170,11 +170,11 @@ const ConsultantDashboard = () => {
             const consultantData = await response.json();
             setConsultantProfile(consultantData); // consultantID
           } else {
-            setConsultantProfile({ ...fallbackProfile, id: user.id, name: user.full_name || "User" });
+            setConsultantProfile({ ...fallbackProfile, id: user.id, name: user.full_name || "User", avatarUrl: user.avatar_url || "" });
           }
         } else {
           // Clean state for travelers (empty ID instead of duplicated User ID)
-          setConsultantProfile({ ...fallbackProfile, id: "", name: user.full_name || "User" });
+          setConsultantProfile({ ...fallbackProfile, id: "", name: user.full_name || "User", avatarUrl: user.avatar_url || "" });
         }
       } catch (error) {
         console.error("Dashboard Identity Error:", error);

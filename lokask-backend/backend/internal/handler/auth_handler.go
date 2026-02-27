@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/config"
 	"asklocal/internal/repository"
+	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"log"
@@ -91,11 +92,17 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
 	}
 
+	hash := md5.Sum([]byte(req.Email))
+	seed := fmt.Sprintf("%x", hash)
+
+	defaultAvatarURL := fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", seed)
+
 	// create new user to put to database
 	user := &repository.User{
 		Email:        req.Email,
 		PasswordHash: string(hashedPwd),
 		FullName:     req.FullName,
+		AvatarURL:    sql.NullString{String: defaultAvatarURL, Valid: true},
 	}
 
 	if err := h.UserRepo.CreateUserTx(tx, user); err != nil {

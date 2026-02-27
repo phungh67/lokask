@@ -2,15 +2,15 @@ import { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { DashboardConsultant } from "@/data/dashboardMockData";
+import { Consultant } from "@/types/consultant";
 import ProfilePhotoSection from "./profile/ProfilePhotoSection";
 import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
 
 interface ProfilePanelProps {
-  consultant: DashboardConsultant;
-  onSave: (updates: Partial<DashboardConsultant>) => void;
+  consultant: Consultant;
+  onSave: (updates: Partial<Consultant>) => void;
 }
 
 interface ProfileFormData {
@@ -30,16 +30,17 @@ interface ProfileFormData {
 const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const { toast } = useToast();
   
+  // Map the real backend keys (avatarUrl, coverUrl, tag) to the form data
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: consultant.name,
-    city: consultant.city,
-    country: consultant.country,
+    name: consultant.name || "",
+    city: consultant.city || "",
+    country: consultant.country || "",
     quote: consultant.quote || "",
     bio: consultant.bio || "",
-    avatar: consultant.avatar,
-    coverImage: consultant.coverImage || "",
+    avatar: consultant.avatarUrl || "",
+    coverImage: consultant.coverUrl || "",
     galleryImages: consultant.galleryImages || [],
-    mainTag: consultant.mainTag || "",
+    mainTag: consultant.tag || "",
     tags: consultant.tags || [],
     languages: consultant.languages || [],
   });
@@ -53,16 +54,17 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   }, [formData, initialData]);
 
   const handleSave = () => {
+    // Map the form data back to the database keys when saving
     onSave({
       name: formData.name,
       city: formData.city,
       country: formData.country,
       quote: formData.quote,
       bio: formData.bio,
-      avatar: formData.avatar,
-      coverImage: formData.coverImage,
+      avatarUrl: formData.avatar, 
+      coverUrl: formData.coverImage,
       galleryImages: formData.galleryImages,
-      mainTag: formData.mainTag,
+      tag: formData.mainTag,
       tags: formData.tags,
       languages: formData.languages,
     });
