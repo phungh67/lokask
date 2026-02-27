@@ -31,13 +31,30 @@ const Navbar = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const userData = await getMe();
-        setUser(userData);
-      } catch (err) {
-        setUser(null);
-      } finally {
+
+      // check local storage for stored credential
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+
+      if (storedToken && storedUser) {
+        setUser(JSON.parse(storedUser));
         setLoading(false);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+
+      if (storedToken) {
+        try {
+          const userData = await getMe();
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+        } catch (err) {
+          console.error("Session expired or invalid token");
+          setUser(null);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
       }
     };
 
@@ -47,7 +64,14 @@ const Navbar = () => {
 
     checkAuth();
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // listener for the authenticated event
+    window.addEventListener("auth-changed", checkAuth);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("auth-changed", checkAuth);
+    }
   }, []);
 
   const handleLogout = async () => {

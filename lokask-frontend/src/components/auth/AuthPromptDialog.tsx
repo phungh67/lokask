@@ -77,6 +77,9 @@ const AuthPromptDialog = ({
       // Save session
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
+
+      // broadcast changing information
+      window.dispatchEvent(new Event("auth-changed"));
       
       onOpenChange(false); // Close dialog
 
