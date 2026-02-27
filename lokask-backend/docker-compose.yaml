@@ -81,6 +81,15 @@ services:
       MINIO_ENDPOINT: "minio:9000"
       MINIO_PUBLIC_URL: "http://localhost:9001"
       REDIS_ADDR: "redis:6379"
+  
+  frontend:
+    build: ../lokask-frontend
+    container_name: lokask_web
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
 
 volumes:
   postgres_data:
