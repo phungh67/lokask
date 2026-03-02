@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, Search, Heart, Globe, User, Briefcase, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, Search, Heart, User, Briefcase, LayoutDashboard } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,

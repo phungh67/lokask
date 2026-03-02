@@ -32,6 +32,11 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     const initChat = async () => {
       try {
         setIsLoading(true);
+
+        // clear old data?
+        setMessages([]); 
+        setConversationId(null);
+        
         // Get the current logged-in user ID to differentiate "me" from others
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
@@ -98,8 +103,16 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      await sendMessage(conversationId, content);
-      // History will be refreshed via polling or immediate fetch
+      // fixing the async gap
+      const realMsg = await sendMessage(conversationId, content);
+
+      // swap opstimistic id with actual data
+      setMessages ((prev) => 
+        prev.map((msg) => msg.id === tempId ? realMsg : msg)
+      )
+
+      const freshHistory = await getChatHistory(conversationId);
+      setMessages(freshHistory);
     } catch (error) {
       console.error("Send failed", error);
       toast.error("Failed to send message");

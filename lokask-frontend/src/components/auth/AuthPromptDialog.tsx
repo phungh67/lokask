@@ -63,7 +63,7 @@ const AuthPromptDialog = ({
   // 1. Initial Step Logic
   const handleContinueWithEmail = async () => {
     if (!isValidEmail(email)) return;
-    setStep("login"); 
+    setStep("login");
   };
 
   // 🟢 2. Handle Login with Smart Redirect
@@ -71,16 +71,16 @@ const AuthPromptDialog = ({
     setIsLoading(true);
     try {
       const res = await login({ email, password });
-      
+
       toast.success(`Welcome back, ${res.user.full_name}!`);
-      
+
       // Save session
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
 
       // broadcast changing information
       window.dispatchEvent(new Event("auth-changed"));
-      
+
       onOpenChange(false); // Close dialog
 
       // 🟢 Trigger external login callback if provided
@@ -88,13 +88,10 @@ const AuthPromptDialog = ({
 
       // 🟢 REDIRECT LOGIC
       const userRole = (res.user as any).role;
-      
+
       if (userRole === "consultant") {
         console.log("Redirecting to Consultant Dashboard");
-        navigate("/dashboard"); 
-      } else {
-        console.log("Redirecting to Home");
-        navigate("/"); 
+        navigate("/dashboard");
       }
 
     } catch (error: any) {
@@ -124,7 +121,7 @@ const AuthPromptDialog = ({
         });
         toast.success("Traveller account created! Please log in.");
       }
-      
+
       // 🟢 Trigger external signup callback if provided
       if (onSignup) onSignup();
 
@@ -153,21 +150,21 @@ const AuthPromptDialog = ({
           onChange={(e) => setEmail(e.target.value)}
           className="h-12 rounded-xl border-2 px-4 text-base"
         />
-        <Button 
+        <Button
           className="w-full h-12 rounded-full font-medium text-base"
           disabled={!isValidEmail(email)}
           onClick={() => setStep("login")}
         >
           Continue with email
         </Button>
-        
+
         <div className="relative py-2">
-           <div className="absolute inset-0 flex items-center"><span className="w-full border-t"/></div>
-           <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
         </div>
 
         <Button variant="outline" className="w-full h-12 rounded-full" onClick={() => setStep("signup")}>
-           New here? Create an account
+          New here? Create an account
         </Button>
       </div>
     </>
@@ -179,9 +176,9 @@ const AuthPromptDialog = ({
         <DialogTitle className="text-2xl font-display font-semibold">Welcome back</DialogTitle>
       </DialogHeader>
       <div className="mt-4 space-y-4">
-        <Input 
-          value={email} 
-          disabled 
+        <Input
+          value={email}
+          disabled
           className="bg-muted text-muted-foreground h-12 rounded-xl px-4"
         />
         <div className="relative">
@@ -214,27 +211,27 @@ const AuthPromptDialog = ({
         </DialogTitle>
       </DialogHeader>
       <div className="mt-4 space-y-4">
-        <Input 
-          placeholder="Full Name" 
-          value={fullName} 
-          onChange={(e) => setFullName(e.target.value)} 
+        <Input
+          placeholder="Full Name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
           className="h-12 rounded-xl border-2 px-4"
         />
-        <Input 
-          placeholder="Email" 
-          value={email} 
-          onChange={(e) => setEmail(e.target.value)} 
+        <Input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="h-12 rounded-xl border-2 px-4"
         />
-        
+
         {/* City Input - Only for Consultants */}
         {defaultRole === "consultant" && (
-           <Input 
-             placeholder="City (e.g., Tokyo)" 
-             value={city} 
-             onChange={(e) => setCity(e.target.value)} 
-             className="h-12 rounded-xl border-2 px-4"
-           />
+          <Input
+            placeholder="City (e.g., Tokyo)"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="h-12 rounded-xl border-2 px-4"
+          />
         )}
 
         <div className="relative">
@@ -245,7 +242,7 @@ const AuthPromptDialog = ({
             onChange={(e) => setPassword(e.target.value)}
             className="h-12 rounded-xl border-2 px-4 pr-12"
           />
-           <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-muted-foreground">
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-muted-foreground">
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
