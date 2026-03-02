@@ -43,7 +43,8 @@ func (r *BookingRepository) CreateBookingTx(tx *sqlx.Tx, b *domain.BookingEntry)
 			start_time, 
 			end_time, 
 			total_price,
-			user_notes
+			user_notes,
+			service_type
 		) 
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, status, created_at, updated_at

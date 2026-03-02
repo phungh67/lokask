@@ -3,7 +3,7 @@ import { format, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Booking } from "@/data/dashboardMockData";
+import { Booking } from "@/types/booking";
 import { cn } from "@/lib/utils";
 
 interface BookingMiniCalendarProps {
@@ -23,7 +23,7 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
   const bookedDates = useMemo(() => {
     return bookings
       .filter((b) => b.status !== "cancelled")
-      .map((b) => new Date(b.scheduledAt));
+      .map((b) => new Date(b.start_time));
   }, [bookings]);
 
   // Generate time slots for selected date
@@ -38,8 +38,8 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
       const matchingBooking = bookings.find(
         (b) =>
           b.status !== "cancelled" &&
-          isSameDay(new Date(b.scheduledAt), slotDate) &&
-          new Date(b.scheduledAt).getHours() === hour
+          isSameDay(new Date(b.start_time), slotDate) &&
+          new Date(b.start_time).getHours() === hour
       );
 
       slots.push({
@@ -100,7 +100,7 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
                 </span>
                 {slot.isBooked ? (
                   <span className="text-xs text-primary truncate max-w-[80px]">
-                    {slot.booking?.traveller.name}
+                    {slot.booking?.traveller_name}
                   </span>
                 ) : (
                   <Badge
