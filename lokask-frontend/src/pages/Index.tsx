@@ -36,30 +36,6 @@ const Index = () => {
 
       <DestinationGrid />
 
-      {loadingThai ? (
-        <div className="h-64 flex items-center justify-center">
-          <span className="text-muted-foreground">Loading Thailand locals...</span>
-        </div>
-      ) : (
-        <LocalsCarousel
-          title="Wonderful locals in Thailand"
-          consultants={thailandRes?.data || []}
-          showMostAskedBadge={true}
-        />
-      )}
-
-      {loadingParis ? (
-        <div className="h-64 flex items-center justify-center">
-          <span className="text-muted-foreground">Loading Paris locals...</span>
-        </div>
-      ) : (
-        <LocalsCarousel
-          title="Wonderful locals in Paris"
-          consultants={parisRes?.data || []}
-          showMostAskedBadge={true}
-        />
-      )}
-
       <IdeasGrid />
 
       <CTASection />

@@ -13,19 +13,19 @@ const ConsultantCardCompact = ({
 }: ConsultantCardCompactProps) => {
   const navigate = useNavigate();
   const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
-  return <div className="bg-white rounded-[20px] overflow-hidden w-[200px] flex-shrink-0 flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-strong group cursor-pointer" style={{
+  return <div className="bg-white rounded-[20px] overflow-hidden w-[324px] h-[433px] flex flex-col transition-all duration-300 hover:scale-[1.02] hover:shadow-strong group cursor-pointer mx-auto" style={{
     boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
   }}>
     {/* Cover Image */}
-    <div className="relative h-[90px] overflow-hidden">
+    <div className="relative h-[130px] overflow-hidden">
       <img src={consultant.coverUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
     </div>
 
     {/* Content with overlapping avatar */}
-    <div className="flex flex-col items-center text-center px-4 pb-5 -mt-14 relative">
+    <div className="flex flex-col items-center text-center px-6 pb-6 -mt-14 relative flex-1">
       {/* Avatar - Large, overlapping the cover */}
       <div className="mb-3">
-        <img src={consultant.avatarUrl} alt={`${consultant.name}'s profile`} className="w-[96px] h-[96px] rounded-full object-cover border-[4px] border-white transition-transform duration-300 group-hover:scale-105" style={{
+        <img src={consultant.avatarUrl} alt={`${consultant.name}'s profile`} className="w-[104px] h-[104px] rounded-full object-cover border-[4px] border-white transition-transform duration-300 group-hover:scale-105" style={{
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
         }} />
       </div>
@@ -57,7 +57,7 @@ const ConsultantCardCompact = ({
       </p>
 
       {/* Tag Pill */}
-      <span className="inline-block px-3 py-1.5 text-[12px] font-medium rounded-full mb-3 transition-colors" style={{
+      <span className="inline-block px-4 py-1.5 text-[13px] font-medium rounded-full mb-auto transition-colors shrink-0" style={{
         backgroundColor: 'rgba(196, 106, 74, 0.12)',
         color: '#C46A4A'
       }}>
@@ -77,7 +77,7 @@ const ConsultantCardCompact = ({
       {/* CTA Button */}
       <Link
         to={`/consultant/${consultant.id}`}
-        className="w-full h-[42px] rounded-full bg-primary text-primary-foreground text-[14px] font-semibold hover:bg-primary/90 transition-all flex items-center justify-center active:scale-[0.98]"
+        className="w-full h-[46px] shrink-0 rounded-full bg-primary text-primary-foreground text-[15px] font-semibold hover:bg-primary/90 transition-all flex items-center justify-center active:scale-[0.98]"
         aria-label={`Ask ${consultant.name} for travel advice`}
       >
         Ask this local
