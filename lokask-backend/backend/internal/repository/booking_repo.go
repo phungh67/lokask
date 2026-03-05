@@ -46,7 +46,7 @@ func (r *BookingRepository) CreateBookingTx(tx *sqlx.Tx, b *domain.BookingEntry)
 			user_notes,
 			service_type
 		) 
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, status, created_at, updated_at
 	`
 	return tx.QueryRow(
@@ -57,6 +57,7 @@ func (r *BookingRepository) CreateBookingTx(tx *sqlx.Tx, b *domain.BookingEntry)
 		b.EndTime,
 		b.TotalPrice,
 		b.UserNotes,
+		b.ServiceType,
 	).Scan(&b.ID, &b.Status, &b.CreatedAt, &b.UpdatedAt)
 }
 

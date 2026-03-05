@@ -161,3 +161,6 @@ FROM consultants c WHERE c.user_id = (SELECT id FROM users WHERE email='alessand
 INSERT INTO portfolio_items (consultant_id, image_url)
 SELECT c.id, 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=800&q=80'
 FROM consultants c WHERE c.user_id = (SELECT id FROM users WHERE email='somchai@bkk.com');
+
+
+-- hash_dummy_password

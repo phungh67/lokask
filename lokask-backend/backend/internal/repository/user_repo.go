@@ -34,8 +34,8 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 // transaction to create an user
 func (r *UserRepository) CreateUserTx(tx *sqlx.Tx, user *User) error {
 	// insert
-	query := `INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING id`
-	return tx.QueryRow(query, user.Email, user.PasswordHash, user.FullName).Scan(&user.ID)
+	query := `INSERT INTO users (email, password_hash, full_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id`
+	return tx.QueryRow(query, user.Email, user.PasswordHash, user.FullName, user.AvatarURL).Scan(&user.ID)
 }
 
 // lookup by checking email
