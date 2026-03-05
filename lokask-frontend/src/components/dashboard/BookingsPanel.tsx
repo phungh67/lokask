@@ -40,7 +40,7 @@ const BookingsPanel = ({ consultantId }: BookingsPanelProps) => {
 
     if (activeStatus === "upcoming") {
       result = result.filter(
-        (b) => b.status === "confirmed" && new Date(b.start_time) > new Date()
+        (b) => (b.status === "confirmed" || b.status === "pending") && new Date(b.start_time) > new Date()
       );
     } else {
       result = result.filter((b) => b.status === activeStatus);

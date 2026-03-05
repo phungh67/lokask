@@ -38,7 +38,7 @@ const DashboardSidebar = ({
       <div className="p-4">
         <div className="relative mb-3">
           <img
-            src={consultant.coverUrl || consultant.avatarUrl}
+            src={consultant.avatarUrl || consultant.coverUrl}
             alt={consultant.name}
             className="w-full aspect-square object-cover rounded-2xl"
           />

@@ -157,7 +157,11 @@ func (h *BookingHandler) DeleteBooking(c *fiber.Ctx) error {
 
 func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 	idStr := c.Params("id")
-	bookingID, _ := uuid.Parse(idStr)
+	bookingID, err := uuid.Parse(idStr)
+
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid booking ID format"})
+	}
 
 	var req struct {
 		Status string `json:"status"` // "confirmed", "cancelled", etc.
@@ -166,7 +170,25 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	err := h.BookingRepo.UpdateBookingStatus(c.Context(), bookingID, req.Status)
+	// shield here, disallow others to change booking
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	isOwner, err := h.BookingRepo.IsBookingOwner(c.Context(), bookingID, userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database error checking ownership"})
+	}
+	if !isOwner {
+		return c.Status(403).JSON(fiber.Map{"error": "Forbidden: You do not own this booking"})
+	}
+
+	if req.Status != "confirmed" && req.Status != "cancelled" && req.Status != "pending" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid status. Must be pending, confirmed, or cancelled."})
+	}
+
+	err = h.BookingRepo.UpdateBookingStatus(c.Context(), bookingID, req.Status)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update booking"})
 	}

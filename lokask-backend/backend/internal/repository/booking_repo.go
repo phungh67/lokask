@@ -115,3 +115,18 @@ func (r *BookingRepository) UpdateBookingStatus(ctx context.Context, id uuid.UUI
 	_, err := r.DB.ExecContext(ctx, query, status, id)
 	return err
 }
+
+// ownership check
+func (r *BookingRepository) IsBookingOwner(ctx context.Context, bookingID uuid.UUID, userID string) (bool, error) {
+	var exists bool
+	// Use 1 to just check if exist, not touch actual data
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM bookings b
+			JOIN consultants c ON b.consultant_id = c.id
+			WHERE b.id = $1 AND c.user_id = $2
+		)
+	`
+	err := r.DB.QueryRowContext(ctx, query, bookingID, userID).Scan(&exists)
+	return exists, err
+}
