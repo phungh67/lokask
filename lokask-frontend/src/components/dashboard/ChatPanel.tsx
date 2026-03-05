@@ -9,7 +9,7 @@ import { format, isAfter, addHours } from "date-fns";
 interface ChatPanelProps {
   conversation: any | null; // Uses the mapped backend data
   onSendMessage: (message: string) => void;
-  onScheduleCall: (callData: any) => void; 
+  onScheduleCall: (callData: any) => void;
   onCancelCall?: (callId: string) => void;
 }
 
@@ -57,8 +57,22 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
 
   return (
     <div className="flex-1 flex flex-col bg-secondary/20 relative">
-      <ChatPanelHeader 
-        otherUser={conversation.otherUser} 
+      <ChatPanelHeader
+        consultantId={
+          conversation.consultant_id ||
+          conversation.consultantId ||
+          conversation.consultant?.id ||
+          conversation.otherUser?.id ||
+          ""
+        } 
+
+        otherUser={{
+          id: conversation.otherUser?.id || conversation.traveler_id || "",
+          name: conversation.otherUser?.name || conversation.consultant?.name || conversation.traveller?.name || "User",
+          avatar: conversation.otherUser?.avatar || conversation.otherUser?.avatarUrl || conversation.consultant?.avatarUrl || "",
+          isOnline: conversation.otherUser?.isOnline || conversation.isOnline || false,
+          hourlyRate: conversation.otherUser?.hourlyRate || conversation.otherUser?.pricePerHour || conversation.consultant?.pricePerHour || 50
+        }}
         onScheduleCall={onScheduleCall}
       />
 

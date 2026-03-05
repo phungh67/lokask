@@ -1,19 +1,21 @@
 import { Phone, Video, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import ScheduleCallDialog from "./chat/ScheduleCallDialog";
+import ScheduleCallDialog from "./chat/ScheduleCallDialog"; // Adjust path if needed
 
 interface ChatPanelHeaderProps {
   otherUser: {
+    id: string;          
     name: string;
     avatar: string;
     isOnline?: boolean;
+    hourlyRate?: number; 
   };
-  onScheduleCall: (callData: any) => void;
+  consultantId: string; // 🟢 Add this explicitly to catch the raw DB ID
+  onScheduleCall?: (callData: any) => void;
 }
 
-const ChatPanelHeader = ({ otherUser, onScheduleCall }: ChatPanelHeaderProps) => {
-  // 🟢 GUARD: Prevent "undefined" property access crash
+const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall }: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
       <div className="h-16 px-4 flex items-center border-b border-border bg-card shrink-0">
@@ -27,16 +29,11 @@ const ChatPanelHeader = ({ otherUser, onScheduleCall }: ChatPanelHeaderProps) =>
 
   const getInitials = (name: string) => {
     if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase();
   };
 
   return (
     <div className="h-16 px-4 flex items-center justify-between border-b border-border bg-card shrink-0">
-      {/* Left: Avatar + Name + Status */}
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar className="h-10 w-10">
@@ -50,16 +47,11 @@ const ChatPanelHeader = ({ otherUser, onScheduleCall }: ChatPanelHeaderProps) =>
         <div>
           <h2 className="font-medium text-sm">{otherUser.name}</h2>
           <p className="text-xs text-muted-foreground">
-            {otherUser.isOnline ? (
-              <span className="text-green-600">Online</span>
-            ) : (
-              "Offline"
-            )}
+            {otherUser.isOnline ? <span className="text-green-600">Online</span> : "Offline"}
           </p>
         </div>
       </div>
 
-      {/* Right: Action icons */}
       <div className="flex items-center gap-1">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Phone className="h-5 w-5" strokeWidth={1.5} />
@@ -67,10 +59,14 @@ const ChatPanelHeader = ({ otherUser, onScheduleCall }: ChatPanelHeaderProps) =>
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-        <ScheduleCallDialog 
+        
+        {/* 🟢 FIX: Pass the explicit consultantId from the DB to the Dialog */}
+        <ScheduleCallDialog
+          consultantId={consultantId}
           travellerName={otherUser.name}
-          onSchedule={onScheduleCall} 
+          hourlyRate={otherUser.hourlyRate || 50}
         />
+        
         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>

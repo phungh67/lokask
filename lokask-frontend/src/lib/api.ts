@@ -27,7 +27,7 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 
     const res = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
-        headers, 
+        headers,
     });
 
     if (!res.ok) {
@@ -61,13 +61,13 @@ const mapConsultant = (c: any): Consultant => ({
     city: c.city_name || c.city || "",
     country: c.country_code || c.country || "",
     // Ensure both snake_case and camelCase fallbacks
-    coverUrl: c.cover_url || c.coverUrl || "", 
+    coverUrl: c.cover_url || c.coverUrl || "",
     avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name || c.name),
-    
+
     rating: Number(c.rating_avg) || Number(c.rating) || 0,
     helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
     hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
-    
+
     tags: c.tags || [],
     tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
     bio: c.bio || "",
@@ -120,11 +120,11 @@ const mapConsultant = (c: any): Consultant => ({
 // }
 
 export async function getConsultants(filters?: {
-    page?: number; 
-    city?: string; 
+    page?: number;
+    city?: string;
     country?: string;
     niche?: string;
-    limit?: number; 
+    limit?: number;
 }): Promise<PaginatedConsultants> {
     const params = new URLSearchParams();
     if (filters?.city) params.append("city", filters.city);
@@ -134,7 +134,7 @@ export async function getConsultants(filters?: {
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
     const response = await fetchJson<any>("/consultants?" + params.toString());
-    
+
     return {
         data: (response.data || []).map(mapConsultant),
         total_count: response.total_count || 0,
@@ -323,37 +323,46 @@ export interface PaginatedConsultants {
 /**
  * Fetch bookings for a consultant's dashboard
  */
-export async function getConsultantBookings(consultantId: string) {
-  // Uses the endpoint we discussed for the backend repository
-  return fetchJson<Booking[]>(`/bookings/consultant/${consultantId}`);
-}
-
-/**
- * Create a new booking
- */
 export async function createBooking(data: CreateBookingRequest) {
-  return fetchJson<Booking>("/bookings", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+    return fetchJson<Booking>("/bookings", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
 }
 
 /**
- * Update booking status (Confirm/Cancel)
- */
-export async function updateBookingStatus(id: string, status: "confirmed" | "cancelled") {
-  return fetchJson<Booking>(`/bookings/${id}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status }),
-  });
-}
-
-// src/lib/api.ts
-
-/**
- * Fetch bookings where the current user is the traveller
+ * 2. View my trips (Traveller Dashboard)
+ * Matches: protected.Get("/bookings/my-trips", bookHandler.GetUserTrips)
  */
 export async function getMyTrips() {
-    // Note: No ID needed in URL because backend gets UserID from JWT token
     return fetchJson<Booking[]>("/bookings/my-trips");
+}
+
+/**
+ * 3. View consultant schedule (Consultant Dashboard)
+ * Matches: protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
+ */
+export async function getConsultantBookings(consultantId: string) {
+    return fetchJson<Booking[]>(`/bookings/consultant/${consultantId}`);
+}
+
+/**
+ * 4. Update booking status (Confirm/Cancel)
+ * Matches: protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
+ */
+export async function updateBookingStatus(id: string, status: "confirmed" | "cancelled") {
+    return fetchJson<Booking>(`/bookings/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+    });
+}
+
+/**
+ * 5. Delete a booking entirely
+ * Matches: protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
+ */
+export async function deleteBooking(id: string) {
+    return fetchJson(`/bookings/${id}`, {
+        method: "DELETE",
+    });
 }

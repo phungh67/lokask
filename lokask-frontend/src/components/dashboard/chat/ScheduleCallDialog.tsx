@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarPlus, Video, Phone } from "lucide-react";
+import { CalendarPlus, Video, Phone, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -27,11 +27,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { ScheduledCall } from "@/types/chat";
+import { toast } from "sonner";
+import { createBooking } from "@/lib/api"; // 🟢 Import your API function
+import { CreateBookingRequest } from "@/types/booking";
 
 interface ScheduleCallDialogProps {
+  consultantId: string;      // 🟢 Added to link the booking to the consultant
   travellerName: string;
-  onSchedule: (callData: Omit<ScheduledCall, "id" | "conversationId" | "createdAt">) => void;
+  hourlyRate: number;        // 🟢 Added to calculate the total price
+  onSuccess?: () => void;    // Optional callback to refresh data after booking
 }
 
 const TIME_SLOTS = [
@@ -41,8 +45,10 @@ const TIME_SLOTS = [
   "18:00", "18:30", "19:00", "19:30", "20:00", "20:30",
 ];
 
-const ScheduleCallDialog = ({ travellerName, onSchedule }: ScheduleCallDialogProps) => {
+const ScheduleCallDialog = ({ consultantId, travellerName, hourlyRate, onSuccess }: ScheduleCallDialogProps) => {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // 🟢 Added loading state
+  
   const [callType, setCallType] = useState<"video" | "voice">("video");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState<string>();
@@ -51,34 +57,57 @@ const ScheduleCallDialog = ({ travellerName, onSchedule }: ScheduleCallDialogPro
 
   const formatTime = (time24: string) => {
     const [hours, minutes] = time24.split(":");
-    const hour = parseInt(hours);
+    const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
   };
 
-  const handleSchedule = () => {
+  // 🟢 INTEGRATED BOOKING FUNCTION
+  const handleSchedule = async () => {
     if (!date || !time) return;
+    setIsLoading(true);
 
-    const [hours, minutes] = time.split(":");
-    const scheduledAt = new Date(date);
-    scheduledAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    try {
+      // 1. Format the date into ISO string for Go Backend
+      const [hours, minutes] = time.split(":");
+      const scheduledAt = new Date(date);
+      scheduledAt.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-    onSchedule({
-      type: callType,
-      scheduledAt,
-      duration: parseInt(duration),
-      status: "confirmed",
-      notes: notes || undefined,
-    });
+      // 2. Calculate the price (e.g., $100/hr * 30 mins / 60 = $50)
+      const durationMinutes = parseInt(duration, 10);
+      const calculatedPrice = hourlyRate * (durationMinutes / 60);
 
-    // Reset form
-    setCallType("video");
-    setDate(undefined);
-    setTime(undefined);
-    setDuration("30");
-    setNotes("");
-    setOpen(false);
+      // 3. Build the payload matching the Go Struct
+      const payload: CreateBookingRequest = {
+        consultant_id: consultantId,
+        start_time: scheduledAt.toISOString(),
+        service_type: callType === "video" ? "video_call" : "voice_call",
+        user_notes: notes,
+        total_price: calculatedPrice, 
+      };
+
+      // 4. Send to backend database!
+      await createBooking(payload);
+      toast.success("Booking request sent successfully!");
+
+      // 5. Reset form and close
+      setCallType("video");
+      setDate(undefined);
+      setTime(undefined);
+      setDuration("30");
+      setNotes("");
+      setOpen(false);
+      
+      if (onSuccess) onSuccess();
+
+    } catch (error: any) {
+      console.error(error);
+      // Catches your PostgreSQL overlapping time error
+      toast.error(error.message || "Failed to schedule. This time slot might be taken.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid = date && time;
@@ -95,6 +124,7 @@ const ScheduleCallDialog = ({ travellerName, onSchedule }: ScheduleCallDialogPro
           <span className="text-sm">Schedule</span>
         </Button>
       </DialogTrigger>
+      
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Schedule a call with {travellerName}</DialogTitle>
@@ -191,7 +221,7 @@ const ScheduleCallDialog = ({ travellerName, onSchedule }: ScheduleCallDialogPro
           <div className="space-y-3">
             <Label className="text-sm font-medium">Notes (optional)</Label>
             <Textarea
-              placeholder="Add any notes for the call..."
+              placeholder="What would you like to discuss?"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="resize-none"
@@ -201,11 +231,12 @@ const ScheduleCallDialog = ({ travellerName, onSchedule }: ScheduleCallDialogPro
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleSchedule} disabled={!isFormValid}>
-            Schedule Call
+          <Button onClick={handleSchedule} disabled={!isFormValid || isLoading}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {isLoading ? "Scheduling..." : "Confirm & Book"}
           </Button>
         </DialogFooter>
       </DialogContent>
