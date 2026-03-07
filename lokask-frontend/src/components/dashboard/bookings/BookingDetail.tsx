@@ -15,6 +15,7 @@ interface BookingDetailProps {
   onReschedule: () => void;
   onCancel: () => void;
   onUpdateNotes: (notes: string[]) => void;
+  userRole?: string | null;
 }
 
 const serviceIcons: Record<Booking["service_type"], React.ReactNode> = {
@@ -49,21 +50,31 @@ const BookingDetail = ({
   onReschedule,
   onCancel,
   onUpdateNotes,
+  userRole
 }: BookingDetailProps) => {
   if (!booking) {
     return (
       <div className="flex-1 bg-secondary/20 flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <p className="text-lg font-medium">Select a booking</p>
-          <p className="text-sm">Choose a booking from the list to view details</p>
+          <p className="text-sm">
+            Choose a booking from the list to view details
+          </p>
         </div>
       </div>
     );
   }
 
   // Logic: Calculate duration from start/end times
-  const duration = differenceInMinutes(new Date(booking.end_time), new Date(booking.start_time));
+  const duration = differenceInMinutes(
+    new Date(booking.end_time),
+    new Date(booking.start_time),
+  );
   const status = statusConfig[booking.status];
+
+  const isTraveler = userRole !== "consultant";
+  const displayName = isTraveler ? booking.consultant_name : booking.traveller_name;
+  const displayAvatar = isTraveler ? booking.consultant_avatar : booking.traveller_avatar;
 
   return (
     <div className="flex-1 bg-secondary/20 flex flex-col">
@@ -72,17 +83,30 @@ const BookingDetail = ({
           {/* Header: Avatar + Traveller Info */}
           <div className="flex items-start gap-4">
             <img
-              src={booking.traveller_avatar}
-              alt={booking.traveller_name}
+              src={
+                displayAvatar ||
+                `https://ui-avatars.com/api/?name=${displayName}`
+              }
+              alt={displayName}
               className="w-16 h-16 rounded-xl object-cover"
             />
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">{booking.traveller_name}</h2>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <h2 className="text-xl font-semibold">
+                  {displayName}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                >
                   <Phone className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                >
                   <Video className="h-4 w-4" />
                 </Button>
               </div>
@@ -93,7 +117,10 @@ const BookingDetail = ({
               </p>
             </div>
 
-            <Badge variant="outline" className={cn("px-3 py-1", status.className)}>
+            <Badge
+              variant="outline"
+              className={cn("px-3 py-1", status.className)}
+            >
               {status.label}
             </Badge>
           </div>
@@ -109,7 +136,9 @@ const BookingDetail = ({
 
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>{format(new Date(booking.start_time), "EEEE, MMMM d, yyyy")}</span>
+              <span>
+                {format(new Date(booking.start_time), "EEEE, MMMM d, yyyy")}
+              </span>
             </div>
 
             <div className="bg-secondary/50 rounded-lg p-3">
@@ -123,13 +152,17 @@ const BookingDetail = ({
             </div>
 
             <div className="flex items-center gap-4 text-sm pt-3 border-t border-border">
-              <span className="font-medium text-primary">Total Price: €{booking.total_price}</span>
+              <span className="font-medium text-primary">
+                Total Price: €{booking.total_price}
+              </span>
             </div>
 
             {/* Traveller Notes from Booking */}
             {booking.user_notes && (
               <div className="pt-3 border-t border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Traveller Notes</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                  Traveller Notes
+                </p>
                 <p className="text-sm italic">"{booking.user_notes}"</p>
               </div>
             )}
@@ -140,12 +173,20 @@ const BookingDetail = ({
       {/* Action Bar */}
       <div className="p-4 border-t border-border bg-card flex gap-3">
         {booking.status === "pending" && (
-          <Button className="flex-1" onClick={onConfirm}>Confirm booking</Button>
+          <Button className="flex-1" onClick={onConfirm}>
+            Confirm booking
+          </Button>
         )}
         {(booking.status === "pending" || booking.status === "confirmed") && (
           <>
-            <Button variant="outline" className="flex-1" onClick={onReschedule}>Reschedule</Button>
-            <Button variant="ghost" className="flex-1 text-destructive hover:bg-destructive/10" onClick={onCancel}>
+            <Button variant="outline" className="flex-1" onClick={onReschedule}>
+              Reschedule
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex-1 text-destructive hover:bg-destructive/10"
+              onClick={onCancel}
+            >
               Cancel booking
             </Button>
           </>
