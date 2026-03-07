@@ -352,7 +352,12 @@ const ConsultantDashboard = () => {
           )}
 
           {activeSection === "bookings" &&
-            renderConsultantOnly(<BookingsPanel consultantId={consultantProfile.id} />)
+            // renderConsultantOnly(<BookingsPanel consultantId={consultantProfile.id} />)
+            <BookingsPanel
+              consultantId={consultantProfile.id}
+              userId = {accountUserId}
+              userRole = {userRole}
+            />
           }
 
           {activeSection === "profile" && (

@@ -8,9 +8,11 @@ import { getConsultantBookings, updateBookingStatus } from "@/lib/api";
 
 interface BookingsPanelProps {
   consultantId: string;
+  userId: string | null;
+  userRole: string | null
 }
 
-const BookingsPanel = ({ consultantId }: BookingsPanelProps) => {
+const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -21,7 +23,15 @@ const BookingsPanel = ({ consultantId }: BookingsPanelProps) => {
   const loadBookings = async () => {
     try {
       setIsLoading(true);
-      const data = await getConsultantBookings(consultantId);
+      // const data = await getConsultantBookings(consultantId);
+      let data;
+
+      if (userRole === "consulant" && consultantId) {
+        data = await getConsultantBookings(consultantId);
+      } else if (userId) {
+        data 
+      }
+
       setBookings(data || []);
     } catch (error) {
       toast({ title: "Error", description: "Failed to load bookings", variant: "destructive" });
