@@ -4,7 +4,7 @@ import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
 import { Booking } from "@/types/booking"; 
-import { getConsultantBookings, updateBookingStatus } from "@/lib/api";
+import { getConsultantBookings, updateBookingStatus, getMyTrips } from "@/lib/api";
 
 interface BookingsPanelProps {
   consultantId: string;
@@ -29,7 +29,7 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
       if (userRole === "consulant" && consultantId) {
         data = await getConsultantBookings(consultantId);
       } else if (userId) {
-        data 
+        data = await getMyTrips(userId);
       }
 
       setBookings(data || []);
@@ -41,7 +41,7 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
   };
 
   useEffect(() => {
-    if (consultantId) loadBookings();
+    loadBookings();
   }, [consultantId]);
 
   // 2. Filter logic updated for flat keys

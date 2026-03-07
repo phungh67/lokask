@@ -22,7 +22,7 @@ const DashboardSidebar = ({
 
   const navItems = [
     { id: "inbox" as const, label: "Inbox", icon: Inbox, restricted: false },
-    { id: "bookings" as const, label: "Bookings", icon: Calendar, restricted: !isConsultant },
+    { id: "bookings" as const, label: "Bookings", icon: Calendar, restricted: false },
     { id: "profile" as const, label: "Profile", icon: User, restricted: false },
   ];
 

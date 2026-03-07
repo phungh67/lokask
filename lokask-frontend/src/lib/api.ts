@@ -334,7 +334,7 @@ export async function createBooking(data: CreateBookingRequest) {
  * 2. View my trips (Traveller Dashboard)
  * Matches: protected.Get("/bookings/my-trips", bookHandler.GetUserTrips)
  */
-export async function getMyTrips() {
+export async function getMyTrips(userId: string) {
     return fetchJson<Booking[]>("/bookings/my-trips");
 }
 

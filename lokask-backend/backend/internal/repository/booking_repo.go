@@ -23,7 +23,7 @@ type UserBookingView struct {
 	domain.BookingEntry
 	ConsultantName   string `db:"consultant_name" json:"consultant_name"`
 	ConsultantAvatar string `db:"consultant_avatar" json:"consultant_avatar"`
-	CityName         string `db:"city_name" json:"city_name"`
+	CityName         string `db:"consultant_city" json:"consultant_city"`
 }
 
 type BookingRepository struct {
@@ -95,6 +95,7 @@ func (r *BookingRepository) GetUserBookings(ctx context.Context, userID uuid.UUI
     JOIN consultants c ON b.consultant_id = c.id
     JOIN users u ON c.user_id = u.id
     JOIN cities ct ON c.city_id = ct.id
+	WHERE b.user_id = $1
     ORDER BY b.start_time DESC
 `
 	// sqlx maps the results into the slice of structs
