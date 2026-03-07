@@ -15,7 +15,6 @@ interface BookingDetailProps {
   onReschedule: () => void;
   onCancel: () => void;
   onUpdateNotes: (notes: string[]) => void;
-  userRole?: string | null;
 }
 
 const serviceIcons: Record<Booking["service_type"], React.ReactNode> = {
@@ -50,7 +49,6 @@ const BookingDetail = ({
   onReschedule,
   onCancel,
   onUpdateNotes,
-  userRole
 }: BookingDetailProps) => {
   if (!booking) {
     return (
@@ -72,10 +70,10 @@ const BookingDetail = ({
   );
   const status = statusConfig[booking.status];
 
-  const isTraveler = userRole !== "consultant";
-  const displayName = isTraveler ? booking.consultant_name : booking.traveller_name;
-  const displayAvatar = isTraveler ? booking.consultant_avatar : booking.traveller_avatar;
-
+  const displayName =
+    booking.traveller_name || booking.consultant_name || "User";
+  const displayAvatar = booking.traveller_avatar || booking.consultant_avatar;
+  
   return (
     <div className="flex-1 bg-secondary/20 flex flex-col">
       <ScrollArea className="flex-1">
@@ -92,9 +90,7 @@ const BookingDetail = ({
             />
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">
-                  {displayName}
-                </h2>
+                <h2 className="text-xl font-semibold">{displayName}</h2>
                 <Button
                   variant="ghost"
                   size="icon"

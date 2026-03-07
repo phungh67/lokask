@@ -25,22 +25,12 @@ interface BookingCardProps {
   booking: Booking;
   isSelected?: boolean; // Made optional for generic lists
   onClick?: () => void;
-  userRole?: string | null;
 }
 
-const BookingCard = ({
-  booking,
-  isSelected,
-  onClick,
-  userRole,
-}: BookingCardProps) => {
-  const isTraveler = userRole !== "consultant";
-  const displayName = isTraveler
-    ? booking.consultant_name
-    : booking.traveller_name;
-  const displayAvatar = isTraveler
-    ? booking.consultant_avatar
-    : booking.traveller_avatar;
+const BookingCard = ({ booking, isSelected, onClick }: BookingCardProps) => {
+  const displayName =
+    booking.traveller_name || booking.consultant_name || "User";
+  const displayAvatar = booking.traveller_avatar || booking.consultant_avatar;
 
   return (
     <div
