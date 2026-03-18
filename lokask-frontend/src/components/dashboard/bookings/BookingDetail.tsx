@@ -73,7 +73,7 @@ const BookingDetail = ({
   const displayName =
     booking.traveller_name || booking.consultant_name || "User";
   const displayAvatar = booking.traveller_avatar || booking.consultant_avatar;
-  
+
   return (
     <div className="flex-1 bg-secondary/20 flex flex-col">
       <ScrollArea className="flex-1">
@@ -101,7 +101,12 @@ const BookingDetail = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground"
+                  className="h-8 w-8 text-primary hover:bg-primary/20"
+                  onClick={() => {
+                    console.log(
+                      `Starting video call for booking: ${booking.id}`,
+                    );
+                  }}
                 >
                   <Video className="h-4 w-4" />
                 </Button>
