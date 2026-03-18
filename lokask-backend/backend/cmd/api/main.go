@@ -12,6 +12,7 @@ import (
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -162,6 +163,9 @@ func main() {
 	protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
+
+	// websocket interceptor
+	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
 
 	// start server
 	port := getEnv("PORT", "8080")

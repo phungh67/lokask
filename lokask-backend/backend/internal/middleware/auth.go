@@ -23,6 +23,11 @@ func Protect() fiber.Handler {
 			token = c.Cookies("session_id")
 		}
 
+		// local storage
+		if token == "" {
+			token = c.Query("token")
+		}
+
 		if token == "" {
 			return c.Status(401).JSON(fiber.Map{
 				"error": "Missing auth token",
