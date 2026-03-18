@@ -72,7 +72,7 @@ func VideoCallHandler(c *websocket.Conn) {
 	}
 
 	// cleanup
-	room.mu.Unlock()
+	room.mu.Lock()
 	delete(room.Clients, userID)
 	room.mu.Unlock()
 }

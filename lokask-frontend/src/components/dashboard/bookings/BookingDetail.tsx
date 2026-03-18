@@ -1,12 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, differenceInMinutes } from "date-fns"; // standard date-fns
 import { Phone, Video, Calendar, MessageSquare, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Booking } from "@/types/booking";
-import ConsultantNotes from "./ConsultantNotes";
-import BookingAISummary from "./BookingAISummary";
+import VideoCallRoom from "@/pages/VideoCallRoom";
 import { cn } from "@/lib/utils";
 
 interface BookingDetailProps {
@@ -50,6 +49,8 @@ const BookingDetail = ({
   onCancel,
   onUpdateNotes,
 }: BookingDetailProps) => {
+  const [showVideoCall, setShowVideoCall] = useState(false);
+
   if (!booking) {
     return (
       <div className="flex-1 bg-secondary/20 flex items-center justify-center">
@@ -106,6 +107,7 @@ const BookingDetail = ({
                     console.log(
                       `Starting video call for booking: ${booking.id}`,
                     );
+                    setShowVideoCall(true);
                   }}
                 >
                   <Video className="h-4 w-4" />
@@ -193,6 +195,12 @@ const BookingDetail = ({
           </>
         )}
       </div>
+      {showVideoCall && (
+        <VideoCallRoom
+          bookingId={booking.id}
+          onClose={() => setShowVideoCall(false)}
+        />
+      )}
     </div>
   );
 };

@@ -32,6 +32,9 @@ const VideoCallRoom = ({ bookingId, onClose }: VideoCallRoomProps) => {
     const startCall = async () => {
       try {
         // 1. Get Local Camera & Mic
+
+        const token = localStorage.getItem("token") || "";
+
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStream;
@@ -53,7 +56,7 @@ const VideoCallRoom = ({ bookingId, onClose }: VideoCallRoomProps) => {
         };
 
         // 3. Connect to Go WebSocket Signaling Server
-        const wsUrl = `ws://localhost:8080/ws/video?booking_id=${bookingId}`;
+        const wsUrl = `ws://localhost:8080/ws/video?booking_id=${bookingId}&token=${token}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
