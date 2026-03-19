@@ -4,7 +4,7 @@ import { CreateBookingRequest } from "@/types/booking";
 
 // configure so that the port here should matched with
 // API port and API definition in main.go 
-const BASE_URL = "http://localhost:8080/api/v1";
+const BASE_URL = "/api/v1";
 
 export class ApiError extends Error {
     constructor(public status: number, message: string) {
