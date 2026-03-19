@@ -52,6 +52,7 @@ func VideoCallHandler(c *websocket.Conn) {
 	room.mu.Unlock()
 
 	log.Printf("[INFO] User %s has successfully joined room for booking %s.", userID, bookingID)
+	log.Printf("[INFO] Booking %s now has total %d people inside!", bookingID, len(room.Clients))
 
 	// listening to message, only end if interrupted (end call,...)
 	for {

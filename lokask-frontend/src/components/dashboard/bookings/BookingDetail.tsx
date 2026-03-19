@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Booking } from "@/types/booking";
-import VideoCallRoom from "@/pages/VideoCallRoom";
 import { cn } from "@/lib/utils";
+import CallRoom from "@/pages/CallRoom";
 
 interface BookingDetailProps {
   booking: Booking | null;
@@ -49,8 +49,9 @@ const BookingDetail = ({
   onCancel,
   onUpdateNotes,
 }: BookingDetailProps) => {
-  const [showVideoCall, setShowVideoCall] = useState(false);
-
+  const [activeCallType, setActiveCallType] = useState<
+    "voice_call" | "video_call" | null
+  >(null);
   if (!booking) {
     return (
       <div className="flex-1 bg-secondary/20 flex items-center justify-center">
@@ -95,19 +96,28 @@ const BookingDetail = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground"
+                  // Disable it if the booking isn't a voice call (optional, but good practice!)
+                  disabled={booking.service_type !== "voice_call"}
+                  className={`h-8 w-8 ${booking.service_type === "voice_call" ? "text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+                  onClick={() => {
+                    console.log(
+                      `Starting voice call for booking: ${booking.id}`,
+                    );
+                    setActiveCallType("voice_call");
+                  }}
                 >
                   <Phone className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-primary hover:bg-primary/20"
+                  disabled={booking.service_type !== "video_call"}
+                  className={`h-8 w-8 ${booking.service_type === "video_call" ? "text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
                   onClick={() => {
                     console.log(
                       `Starting video call for booking: ${booking.id}`,
                     );
-                    setShowVideoCall(true);
+                    setActiveCallType("video_call");
                   }}
                 >
                   <Video className="h-4 w-4" />
@@ -195,10 +205,11 @@ const BookingDetail = ({
           </>
         )}
       </div>
-      {showVideoCall && (
-        <VideoCallRoom
+      {activeCallType && (
+        <CallRoom
           bookingId={booking.id}
-          onClose={() => setShowVideoCall(false)}
+          serviceType={activeCallType} // Passes "voice_call" or "video_call"
+          onClose={() => setActiveCallType(null)} // Closes the modal by resetting to null
         />
       )}
     </div>
