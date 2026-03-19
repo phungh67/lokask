@@ -67,7 +67,8 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
             booked: bookedDates,
           }}
           modifiersClassNames={{
-            booked: "bg-primary/20 text-primary font-medium",
+            // booked: "bg-primary/20 text-primary font-medium",
+            booked: "bg-primary/20 text-primary font-medium rounded-md",
           }}
         />
       </div>
