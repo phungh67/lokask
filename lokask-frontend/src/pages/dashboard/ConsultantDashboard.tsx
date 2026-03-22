@@ -162,7 +162,7 @@ const ConsultantDashboard = () => {
         setAccountUserId(user.id); // userID
 
         if (user.role === "consultant") {
-          const response = await fetch(`http://localhost:8080/api/v1/users/${user.id}/consultant`, {
+          const response = await fetch(`/api/v1/users/${user.id}/consultant`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
 
