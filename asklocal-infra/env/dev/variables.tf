@@ -40,3 +40,25 @@ variable "nat_attached" {
   description = "Determine if AWS managed NAT is used"
   type        = number
 }
+
+# compute block
+variable "instance_count" {
+  description = "Number of instance to created"
+  type        = number
+  default     = 1
+}
+
+variable "base_ami" {
+  description = "Passed value of AMI ID"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "Type of instance to run"
+  type        = string
+}
+
+variable "generated_new_ssh_key" {
+  description = "Indicate to generate SSH key on run"
+  type        = number
+}

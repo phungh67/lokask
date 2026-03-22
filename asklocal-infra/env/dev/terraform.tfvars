@@ -6,3 +6,7 @@ number_of_layers            = 2
 number_of_subnets_per_layer = 1
 group_name                  = "customized-module"
 nat_attached                = 0
+instance_count              = 1
+base_ami                    = "ami-099a72c906c8c7e7c"
+instance_type               = "t3.medium"
+generated_new_ssh_key       = 1
