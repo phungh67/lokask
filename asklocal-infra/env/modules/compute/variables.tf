@@ -33,3 +33,7 @@ variable "default_public_ip_to_machine" {
   description = "Quick test, turn it on, otherwise, it is best to leave it as false"
 }
 
+variable "open_publicy_ssh" {
+  description = "Indicate the ability to SSH directly"
+}
+

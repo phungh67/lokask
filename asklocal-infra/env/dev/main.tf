@@ -19,4 +19,7 @@ module "compute" {
   instance_type                = var.instance_type
   instance_count               = var.instance_count
   default_public_ip_to_machine = 1
+  open_publicy_ssh             = 1
+
+  depends_on = [module.networking]
 }

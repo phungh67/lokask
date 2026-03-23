@@ -8,4 +8,5 @@ module "ec2-cluster" {
   machine_net                  = var.machine_net
   generated_new_ssh_key        = var.generated_new_ssh_key
   default_public_ip_to_machine = var.default_public_ip_to_machine
+  open_publicy_ssh             = var.open_publicy_ssh
 }
