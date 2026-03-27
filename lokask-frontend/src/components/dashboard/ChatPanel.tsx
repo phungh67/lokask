@@ -1,8 +1,9 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatPanelHeader from "./ChatPanelHeader";
 import ChatPanelComposer from "./ChatPanelComposer";
 import FloatingAISummary from "./FloatingAISummary";
+import ConsultantScheduleSidebar from "../chat/ConsultantScheduleSidebar";
 import { cn } from "@/lib/utils";
 import { format, isAfter, addHours } from "date-fns";
 
@@ -15,6 +16,8 @@ interface ChatPanelProps {
 
 const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }: ChatPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [isScheduleOpen, setIsScheduleOpen ] = useState(false);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -55,6 +58,12 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
     );
   };
 
+  const resolvedConsultantId = conversation.consultant_id ||
+    conversation.consultantId ||
+    conversation.consultant?.id ||
+    conversation.otherUser?.id ||
+    "";
+
   return (
     <div className="flex-1 flex flex-col bg-secondary/20 relative">
       <ChatPanelHeader
@@ -74,6 +83,7 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
           hourlyRate: conversation.otherUser?.hourlyRate || conversation.otherUser?.pricePerHour || conversation.consultant?.pricePerHour || 50
         }}
         onScheduleCall={onScheduleCall}
+        onOpenInfo={() => setIsScheduleOpen(true)}
       />
 
       <div className="flex-1 relative overflow-hidden">
@@ -89,6 +99,13 @@ const ChatPanel = ({ conversation, onSendMessage, onScheduleCall, onCancelCall }
       </div>
 
       <ChatPanelComposer onSendMessage={onSendMessage} />
+
+      <ConsultantScheduleSidebar
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        consultantId={resolvedConsultantId}
+        consultantName={conversation.otherUser?.name || "Consultant"}
+      />
     </div>
   );
 };
