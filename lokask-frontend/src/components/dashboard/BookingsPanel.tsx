@@ -1,22 +1,36 @@
 import { useState, useMemo, useEffect } from "react";
+import { isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
-import { Booking } from "@/types/booking"; 
-import { getConsultantBookings, updateBookingStatus, getMyTrips } from "@/lib/api";
+import { Booking } from "@/types/booking";
+import {
+  getConsultantBookings,
+  updateBookingStatus,
+  getMyTrips,
+} from "@/lib/api";
 
 interface BookingsPanelProps {
   consultantId: string;
   userId: string | null;
-  userRole: string | null
+  userRole: string | null;
 }
 
-const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) => {
+const BookingsPanel = ({
+  consultantId,
+  userId,
+  userRole,
+}: BookingsPanelProps) => {
   // debug
-  console.log("DEBUG BookingPanel: Props receieved:", {consultantId, userId, userRole});
+  console.log("DEBUG BookingPanel: Props receieved:", {
+    consultantId,
+    userId,
+    userRole,
+  });
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
+  const [activeStatus, setActiveStatus] =
+    useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,10 +50,13 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
         data = await getMyTrips(userId);
       }
 
-      setBookings(data || []);  
-
+      setBookings(data || []);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load bookings", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load bookings",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -51,13 +68,22 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
 
   // 2. Filter logic updated for flat keys
   const filteredBookings = useMemo(() => {
-    console.log(`[DEBUG BookingsPanel] Running filter. Active status: ${activeStatus}. Total raw bookings:`, bookings.length);
+    console.log(
+      `[DEBUG BookingsPanel] Running filter. Active status: ${activeStatus}. Total raw bookings:`,
+      bookings.length,
+    );
     let result = [...bookings];
 
     if (activeStatus === "upcoming") {
-      result = result.filter(
-        (b) => (b.status === "confirmed" || b.status === "pending") && new Date(b.start_time) > new Date()
-      );
+      result = result.filter((b) => {
+        const isPendingOrConfirmed = b.status === "confirmed" || b.status === "pending";
+        const bookingDate = new Date (b.start_time);
+        const now = new Date();
+
+        const isFutureOrToday = bookingDate > now || isSameDay(bookingDate, now);
+        
+        return isPendingOrConfirmed && isFutureOrToday;
+      });
     } else {
       result = result.filter((b) => b.status === activeStatus);
     }
@@ -67,11 +93,14 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
       result = result.filter(
         (b) =>
           b.traveller_name.toLowerCase().includes(query) ||
-          b.consultant_city.toLowerCase().includes(query)
+          b.consultant_city.toLowerCase().includes(query),
       );
     }
 
-    console.log("[DEBUG BookingsPanel] Filtered bookings count:", result.length);
+    console.log(
+      "[DEBUG BookingsPanel] Filtered bookings count:",
+      result.length,
+    );
     return result;
   }, [bookings, activeStatus, searchQuery]);
 
@@ -85,16 +114,24 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
 
       // Refresh local state
       setBookings((prev) =>
-        prev.map((b) => (b.id === selectedBooking.id ? { ...b, status: newStatus } : b))
+        prev.map((b) =>
+          b.id === selectedBooking.id ? { ...b, status: newStatus } : b,
+        ),
       );
-      setSelectedBooking((prev) => (prev ? { ...prev, status: newStatus } : null));
+      setSelectedBooking((prev) =>
+        prev ? { ...prev, status: newStatus } : null,
+      );
 
       toast({
         title: `Booking ${newStatus}`,
         description: `Session with ${selectedBooking.traveller_name} has been ${newStatus}.`,
       });
     } catch (error) {
-      toast({ title: "Update failed", description: "Please try again.", variant: "destructive" });
+      toast({
+        title: "Update failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -117,7 +154,9 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
           booking={selectedBooking}
           onConfirm={() => handleStatusUpdate("confirmed")}
           onCancel={() => handleStatusUpdate("cancelled")}
-          onReschedule={() => toast({ title: "Info", description: "Feature coming soon." })}
+          onReschedule={() =>
+            toast({ title: "Info", description: "Feature coming soon." })
+          }
           onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
         />
       ) : (
@@ -126,10 +165,14 @@ const BookingsPanel = ({ consultantId, userId, userRole }: BookingsPanelProps) =
         </div>
       )}
 
-      <BookingMiniCalendar
-        selectedDate={selectedBooking ? new Date(selectedBooking.start_time) : undefined}
-        bookings={bookings}
-      />
+      <div className="w-[280px] shrink-0 border-l border-border bg-card">
+        <BookingMiniCalendar
+          selectedDate={
+            selectedBooking ? new Date(selectedBooking.start_time) : undefined
+          }
+          bookings={bookings}
+        />
+      </div>
     </div>
   );
 };
