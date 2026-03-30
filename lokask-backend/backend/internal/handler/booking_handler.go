@@ -125,6 +125,27 @@ func (h *BookingHandler) GetMySchedule(c *fiber.Ctx) error {
 	return c.JSON(bookings)
 }
 
+// public get consultant booking
+func (h *BookingHandler) PublicGetConsultantSchedule(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	consultantID, err := uuid.Parse(idStr)
+
+	// passed the other_user_id (from front-end) to this
+	// @TODO: only show confirmed bookings (front-end side)
+
+	// skip logged in checking here due to logged in user is not the same person
+	bookings, err := h.BookingRepo.GetConsultantBookings(c.Context(), consultantID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Could not get booking",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(bookings)
+}
+
 func (h *BookingHandler) GetUserTrips(c *fiber.Ctx) error {
 	// Extract userID from middleware context
 	uidStr := c.Locals("user_id").(string)
