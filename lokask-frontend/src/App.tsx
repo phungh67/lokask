@@ -13,6 +13,7 @@ import ConsultantPage from "./pages/ConsultantPage";
 import BecomeLocal from "./pages/BecomeLocal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import CallPage from "./pages/CallPage";
 import SignupTraveller from "./pages/SignupTraveller";
 import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
@@ -49,6 +50,9 @@ const App = () => (
             <Route path="/signup/traveller" element={<SignupTraveller />} />
             <Route path="/signup/consultant" element={<SignupConsultant />} />
             <Route path="/dashboard" element={<ConsultantDashboard />} />
+
+            {/* Calling */}
+            <Route path="/call/:roomId" element={<CallPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

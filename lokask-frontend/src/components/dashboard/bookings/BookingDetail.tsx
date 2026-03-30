@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Booking } from "@/types/booking";
 import { cn } from "@/lib/utils";
-import CallRoom from "@/pages/CallRoom";
+import CallRoom from "@/components/CallRoom";
 
 interface BookingDetailProps {
   booking: Booking | null;
@@ -76,6 +76,18 @@ const BookingDetail = ({
     booking.traveller_name || booking.consultant_name || "User";
   const displayAvatar = booking.traveller_avatar || booking.consultant_avatar;
 
+  // helper function to open a separate window for calling
+  const openCallWindow = (
+    bookingId: string,
+    type: "video_call" | "voice_call",
+  ) => {
+    const url = `/call/${bookingId}?type=${type}`;
+    const windowFeatures =
+      "width=1200,height=800,left=100,top=100,menubar=no,toolbar=no,location=no,status=no";
+
+    window.open(url, "LokaskCallRoom", windowFeatures);
+  };
+
   return (
     <div className="flex-1 bg-secondary/20 flex flex-col">
       <ScrollArea className="flex-1">
@@ -103,7 +115,7 @@ const BookingDetail = ({
                     console.log(
                       `Starting voice call for booking: ${booking.id}`,
                     );
-                    setActiveCallType("voice_call");
+                    openCallWindow(booking.id, "voice_call");
                   }}
                 >
                   <Phone className="h-4 w-4" />
@@ -117,7 +129,7 @@ const BookingDetail = ({
                     console.log(
                       `Starting video call for booking: ${booking.id}`,
                     );
-                    setActiveCallType("video_call");
+                    openCallWindow(booking.id, "video_call");
                   }}
                 >
                   <Video className="h-4 w-4" />
