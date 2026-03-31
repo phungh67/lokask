@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getConsultantBookings } from "@/lib/api";
+import { getConsultantBookings, getPublicConsultantBookings } from "@/lib/api";
 import { Booking } from "@/types/booking";
 import BookingMiniCalendar from "../dashboard/bookings/BookingMiniCalendar"; // Adjust import path if needed
 
@@ -41,16 +41,17 @@ const ConsultantScheduleSidebar = ({
         console.log(
           `[DEBUG] Fetching public schedule for consultant: ${consultantId}`,
         );
-        const data = await getConsultantBookings(consultantId);
+        const data = await getPublicConsultantBookings(consultantId);
 
-        // 🟢 PRIVACY GUARD: Scrub sensitive traveler data before rendering
-        const sanitizedBookings = (data || []).map((b: Booking) => ({
-          ...b,
-          traveller_name: "Busy", // Overwrite actual client names
-          notes: "", // Strip out private notes
-        }));
+        const confirmedPublicBookings = (data || [])
+          .filter((b: Booking) => b.status === "confirmed")
+          .map((b: Booking) => ({
+            ...b,
+            traveller_name: "Busy", // Safely overwrite
+            notes: "",
+          }));
 
-        setBookings(sanitizedBookings);
+        setBookings(confirmedPublicBookings);
       } catch (error) {
         console.error("Failed to load schedule:", error);
       } finally {

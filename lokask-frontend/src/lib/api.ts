@@ -347,6 +347,14 @@ export async function getConsultantBookings(consultantId: string) {
 }
 
 /**
+ * 3.5. Public function to view consultant schedule (User dashboard)
+ * Does not require authentication, only show official bookings (i.e. confirmed)
+ */
+export async function getPublicConsultantBookings(consultantId: string){
+    return fetchJson<Booking[]>(`/public/${consultantId}`);
+}
+
+/**
  * 4. Update booking status (Confirm/Cancel)
  * Matches: protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
  */

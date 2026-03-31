@@ -133,6 +133,9 @@ func main() {
 	// filter
 	api.Get("/cities", consultantHandler.GetCities)
 
+	// public get
+	api.Get("/public/:id", bookHandler.PublicGetConsultantSchedule)
+
 	// upload avatar
 	// move to protected
 
