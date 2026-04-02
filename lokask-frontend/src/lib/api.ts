@@ -374,3 +374,20 @@ export async function deleteBooking(id: string) {
         method: "DELETE",
     });
 }
+
+/**
+ * User profile
+ * 
+ */
+
+export interface CityOption {
+    id: number;
+    name: string;
+    country: string;
+}
+
+// API call
+export async function getCities(): Promise<CityOption[]> {
+    const data = await fetchJson<CityOption[]>("/cities");
+    return data || [];
+}

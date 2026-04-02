@@ -7,22 +7,27 @@ import ProfilePhotoSection from "./profile/ProfilePhotoSection";
 import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
+import { getCities, getNiches, CityOption } from "@/lib/api"; // 🟢 Wire up the API calls!
+
+// Import Niche from api.ts to match types
+import { Niche } from "@/lib/api";
 
 interface ProfilePanelProps {
   consultant: Consultant;
-  onSave: (updates: Partial<Consultant>) => void;
+  onSave: (updates: Partial<Consultant> & any) => void; // Added & any to accept new backend keys
 }
 
+// 🟢 1. Updated the internal form state to match our new database columns
 interface ProfileFormData {
-  name: string;
-  city: string;
-  country: string;
+  fullName: string;
+  displayName: string;
+  cityId: number | "";
   quote: string;
   bio: string;
   avatar: string;
   coverImage: string;
   galleryImages: string[];
-  mainTag: string;
+  mainNicheId: number | "";
   tags: string[];
   languages: string[];
 }
@@ -30,17 +35,21 @@ interface ProfileFormData {
 const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const { toast } = useToast();
   
-  // Map the real backend keys (avatarUrl, coverUrl, tag) to the form data
+  // 🟢 2. Added state for our API-driven dropdowns
+  const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
+  const [availableNiches, setAvailableNiches] = useState<Niche[]>([]);
+
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: consultant.name || "",
-    city: consultant.city || "",
-    country: consultant.country || "",
+    // Map initial consultant data (falling back safely if some new keys aren't on the type yet)
+    fullName: (consultant as any).fullName || consultant.name || "",
+    displayName: consultant.displayName || consultant.name || "",
+    cityId: (consultant as any).cityId || "", 
     quote: consultant.quote || "",
     bio: consultant.bio || "",
     avatar: consultant.avatarUrl || "",
     coverImage: consultant.coverUrl || "",
     galleryImages: consultant.galleryImages || [],
-    mainTag: consultant.tag || "",
+    mainNicheId: (consultant as any).mainNicheId || "",
     tags: consultant.tags || [],
     languages: consultant.languages || [],
   });
@@ -48,23 +57,46 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const [initialData, setInitialData] = useState<ProfileFormData>(formData);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // 🟢 3. The API Wiring: Fetch Cities and Niches when the panel loads
+  useEffect(() => {
+    const loadDropdownData = async () => {
+      try {
+        const [citiesData, nichesData] = await Promise.all([
+          getCities(),
+          getNiches()
+        ]);
+        setAvailableCities(citiesData);
+        setAvailableNiches(nichesData);
+      } catch (error) {
+        console.error("Failed to load dropdown options", error);
+        toast({
+          title: "Warning",
+          description: "Could not load cities and niches from the server.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    loadDropdownData();
+  }, [toast]);
+
   useEffect(() => {
     const changed = JSON.stringify(formData) !== JSON.stringify(initialData);
     setHasChanges(changed);
   }, [formData, initialData]);
 
   const handleSave = () => {
-    // Map the form data back to the database keys when saving
+    // 🟢 4. Map the data back for the parent component to send to the backend
     onSave({
-      name: formData.name,
-      city: formData.city,
-      country: formData.country,
+      full_name: formData.fullName, 
+      alias: formData.displayName,
+      city_id: formData.cityId,
       quote: formData.quote,
       bio: formData.bio,
-      avatarUrl: formData.avatar, 
-      coverUrl: formData.coverImage,
-      galleryImages: formData.galleryImages,
-      tag: formData.mainTag,
+      avatar_url: formData.avatar, 
+      cover_url: formData.coverImage,
+      gallery_images: formData.galleryImages,
+      niche_id: formData.mainNicheId,
       tags: formData.tags,
       languages: formData.languages,
     });
@@ -87,7 +119,7 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     window.open(`/consultant/${consultant.id}`, "_blank");
   };
 
-  // File upload handlers (create object URLs for preview)
+  // File upload handlers
   const handleAvatarChange = (file: File) => {
     const url = URL.createObjectURL(file);
     setFormData((prev) => ({ ...prev, avatar: url }));
@@ -132,7 +164,6 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
 
         {/* Form Sections */}
         <div className="space-y-8">
-          {/* Photos + Basic Info */}
           <div className="bg-card rounded-2xl p-6 border border-border">
             <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
             <div className="grid md:grid-cols-2 gap-8">
@@ -147,16 +178,16 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
                 onGalleryRemove={handleGalleryRemove}
               />
 
-              {/* Basic Info */}
+              {/* 🟢 5. Bug 1 Fixed: Passing the new props to ProfileBasicInfo */}
               <ProfileBasicInfo
-                name={formData.name}
-                city={formData.city}
-                country={formData.country}
+                fullName={formData.fullName}
+                displayName={formData.displayName}
+                cityId={formData.cityId}
                 quote={formData.quote}
-                onNameChange={(name) => setFormData((prev) => ({ ...prev, name }))}
-                onCityChange={(city, country) =>
-                  setFormData((prev) => ({ ...prev, city, country }))
-                }
+                availableCities={availableCities}
+                onFullNameChange={(fullName) => setFormData((prev) => ({ ...prev, fullName }))}
+                onDisplayNameChange={(displayName) => setFormData((prev) => ({ ...prev, displayName }))}
+                onCityChange={(cityId) => setFormData((prev) => ({ ...prev, cityId }))}
                 onQuoteChange={(quote) => setFormData((prev) => ({ ...prev, quote }))}
               />
             </div>
@@ -168,13 +199,14 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
             onBioChange={(bio) => setFormData((prev) => ({ ...prev, bio }))}
           />
 
-          {/* Expertise */}
+          {/* 🟢 6. Bug 2 Fixed: Passing the new props to ProfileExpertise */}
           <ProfileExpertise
-            mainTag={formData.mainTag}
+            mainNicheId={formData.mainNicheId}
+            availableNiches={availableNiches}
             tags={formData.tags}
             languages={formData.languages}
             responseTime={consultant.responseTime || "~2 hours"}
-            onMainTagChange={(mainTag) => setFormData((prev) => ({ ...prev, mainTag }))}
+            onMainNicheChange={(mainNicheId) => setFormData((prev) => ({ ...prev, mainNicheId }))}
             onTagsChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
             onLanguagesChange={(languages) =>
               setFormData((prev) => ({ ...prev, languages }))
