@@ -7,7 +7,7 @@ import ProfilePhotoSection from "./profile/ProfilePhotoSection";
 import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
-import { getCities, getNiches, CityOption } from "@/lib/api"; // 🟢 Wire up the API calls!
+import { getCities, getNiches, CityOption, uploadAvatar } from "@/lib/api"; // 🟢 Wire up the API calls!
 
 // Import Niche from api.ts to match types
 import { Niche } from "@/lib/api";
@@ -34,7 +34,7 @@ interface ProfileFormData {
 
 const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const { toast } = useToast();
-  
+
   // 🟢 2. Added state for our API-driven dropdowns
   const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
   const [availableNiches, setAvailableNiches] = useState<Niche[]>([]);
@@ -43,7 +43,7 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     // Map initial consultant data (falling back safely if some new keys aren't on the type yet)
     fullName: (consultant as any).fullName || consultant.name || "",
     displayName: consultant.displayName || consultant.name || "",
-    cityId: (consultant as any).cityId || "", 
+    cityId: (consultant as any).cityId || "",
     quote: consultant.quote || "",
     bio: consultant.bio || "",
     avatar: consultant.avatarUrl || "",
@@ -63,7 +63,7 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
       try {
         const [citiesData, nichesData] = await Promise.all([
           getCities(),
-          getNiches()
+          getNiches(),
         ]);
         setAvailableCities(citiesData);
         setAvailableNiches(nichesData);
@@ -72,7 +72,7 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
         toast({
           title: "Warning",
           description: "Could not load cities and niches from the server.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     };
@@ -88,12 +88,12 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const handleSave = () => {
     // 🟢 4. Map the data back for the parent component to send to the backend
     onSave({
-      full_name: formData.fullName, 
+      full_name: formData.fullName,
       alias: formData.displayName,
       city_id: formData.cityId,
       quote: formData.quote,
       bio: formData.bio,
-      avatar_url: formData.avatar, 
+      avatar_url: formData.avatar,
       cover_url: formData.coverImage,
       gallery_images: formData.galleryImages,
       niche_id: formData.mainNicheId,
@@ -120,9 +120,16 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   };
 
   // File upload handlers
-  const handleAvatarChange = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, avatar: url }));
+  const handleAvatarChange = async (file: File) => {
+    try {
+      const response = await uploadAvatar(file);
+
+      setFormData((prev) => ({ ...prev, avatar: response.avatar_url }));
+
+      toast({ title: "Avatar uploaded successfully!" });
+    } catch (error) {
+      toast({ title: "Upload failed", variant: "destructive" });
+    }
   };
 
   const handleCoverChange = (file: File) => {
@@ -156,7 +163,11 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
               Update your public profile information
             </p>
           </div>
-          <Button variant="outline" onClick={handlePreview} className="gap-2 rounded-full">
+          <Button
+            variant="outline"
+            onClick={handlePreview}
+            className="gap-2 rounded-full"
+          >
             Preview
             <ExternalLink className="h-4 w-4" />
           </Button>
@@ -185,10 +196,18 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
                 cityId={formData.cityId}
                 quote={formData.quote}
                 availableCities={availableCities}
-                onFullNameChange={(fullName) => setFormData((prev) => ({ ...prev, fullName }))}
-                onDisplayNameChange={(displayName) => setFormData((prev) => ({ ...prev, displayName }))}
-                onCityChange={(cityId) => setFormData((prev) => ({ ...prev, cityId }))}
-                onQuoteChange={(quote) => setFormData((prev) => ({ ...prev, quote }))}
+                onFullNameChange={(fullName) =>
+                  setFormData((prev) => ({ ...prev, fullName }))
+                }
+                onDisplayNameChange={(displayName) =>
+                  setFormData((prev) => ({ ...prev, displayName }))
+                }
+                onCityChange={(cityId) =>
+                  setFormData((prev) => ({ ...prev, cityId }))
+                }
+                onQuoteChange={(quote) =>
+                  setFormData((prev) => ({ ...prev, quote }))
+                }
               />
             </div>
           </div>
@@ -206,7 +225,9 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
             tags={formData.tags}
             languages={formData.languages}
             responseTime={consultant.responseTime || "~2 hours"}
-            onMainNicheChange={(mainNicheId) => setFormData((prev) => ({ ...prev, mainNicheId }))}
+            onMainNicheChange={(mainNicheId) =>
+              setFormData((prev) => ({ ...prev, mainNicheId }))
+            }
             onTagsChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
             onLanguagesChange={(languages) =>
               setFormData((prev) => ({ ...prev, languages }))

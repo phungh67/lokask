@@ -391,3 +391,20 @@ export async function getCities(): Promise<CityOption[]> {
     const data = await fetchJson<CityOption[]>("/cities");
     return data || [];
 }
+
+// user's profile modification
+export async function uploadAvatar(file: File){
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const token = localStorage.getItem("token")
+
+    const res = await fetch("/api/v1/users/avatar", {
+        method: "POST",
+        headers: token ? {"Authorization": `Bearer ${token}`} : {},
+        body: formData,
+    });
+
+    if (!res.ok) throw new Error ("Avatar upload failed");
+    return res.json();
+}

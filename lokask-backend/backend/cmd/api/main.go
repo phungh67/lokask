@@ -85,6 +85,8 @@ func main() {
 
 	// 3. Setup Fiber App
 	app := fiber.New(fiber.Config{
+		// limit size in avatar or image upload
+		BodyLimit: 20 * 1024 * 1024,
 		// custom error hanlder
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Printf("Server error: %v", err)
