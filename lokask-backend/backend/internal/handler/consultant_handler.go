@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
+	"asklocal/internal/storage"
 	"log"
 	"strconv"
 
@@ -11,7 +12,12 @@ import (
 )
 
 type ConsultantHandler struct {
-	Repo *repository.ConsultantRepository
+	Repo    *repository.ConsultantRepository
+	Storage *storage.MinioClient
+}
+
+func NewConsultantHandler(repo *repository.ConsultantRepository, storage *storage.MinioClient) *ConsultantHandler {
+	return &ConsultantHandler{Repo: repo, Storage: storage}
 }
 
 // handle GET request /api/v1/consultants/:id
@@ -113,4 +119,9 @@ func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 		})
 	}
 	return c.JSON(cities)
+}
+
+// func
+func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
+	return nil
 }
