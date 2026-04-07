@@ -108,7 +108,9 @@ func (m *MinioClient) UploadProfilePicture(file *multipart.FileHeader, userID st
 
 // UploadFile uploads any file to a specific bucket and returns the public URL
 // generic function
-func (m *MinioClient) UploadFile(file *multipart.FileHeader, bucketName string) (string, error) {
+// ADD: this function now tries to match that object under a directory, starts
+// with owner's UUID
+func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, bucketName string) (string, error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", err
@@ -119,7 +121,7 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, bucketName string) 
 	ext := filepath.Ext(file.Filename)
 	name := strings.TrimSuffix(file.Filename, ext)
 	cleanName := strings.ReplaceAll(name, " ", "_") // Basic sanitization
-	objectName := fmt.Sprintf("%s_%d%s", cleanName, time.Now().Unix(), ext)
+	objectName := fmt.Sprintf("%s/%s_%d%s", ownerID, cleanName, time.Now().Unix(), ext)
 
 	ctx := context.Background()
 	contentType := file.Header.Get("Content-Type")
