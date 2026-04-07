@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -123,5 +124,45 @@ func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 
 // func
 func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
-	return nil
+	userIDStr := c.Locals("user_id").(string) // cast to only string
+	userID, err := uuid.Parse(userIDStr)      // convert to uuid format (assume that we get the string)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "UUID error, either malformed or mismatched",
+			"error":   err.Error(),
+		})
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "No file was uploaded",
+			"error":   err.Error(),
+		})
+	}
+
+	mediaType := c.FormValue("type") // to check if it meant to be cover or galleries
+
+	bucketName := "galleries"
+	if mediaType == "cover" {
+		bucketName = "covers"
+	}
+
+	fileLocation := fmt.Sprintf("%s/%s", userID.String(), bucketName)
+	url, err := h.Storage.UploadFile(fileHeader, fileLocation)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "DB upload failed",
+			"error":   err.Error(),
+		})
+	}
+
+	log.Printf("[LOG] Upload media successfully to %s\n", url)
+
+	return c.JSON(fiber.Map{
+		"media_url": url,
+		"message":   "Successfully upload media.",
+	})
 }
