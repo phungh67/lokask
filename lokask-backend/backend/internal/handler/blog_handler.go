@@ -41,7 +41,7 @@ func (h *BlogHandler) Create(c *fiber.Ctx) error {
 	file, err := c.FormFile("cover_image")
 	if err == nil {
 		// Upload to MinIO
-		rawURL, err := h.Storage.UploadFile(file, "travel-photos")
+		rawURL, err := h.Storage.UploadFile(file, userIDStr, "travel-photos")
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to upload cover image"})
 		}

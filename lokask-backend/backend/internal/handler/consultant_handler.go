@@ -4,7 +4,6 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
-	"fmt"
 	"log"
 	"strconv"
 
@@ -149,8 +148,7 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		bucketName = "covers"
 	}
 
-	fileLocation := fmt.Sprintf("%s/%s", userID.String(), bucketName)
-	url, err := h.Storage.UploadFile(fileHeader, fileLocation)
+	url, err := h.Storage.UploadFile(fileHeader, userID.String(), bucketName)
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{

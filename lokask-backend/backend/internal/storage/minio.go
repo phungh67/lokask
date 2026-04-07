@@ -119,7 +119,7 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, buc
 
 	// 1. Generate unique filename (image_123456789.jpg)
 	ext := filepath.Ext(file.Filename)
-	name := strings.TrimSuffix(file.Filename, ext)
+	name := strings.TrimSuffix(filepath.Base(file.Filename), ext)
 	cleanName := strings.ReplaceAll(name, " ", "_") // Basic sanitization
 	objectName := fmt.Sprintf("%s/%s_%d%s", ownerID, cleanName, time.Now().Unix(), ext)
 
