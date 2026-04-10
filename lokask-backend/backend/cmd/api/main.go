@@ -55,7 +55,7 @@ func main() {
 
 	// consultant
 	consultantRepo := repository.NewConsultantRepository(db)
-	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo}
+	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo, Storage: minioClient}
 
 	// user
 	userRepo := repository.NewUserRepository(db)
@@ -168,6 +168,7 @@ func main() {
 	protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
+	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
 
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
