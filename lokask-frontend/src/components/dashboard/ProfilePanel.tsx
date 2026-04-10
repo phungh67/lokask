@@ -132,9 +132,13 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     }
   };
 
-  const handleCoverChange = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, coverImage: url }));
+  const handleCoverChange = async (file: File) => {
+    const localOptimisticUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({...prev, coverUrl: localOptimisticUrl}));
+
+    try {
+      
+    }
   };
 
   const handleGalleryAdd = (file: File) => {

@@ -408,3 +408,28 @@ export async function uploadAvatar(file: File){
     if (!res.ok) throw new Error ("Avatar upload failed");
     return res.json();
 }
+
+// consultant's cover and gallery upload
+export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery") => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No authentication token found");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+
+    const response = await fetch("api/v1/consultant/media", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to upload media");
+    }
+
+    return response.json();
+}
