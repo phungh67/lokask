@@ -126,6 +126,12 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, buc
 	ctx := context.Background()
 	contentType := file.Header.Get("Content-Type")
 
+	// perform check
+	if err := m.CreateIfNotExist(ctx, bucketName); err != nil {
+		log.Printf("[ERR][MINIO] Bucket created failed: %v", err)
+		return "", err
+	}
+
 	// 2. Upload to MinIO
 	_, err = m.Client.PutObject(ctx, bucketName, objectName, src, file.Size, minio.PutObjectOptions{
 		ContentType: contentType,
@@ -140,6 +146,39 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, buc
 	url := fmt.Sprintf("%s/%s/%s", publicURL, bucketName, objectName)
 
 	return url, nil
+}
+
+func (m *MinioClient) CreateIfNotExist(ctx context.Context, bucketName string) error {
+	exists, err := m.Client.BucketExists(ctx, bucketName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		err = m.Client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			return err
+		}
+
+		policy := fmt.Sprintf(`{
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Effect": "Allow",
+					"Principal": {"AWS": ["*"]},
+					"Action": ["s3:GetObject"],
+					"Resource": ["arn:aws:s3:::%s/*"]
+				}
+			]
+		}`, bucketName)
+
+		if err := m.Client.SetBucketPolicy(ctx, bucketName, policy); err != nil {
+			return err
+		}
+
+		log.Printf("[LOG][MINIO] Auto-created bucket %s successfully.\n", bucketName)
+	}
+	return nil
 }
 
 func getEnv(key, fallback string) string {
