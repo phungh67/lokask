@@ -389,14 +389,14 @@ func calculateBadges(profile *domain.ConsultantProfile) []domain.Badge {
 func (r *ConsultantRepository) UpdateCoverImage(userID uuid.UUID, coverURL string) error {
 	query := `
 		UPDATE consultants
-		SET cover_url = $1, updated_at = $2
-		WHERE user_id = $3
+		SET cover_url = $1
+		WHERE user_id = $2
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := r.DB.ExecContext(ctx, query, coverURL, time.Now(), userID)
+	_, err := r.DB.ExecContext(ctx, query, coverURL, userID)
 
 	return err
 }
