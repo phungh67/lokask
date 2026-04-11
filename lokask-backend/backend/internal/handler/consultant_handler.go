@@ -157,6 +157,14 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		})
 	}
 
+	err = h.Repo.UpdateCoverImage(userID, url)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Failed to update avatar, something happened",
+			"error":   err.Error(),
+		})
+	}
+
 	log.Printf("[LOG] Upload media successfully to %s\n", url)
 
 	return c.JSON(fiber.Map{
