@@ -7,7 +7,13 @@ import ProfilePhotoSection from "./profile/ProfilePhotoSection";
 import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
-import { getCities, getNiches, CityOption, uploadAvatar } from "@/lib/api"; // 🟢 Wire up the API calls!
+import {
+  getCities,
+  getNiches,
+  CityOption,
+  uploadAvatar,
+  uploadConsultantMedia,
+} from "@/lib/api"; // 🟢 Wire up the API calls!
 
 // Import Niche from api.ts to match types
 import { Niche } from "@/lib/api";
@@ -134,19 +140,46 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
 
   const handleCoverChange = async (file: File) => {
     const localOptimisticUrl = URL.createObjectURL(file);
-    setFormData((prev) => ({...prev, coverUrl: localOptimisticUrl}));
+    setFormData((prev) => ({ ...prev, coverUrl: localOptimisticUrl }));
 
     try {
-      
+      const response = await uploadConsultantMedia(file, "cover");
+
+      setFormData((prev) => ({ ...prev, coverUrl: response.media_url }));
+
+      toast({ title: "Cover updated successfully!" });
+    } catch (error) {
+      toast({ title: "Cover uploaded failed", variant: "destructive" });
     }
   };
 
-  const handleGalleryAdd = (file: File) => {
-    const url = URL.createObjectURL(file);
+  const handleGalleryAdd = async (file: File) => {
+    const localOptimisticUrl = URL.createObjectURL(file);
     setFormData((prev) => ({
       ...prev,
-      galleryImages: [...prev.galleryImages, url],
+      galleryImages: [...prev.galleryImages, localOptimisticUrl],
     }));
+
+    try {
+      const response = await uploadConsultantMedia(file, "gallery");
+
+      setFormData((prev) => ({
+        ...prev,
+        galleryImages: prev.galleryImages.map((img) =>
+          img === localOptimisticUrl ? response.media_url : img,
+        ),
+      }));
+
+      toast({ title: "Image added to gallery!" });
+    } catch (error) {
+      toast({ title: "Gallery upload failed", variant: "destructive" });
+      setFormData((prev) => ({
+        ...prev,
+        galleryImages: prev.galleryImages.filter(
+          (img) => img !== localOptimisticUrl,
+        ),
+      }));
+    }
   };
 
   const handleGalleryRemove = (index: number) => {
