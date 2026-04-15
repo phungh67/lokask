@@ -1,12 +1,24 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MessageCircle, Clock, Globe, Heart, MapPin, Trophy, Award, Calendar, CheckCircle, Images, Users, Play, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Star,
+  MessageCircle,
+  Clock,
+  Globe,
+  Heart,
+  MapPin,
+  Trophy,
+  Award,
+  Calendar,
+  CheckCircle,
+  Images,
+  Users,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ReviewCard from "@/components/ReviewCard";
-import ReviewCardCompact from "@/components/ReviewCardCompact";
 import LocalsCarousel from "@/components/LocalsCarousel";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// 🟢 Use real API helpers
 import { getConsultantById, getConsultants } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
@@ -17,35 +29,34 @@ const ConsultantPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { openChat } = useChat();
-  const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
+  const { showPrompt, setShowPrompt, promptMessage, requireAuth } =
+    useAuthPrompt();
 
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // 🟢 1. Fetch real Consultant details by ID
+  // 1. Fetch Consultant details by ID
   const { data: consultant, isLoading: isProfileLoading } = useQuery({
     queryKey: ["consultant", id],
     queryFn: () => getConsultantById(id!),
     enabled: !!id,
   });
 
-  // 🟢 2. Fetch related consultants in the same city
+  // 2. Fetch related consultants
   const { data: relatedResponse } = useQuery({
     queryKey: ["consultants", "related", consultant?.city],
     queryFn: () => getConsultants({ city: consultant?.city }),
     enabled: !!consultant?.city,
   });
 
-  // 🟢 Fix: Safely extract the data array from the paginated response
   const relatedConsultants = Array.isArray(relatedResponse)
     ? relatedResponse
     : relatedResponse?.data || [];
 
-  // 🟢 3. Loading & Error States
+  // 3. Loading & Error States
   if (isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <div className="w-10 h-10 border-4 border-[#C56A49] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -53,206 +64,380 @@ const ConsultantPage = () => {
   if (!consultant) {
     return (
       <div className="container mx-auto px-6 py-20 text-center">
-        <h1 className="text-2xl font-display mb-4">Consultant not found</h1>
-        <Link to="/" className="text-primary hover:underline">← Back to home</Link>
+        <h1 className="text-2xl font-bold text-zinc-800 mb-4">
+          Consultant not found
+        </h1>
+        <Link to="/" className="text-[#C56A49] hover:underline">
+          ← Back to home
+        </Link>
       </div>
     );
   }
 
-  // 🟢 4. Gallery Logic using mapped backend data
-  const galleryImages = consultant.galleryImages?.length
-    ? consultant.galleryImages
-    : [consultant.coverUrl, consultant.coverUrl, consultant.coverUrl];
+  // 4. Gallery Logic
+  const galleryImages =
+    consultant.galleryImages?.length >= 3
+      ? consultant.galleryImages
+      : [
+          consultant.coverUrl || "https://placehold.co/600x400",
+          consultant.coverUrl || "https://placehold.co/400x300",
+          consultant.coverUrl || "https://placehold.co/400x300",
+        ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <section className="relative min-h-[650px] py-16 overflow-hidden">
-        <div className="container mx-auto px-6 relative">
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
+    <div className="min-h-screen bg-[#fafafa] font-sans pb-20">
+      <div className="max-w-[1400px] mx-auto px-6 py-8">
+        {/* Top Navigation */}
+        <div className="mb-8">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-zinc-500 hover:text-zinc-800 transition-colors"
+          >
             <ArrowLeft size={18} />
-            <span>Back</span>
+            <span className="text-base">Back</span>
           </Link>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-20 items-center max-w-5xl mx-auto">
-            {/* Profile Card */}
-            <div className="relative max-w-md mx-auto lg:ml-auto lg:mr-0">
-              <div className="relative z-10 bg-white rounded-[40px] shadow-xl p-5 w-[280px] lg:w-[320px] transition-all duration-300 hover:shadow-2xl">
-                <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-gray-100">
-                  <img src={consultant.avatarUrl} alt={consultant.name} className="w-full h-full object-cover" />
-                  <div className="absolute top-3 left-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center">
-                    <Play className="w-4 h-4 text-white fill-white" />
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 relative">
+          {/* LEFT COLUMN: Profile Card */}
+          <div className="lg:col-span-4 relative">
+            <div className="bg-white rounded-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-zinc-200 p-8 flex flex-col items-center sticky top-24">
+              <h1 className="text-[28px] font-bold text-zinc-900 mb-1">
+                {consultant.displayName || consultant.name}
+              </h1>
+              <div className="flex items-center text-zinc-500 text-sm mb-6">
+                <MapPin size={14} className="mr-1" />
+                {consultant.city}
+              </div>
+
+              <div className="w-full aspect-square bg-zinc-100 rounded-2xl overflow-hidden mb-6">
+                <img
+                  src={consultant.avatarUrl || "https://placehold.co/280x280"}
+                  alt={consultant.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 border border-zinc-200 rounded-xl px-4 py-3 w-full mb-6">
+                <Globe size={18} className="text-[#C56A49]" />
+                <span className="text-sm font-medium text-zinc-800">
+                  {consultant.languages?.join(", ") || "English, French"}
+                </span>
+              </div>
+
+              <p className="text-zinc-600 text-[15px] leading-relaxed text-center mb-8 px-2">
+                {consultant.bio ||
+                  "I've spent years exploring every museum, gallery, and street art corner of my city. I'll help you discover art that speaks to your soul."}
+              </p>
+
+              <button
+                onClick={() => {
+                  const isAuthenticated = !!localStorage.getItem("token");
+                  if (isAuthenticated) {
+                    navigate("/dashboard", {
+                      state: { intent: "startChat", targetId: consultant.id },
+                    });
+                  } else {
+                    requireAuth(
+                      () =>
+                        navigate("/dashboard", {
+                          state: {
+                            intent: "startChat",
+                            targetId: consultant.id,
+                          },
+                        }),
+                      { actionType: "ask", consultantName: consultant.name },
+                    );
+                  }
+                }}
+                className="w-full bg-[#C56A49] hover:bg-[#A3553A] transition-colors text-white rounded-full py-4 text-base font-medium"
+              >
+                Ask me
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Details & Gallery */}
+          <div className="lg:col-span-8 flex flex-col pt-4">
+            {/* Header Stats Row */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
+              {/* Local Favorite Badge */}
+              <div className="flex items-center gap-4">
+                <span className="text-3xl">🏆</span>
+                <div className="flex flex-col">
+                  <span className="text-[#EF4343] font-bold text-lg leading-tight">
+                    Local
+                  </span>
+                  <span className="text-[#E11D48] font-bold text-lg leading-tight">
+                    Favorite
+                  </span>
+                </div>
+                <div className="h-10 w-px bg-zinc-300 mx-2" />
+                <p className="text-sm font-bold text-zinc-500 max-w-[220px] leading-snug">
+                  One of the most loved locals on LokaAsk, according to
+                  travelers
+                </p>
+              </div>
+
+              {/* Rating & Reviews */}
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-bold text-zinc-900">
+                    {consultant.rating || "4.9"}
+                  </span>
+                  <div className="flex text-[#FBBF24]">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        fill={i < 4 ? "currentColor" : "none"}
+                        className={i === 4 ? "text-zinc-300" : ""}
+                      />
+                    ))}
                   </div>
                 </div>
+                <div className="h-10 w-px bg-zinc-300" />
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-bold text-zinc-900">
+                    {consultant.helpedCount || "5"}
+                  </span>
+                  <span className="text-sm text-zinc-500">Reviews</span>
+                </div>
+              </div>
+            </div>
 
-                <div className="text-center mb-2">
-                  <h3 className="font-display text-lg font-semibold">{consultant.displayName || consultant.name}</h3>
-                  <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                    <MapPin size={12} /> {consultant.city}
+            {/* Quote & Wishlist Row */}
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-zinc-500 italic text-[15px]">
+                "{consultant.quote || "I show you art beyond the queues."}"
+              </p>
+              <button
+                onClick={() =>
+                  requireAuth(() => setIsWishlisted(!isWishlisted), {
+                    actionType: "wishlist",
+                    consultantName: consultant.name,
+                  })
+                }
+                className="flex items-center gap-2 text-zinc-900 font-bold text-sm hover:opacity-70 transition-opacity"
+              >
+                <Heart
+                  size={16}
+                  className={
+                    isWishlisted ? "fill-red-500 text-red-500" : "text-zinc-900"
+                  }
+                />
+                <span className="underline">Add to wishlist</span>
+              </button>
+            </div>
+
+            {/* Gallery Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-12">
+              <div className="md:col-span-2 relative h-full">
+                <img
+                  src={galleryImages[0]}
+                  className="w-full h-full object-cover"
+                  alt="Main gallery"
+                />
+              </div>
+              <div className="hidden md:grid grid-rows-2 gap-3 h-full">
+                <img
+                  src={galleryImages[1]}
+                  className="w-full h-full object-cover"
+                  alt="Gallery 2"
+                />
+                <div className="relative w-full h-full">
+                  <img
+                    src={galleryImages[2]}
+                    className="w-full h-full object-cover"
+                    alt="Gallery 3"
+                  />
+                  <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md flex items-center gap-2">
+                    <Images size={14} className="text-zinc-800" />
+                    <span className="text-sm font-medium text-zinc-800">
+                      3+
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Features & Badges Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8 mb-10">
+              <div className="flex gap-4">
+                <Calendar className="w-6 h-6 text-zinc-500 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    3+ years on LokaAsk
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Member since 2022. Experienced local guide.
                   </p>
                 </div>
-
-                <p className="text-xs text-muted-foreground text-center italic mb-3 px-2 line-clamp-2">
-                  "{consultant.quote}"
-                </p>
-
-                <div className="flex flex-wrap justify-center gap-1 mb-3">
-                  {consultant.tags?.map(tag => (
-                    <span key={tag} className="text-xs bg-secondary text-foreground/70 px-2 py-0.5 rounded-full">#{tag}</span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <div className="flex items-center gap-0.5">
-                    <Star size={12} className="fill-amber-400 text-amber-400" />
-                    <span className="text-sm font-medium ml-1">{consultant.rating}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{consultant.helpedCount}+ helped</span>
-                </div>
-
-                <Button
-                  onClick={() => {
-                    const isAuthenticated = !!localStorage.getItem("token");
-
-                    if (isAuthenticated) {
-                      navigate("/dashboard", {
-                        state: {
-                          intent: "startChat",
-                          targetId: consultant.id
-                        }
-                      });
-                    } else {
-                      requireAuth(
-                        () => navigate("/dashboard", { state: { intent: "startChat", targetId: consultant.id } }),
-                        { actionType: 'ask', consultantName: consultant.name }
-                      );
-                    }
-                  }}
-                  className="w-full bg-primary rounded-full"
-                >
-                  Ask now
-                </Button>
-              </div>
-            </div>
-
-            {/* AI Summary Section */}
-            <div className="relative flex flex-col justify-center">
-              <button
-                onClick={() => requireAuth(
-                  () => setIsWishlisted(!isWishlisted),
-                  { actionType: 'wishlist', consultantName: consultant.name }
-                )}
-                className="absolute -top-8 right-0 flex items-center gap-2"
-              >
-                <Heart size={18} className={isWishlisted ? "fill-red-500 text-red-500" : ""} />
-                <span className="text-sm underline font-extrabold">{isWishlisted ? "Saved" : "Add to wishlist"}</span>
-              </button>
-
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground mb-4">
-                Travel with<br />
-                <span className="text-[#1E3A5F]">{consultant.displayName || consultant.name}</span>
-              </h1>
-
-              <div className="flex items-center gap-2 mb-6">
-                <Users size={14} className="text-[#1E3A5F]" />
-                <span className="text-sm italic text-lime-600">AI-generated summary of reviews</span>
               </div>
 
-              <p className="text-lg text-muted-foreground mb-8 max-w-lg leading-relaxed">
-                {consultant.bio || "Travellers consistently describe this local as friendly, patient, and easy to talk to."}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Info Section */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <h2 className="text-2xl font-semibold mb-6">About {consultant.name}</h2>
-          <p className="text-foreground/80 mb-8 leading-relaxed">{consultant.bio}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
-              <Globe size={20} className="text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Languages</p>
-                <p className="text-sm font-medium">{consultant.languages?.join(", ") || "English"}</p>
-              </div>
-            </div>
-            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
-              <Clock size={20} className="text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Response time</p>
-                <p className="text-sm font-medium">{consultant.responseTime || "Within an hour"}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Gallery */}
-      <section className="py-10 border-b">
-        <div className="container mx-auto px-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 flex flex-wrap items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <span className="text-2xl">🏆</span>
-              <div className="font-bold text-rose-600 leading-tight">LOCAL<br />FAVORITE</div>
-              <span className="text-2xl">🏆</span>
-              <p className="text-sm text-muted-foreground font-bold ml-4 max-w-[260px]">One of the most loved locals on Lokask, according to travelers</p>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-center"><p className="text-2xl font-bold">{consultant.rating}</p><div className="flex text-amber-400"><Star size={12} fill="currentColor" /></div></div>
-              <div className="h-12 w-px bg-border" />
-              <div className="text-center"><p className="text-2xl font-bold">{consultant.helpedCount}</p><p className="text-xs text-muted-foreground">Reviews</p></div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="space-y-6">
-              {consultant.badges && consultant.badges.length > 0 ? (
-                consultant.badges.map((badge) => (
-                  <div key={badge.id} className="flex items-start gap-4 transition-all hover:translate-x-1">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Award className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{badge.title}</p>
-                      <p className="text-sm text-muted-foreground">{badge.description}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No specific achievements listed yet.</p>
-              )}
-
-              <div className="flex items-start gap-4">
-                <CheckCircle className="w-6 h-6 text-green-500" />
+              <div className="flex gap-4">
+                <Clock className="w-6 h-6 text-zinc-500 shrink-0" />
                 <div>
-                  <p className="font-semibold">Identity verified</p>
-                  <p className="text-sm text-muted-foreground">Personal info confirmed.</p>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Quick Responder
+                  </h4>
+                  <p className="text-sm text-zinc-500">Usually within 1 hour</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Award className="w-6 h-6 text-[#C56A49] shrink-0" />
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Certified Local Expert
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Verified expertise in local history & culture
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Trophy className="w-6 h-6 text-[#F59E0B] shrink-0" />
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Top Rated Local
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Highly ranked based on ratings and reliability.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Identity verified
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Personal info confirmed. You're in safe hands.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <MessageCircle className="w-6 h-6 text-zinc-500 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">Most Asked</h4>
+                  <p className="text-sm text-zinc-500">
+                    Helped {consultant.helpedCount || "160"}+ travelers with
+                    local insights.
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-[2fr_1fr] gap-2 h-[380px] rounded-xl overflow-hidden">
-              <img src={galleryImages[0]} className="w-full h-full object-cover" alt="Gallery 1" />
-              <div className="flex flex-col gap-2">
-                <img src={galleryImages[1]} className="h-1/2 w-full object-cover" alt="Gallery 2" />
-                <div className="relative h-1/2">
-                  <img src={galleryImages[2]} className="w-full h-full object-cover" alt="Gallery 3" />
-                  <button className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                    <Images size={14} /> {galleryImages.length}+
-                  </button>
-                </div>
+            {/* Tags & Trust Footer */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-zinc-200 pt-8 mt-4 gap-6">
+              <div className="flex flex-wrap gap-2">
+                {(consultant.tags?.length
+                  ? consultant.tags
+                  : ["Art", "Museums"]
+                ).map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-[#EBE6E0] text-zinc-700 text-xs font-medium rounded-full"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-[#C56A49]" />
+                <span className="text-sm text-zinc-500">Highly Trusted</span>
+                <span className="text-sm text-zinc-500 border-l border-zinc-300 pl-3">
+                  {consultant.helpedCount || "160"}+ travelers helped
+                </span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* AI Summary Section */}
+        <div className="mt-12 max-w-[1271px] mx-auto text-left flex flex-col items-start w-full">
+          <h2 className="text-4xl md:text-[45px] font-black text-[#2E2E2E] leading-tight mb-4 tracking-tight w-full">
+            Seamless Travel Experiences with{" "}
+            <span className="text-[#1E3A5F]">
+              {consultant.displayName || consultant.name}
+            </span>
+          </h2>
+
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="w-[14px] h-[14px] text-[#1E3A5F]" />
+            <span className="text-[#65A30D] text-sm font-medium">
+              AI-generated summary based on traveler reviews
+            </span>
+          </div>
+
+          <p className="text-[#737373] text-[18px] leading-[29px] mb-8 max-w-[1206px]">
+            Travellers consistently describe{" "}
+            {consultant.displayName || consultant.name} as friendly, patient,
+            and easy to talk to. Many reviews highlight her deep local
+            knowledge, especially when it comes to food spots and lesser-known
+            neighborhoods. Guests often mention that her recommendations feel
+            practical and realistic, helping them avoid tourist traps while
+            still feeling confident exploring the city on their own.
+          </p>
+
+          <button className="bg-[#E07A5F] hover:bg-[#C8664D] text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors">
+            Read more
+          </button>
+        </div>
+      </div>
+
+      {/* CTA Section (Centered per Figma) */}
+      <section className="w-full bg-white border-t border-zinc-200 pt-20 pb-8 mt-16">
+        <div className="w-full px-6 flex flex-col items-center justify-start gap-4 max-w-[1400px] mx-auto">
+          <div className="flex flex-col items-center w-full">
+            <h2 className="text-center text-[#2E2E2E] text-[24px] font-semibold leading-[32px]">
+              Ready to explore {consultant.city} with{" "}
+              {consultant.displayName || consultant.name}?
+            </h2>
+          </div>
+
+          <div className="max-w-[448px] pb-4 flex flex-col items-center">
+            <p className="text-center text-[#737373] text-[16px] leading-[24px]">
+              Send a message to start planning your authentic local experience.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              const isAuthenticated = !!localStorage.getItem("token");
+              if (isAuthenticated) {
+                navigate("/dashboard", {
+                  state: { intent: "startChat", targetId: consultant.id },
+                });
+              } else {
+                requireAuth(
+                  () =>
+                    navigate("/dashboard", {
+                      state: { intent: "startChat", targetId: consultant.id },
+                    }),
+                  { actionType: "ask", consultantName: consultant.name },
+                );
+              }
+            }}
+            className="h-[44px] px-8 bg-[#C56A49] hover:bg-[#A3553A] transition-colors rounded-full flex items-center justify-center gap-2 text-white text-[14px]"
+          >
+            <MessageCircle size={16} />
+            <span>Ask {consultant.displayName || consultant.name}</span>
+          </button>
+        </div>
       </section>
 
-      {/* Related Section */}
+      {/* Related Locals Section */}
       {relatedConsultants.length > 0 && (
-        <section className="py-16 bg-secondary/30">
-          <div className="container mx-auto px-6">
+        <section className="pb-20 pt-8 bg-white">
+          <div className="max-w-[1400px] mx-auto px-6">
             <LocalsCarousel
               title={`Other locals in ${consultant.city}`}
               consultants={relatedConsultants.filter((c: any) => c.id !== id)}
@@ -261,35 +446,12 @@ const ConsultantPage = () => {
         </section>
       )}
 
-      {/* Final CTA */}
-      <section className="py-20 border-t border-border">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl font-extrabold mb-4 text-foreground">
-            Ready to explore {consultant.city} with {consultant.displayName || consultant.name}?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
-            Send a message to start planning your authentic local experience directly with {consultant.displayName || consultant.name}.
-          </p>
-          <Button
-            size="lg"
-            className="rounded-full gap-2 px-10 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
-            onClick={() => requireAuth(
-              () => openChat(consultant),
-              { actionType: 'ask', consultantName: consultant.name }
-            )}
-          >
-            <MessageCircle size={20} />
-            Ask {consultant.displayName || consultant.name} now
-          </Button>
-        </div>
-      </section>
-
       <AuthPromptDialog
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
-        onLogin={() => navigate('/login')}
-        onSignup={() => navigate('/signup')}
+        onLogin={() => navigate("/login")}
+        onSignup={() => navigate("/signup")}
       />
     </div>
   );
