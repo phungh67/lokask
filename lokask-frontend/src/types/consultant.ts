@@ -12,7 +12,7 @@ export interface Review {
   rating: number;  
   comment: string;
   verified_stay: boolean;
-  created_at: string;
+  date: string;
 }
 
 export interface Consultant {

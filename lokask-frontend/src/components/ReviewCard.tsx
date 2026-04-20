@@ -1,12 +1,15 @@
 import { Star, CheckCircle2 } from "lucide-react";
-import { Review } from "@/types/consultant";
+import { Review } from "@/types/consultant"; // Adjust import path if needed
+
 interface ReviewCardProps {
   review: Review;
 }
 
 const ReviewCard = ({ review }: ReviewCardProps) => {
   const formatDate = (dateString: string) => {
+    if (!dateString) return "Recent";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Recent";
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
@@ -23,7 +26,6 @@ const ReviewCard = ({ review }: ReviewCardProps) => {
         ))}
       </div>
 
-      {/* Comment (Flex-grow pushes the user info to the bottom evenly) */}
       <p className="text-zinc-700 text-[15px] leading-relaxed mb-6 flex-grow">
         "{review.comment}"
       </p>
@@ -41,7 +43,7 @@ const ReviewCard = ({ review }: ReviewCardProps) => {
           </p>
           <div className="flex items-center gap-2">
             <p className="text-xs text-zinc-500">
-              {formatDate(review.created_at)}
+              {formatDate(review.date)} 
             </p>
             {review.verified_stay && (
               <span className="flex items-center gap-0.5 text-xs text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded-md">
