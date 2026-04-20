@@ -396,24 +396,24 @@ const ConsultantPage = () => {
 
       {/* Reviews Grid Section */}
       {consultant.reviews && consultant.reviews.length > 0 && (
-        <div className="mt-20 pt-16 border-t border-zinc-200 max-w-[1271px] mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-zinc-900">
-              What travelers are saying
-            </h2>
-          </div>
+        <div className="mt-20 pt-16 border-t border-zinc-200 max-w-[1271px] mx-auto w-full">
+          {/* Title */}
+          <h2 className="text-[#101828] text-[24px] font-bold leading-[32px] tracking-[0.07px] mb-8">
+            Highlighted reviews from travelers
+          </h2>
 
+          {/* Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {consultant.reviews.map((review) => (
               <ReviewCard key={review.id} review={review} />
             ))}
           </div>
 
-          {/* The trigger button for the API endpoint we'll build next */}
+          {/* "See more" */}
           {consultant.helpedCount > 5 && (
-            <div className="mt-8">
-              <button className="px-6 py-2.5 border border-zinc-300 rounded-xl text-zinc-900 font-medium hover:bg-zinc-50 transition-colors">
-                Show all {consultant.helpedCount} reviews
+            <div className="mt-8 flex justify-start">
+              <button className="text-[#C77752] text-[14px] font-medium leading-[20px] hover:opacity-80 transition-opacity px-4 py-2 -ml-4">
+                See more reviews ({consultant.helpedCount})
               </button>
             </div>
           )}
