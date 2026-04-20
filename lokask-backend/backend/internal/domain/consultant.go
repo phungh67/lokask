@@ -56,6 +56,7 @@ type ConsultantProfile struct {
 	ResponseTime string         `db:"response_time" json:"response_time"`
 	JoinedAt     time.Time      `json:"joinedAt" db:"created_at"`
 	Badges       []Badge        `json:"badges"`
+	Reviews      []Review       `json:"reviews"`
 }
 
 // for mapping the review to consultant (e.g review from previous clients)

@@ -5,6 +5,16 @@ export interface Badge {
   description: string;
 }
 
+export interface Review {
+  id: string;
+  review_name: string;
+  review_avatar: string;
+  rating: number;  
+  comment: string;
+  verified_stay: boolean;
+  created_at: string;
+}
+
 export interface Consultant {
   id: string;
   name: string; // full name
@@ -27,4 +37,5 @@ export interface Consultant {
   isOnline?: boolean;
   galleryImages?: string[]; // Matches the gallery images field
   badges?: Badge [];
+  reviews?: Review[];
 }

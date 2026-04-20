@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";
+import ReviewCard from "@/components/ReviewCard";
 
 const ConsultantPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -392,6 +393,32 @@ const ConsultantPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Reviews Grid Section */}
+      {consultant.reviews && consultant.reviews.length > 0 && (
+        <div className="mt-20 pt-16 border-t border-zinc-200 max-w-[1271px] mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-zinc-900">
+              What travelers are saying
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {consultant.reviews.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </div>
+
+          {/* The trigger button for the API endpoint we'll build next */}
+          {consultant.helpedCount > 5 && (
+            <div className="mt-8">
+              <button className="px-6 py-2.5 border border-zinc-300 rounded-xl text-zinc-900 font-medium hover:bg-zinc-50 transition-colors">
+                Show all {consultant.helpedCount} reviews
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CTA Section (Centered per Figma) */}
       <section className="w-full bg-white border-t border-zinc-200 pt-20 pb-8 mt-16">

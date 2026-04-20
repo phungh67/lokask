@@ -84,41 +84,6 @@ const mapConsultant = (c: any): Consultant => ({
     galleryImages: c.gallery_images || []
 });
 
-// endpoint for fetching the consultant
-// export async function getConsultants(filters?: {
-//     page?: number; city?: string, country?: string,
-// }): Promise<Consultant[]> {
-//     const params = new URLSearchParams();
-//     if (filters?.city) params.append("city", filters.city);
-//     if (filters?.country) params.append("country", filters.country);
-
-//     // limit page
-//     if (filters?.page) params.append("page", filters.page.toString());
-
-//     // returned result
-//     const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);
-
-//     // data transform step(s)
-//     return data.map((c: any) => ({
-//         ...c,
-
-//         name: c.full_name || c.name,
-//         displayName: c.display_name || c.full_name,
-//         city: c.city_name || c.city,
-//         country: c.country_code || c.country || "",
-//         coverUrl: c.cover_url || c.coverUrl || "",
-
-//         avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name),
-
-//         rating: Number(c.rating_avg) || Number(c.rating) || 0,
-//         helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
-//         hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
-
-//         tags: c.tags || [],
-//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-//     }));
-// }
-
 export async function getConsultants(filters?: {
     page?: number;
     city?: string;
@@ -142,27 +107,6 @@ export async function getConsultants(filters?: {
         limit: response.limit || 12
     };
 }
-
-// function to get a specific consultant by 
-// looking in the consultant id
-// export async function getConsultantById(id: string): Promise<Consultant> {
-//     const c = await fetchJson<any>(`/consultants/${id}`);
-//     return {
-//         id: c.id,
-//         name: c.full_name,
-//         displayName: c.display_name || c.full_name,
-//         avatarUrl: c.avatar_url,
-//         coverUrl: c.cover_url || "", // 🟢 Added
-//         city: c.city_name,
-//         country: c.country_code || "",
-//         bio: c.bio || "",
-//         quote: c.quote || "",
-//         tags: c.tags || [],
-//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-//         rating: Number(c.rating_avg) || 0,
-//         helpedCount: Number(c.helped_count) || 0,
-//     };
-// }
 
 export async function getConsultantById(id: string): Promise<Consultant> {
     const data = await fetchJson<any>(`/consultants/${id}`);

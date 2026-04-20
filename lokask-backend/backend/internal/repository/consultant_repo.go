@@ -73,7 +73,7 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	}
 
 	// temp removal reviews field
-	// profile.Reviews = []domain.Review{}
+	profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
 	profile.GalleryImages = []string{}
 
@@ -95,9 +95,9 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		LIMIT 5
 	`
 	_ = r.DB.SelectContext(ctx, &reviews, reviewQuery, id)
-	// if reviews != nil {
-	// 	profile.Reviews = reviews
-	// }
+	if reviews != nil {
+		profile.Reviews = reviews
+	}
 
 	// 2. Fetch Tags (mapped from Niches table)
 	var tags []string
