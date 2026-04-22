@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Star, Check, MessageCircle, Shield, Clock } from "lucide-react";
+import {
+  ChevronLeft,
+  Star,
+  Check,
+  MessageCircle,
+  Shield,
+  Clock,
+} from "lucide-react";
 
 // Mock data
 const consultant = {
@@ -78,11 +85,13 @@ const ChoosePackagePage = () => {
 
   return (
     <div className="min-h-screen bg-[#F5F3F0] flex flex-col font-['Inter',sans-serif]">
-      
       {/* 1. Standard Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-[0_4px_20px_rgba(0,0,0,0.06)] sticky top-0 z-50">
         <div className="max-w-[1400px] mx-auto px-11 h-16 flex items-center justify-between">
-          <Link to="/" className="text-[36px] font-bold leading-[40px] text-[#2E2E2E] font-['Helvetica',sans-serif]">
+          <Link
+            to="/"
+            className="text-[36px] font-bold leading-[40px] text-[#2E2E2E] font-['Helvetica',sans-serif]"
+          >
             Lok<span className="text-[#C56A49]">ask</span>
           </Link>
         </div>
@@ -90,50 +99,81 @@ const ChoosePackagePage = () => {
 
       {/* 2. Main Content Container */}
       <main className="flex-grow max-w-[1200px] mx-auto w-full px-6 py-12 flex flex-col gap-12">
-        
         {/* Back Link */}
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#4A5565] hover:text-black w-fit transition-colors">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-[#4A5565] hover:text-black w-fit transition-colors"
+        >
           <ChevronLeft size={20} />
-          <span className="text-[16px] font-normal leading-[24px]">Back to profile</span>
+          <span className="text-[16px] font-normal leading-[24px]">
+            Back to profile
+          </span>
         </button>
 
         {/* 3. Consultant Info Banner */}
         <div className="bg-white border border-[#E5E7EB] rounded-[14px] p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="flex flex-col">
-            <h1 className="text-[24px] font-bold text-[#101828] leading-[32px] tracking-[0.07px]">
-              {consultant.name}
-            </h1>
-            <p className="text-[#4A5565] text-[16px] font-normal leading-[24px] mt-1">
-              📍 {consultant.location}
-            </p>
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5">
-                <div className="bg-[#FDC700] p-1 rounded-sm flex items-center justify-center">
-                  <Star size={12} className="fill-white text-white" />
+          {/* Left Side: Avatar & Details */}
+          <div className="flex items-center gap-6">
+            {/* Avatar (80x80) */}
+            <div className="w-20 h-20 rounded-full overflow-hidden shrink-0">
+              <img
+                src={consultant.avatarUrl}
+                alt={consultant.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col">
+              <h1 className="text-[24px] font-bold text-[#101828] leading-[32px] tracking-[0.07px]">
+                {consultant.name}
+              </h1>
+              <p className="text-[#4A5565] text-[16px] font-normal leading-[24px]">
+                📍 {consultant.location}
+              </p>
+
+              <div className="flex items-center gap-4 mt-2">
+                {/* Rating */}
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-[#FDC700] rounded-[2px] flex items-center justify-center">
+                    <Star
+                      size={10}
+                      className="fill-white text-white"
+                      strokeWidth={3}
+                    />
+                  </div>
+                  <span className="text-[16px] font-semibold text-[#101828] leading-[24px] ml-1">
+                    {consultant.rating}
+                  </span>
+                  <span className="text-[14px] font-normal text-[#6A7282] leading-[20px] ml-0.5">
+                    ({consultant.reviews} reviews)
+                  </span>
                 </div>
-                <span className="text-[16px] font-semibold text-[#101828] leading-[24px]">
-                  {consultant.rating}
-                </span>
-                <span className="text-[14px] font-normal text-[#6A7282] leading-[20px]">
-                  ({consultant.reviews} reviews)
-                </span>
+
+                {/* Niche Badge */}
+                <div className="bg-[#FCE8E0] px-2 py-0.5 rounded-lg flex items-center justify-center">
+                  <span className="text-[#C77752] text-[12px] font-medium leading-[16px]">
+                    {consultant.niche}
+                  </span>
+                </div>
               </div>
-              <span className="bg-[#FCE8E0] text-[#C77752] text-[12px] font-medium leading-[16px] px-2 py-0.5 rounded-lg">
-                {consultant.niche}
-              </span>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end">
-              <span className="text-[#4A5565] text-[14px] font-normal leading-[20px] flex items-center gap-2">
-                <Clock size={16} /> {consultant.responseTime}
-              </span>
-              <span className="bg-[#DCFCE7] text-[#008236] text-[12px] font-medium leading-[16px] px-2 py-0.5 rounded-lg flex items-center gap-1.5 mt-2">
-                <span className="w-2 h-2 bg-[#00A63E] rounded-full"></span> Online
+
+          {/* Right Side: Status & Response Time */}
+          <div className="flex flex-col items-end gap-1.5 mt-4 md:mt-0">
+            <div className="flex items-center gap-2 text-[#4A5565]">
+              <Clock size={16} />
+              <span className="text-[14px] font-normal leading-[20px] text-right">
+                {consultant.responseTime}
               </span>
             </div>
-            <img src={consultant.avatarUrl} alt={consultant.name} className="w-20 h-20 rounded-full object-cover shrink-0" />
+            <div className="bg-[#DCFCE7] px-2.5 py-0.5 rounded-lg flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#00A63E] rounded-full" />
+              <span className="text-[#008236] text-[12px] font-medium leading-[16px] text-right">
+                Online
+              </span>
+            </div>
           </div>
         </div>
 
@@ -143,7 +183,8 @@ const ChoosePackagePage = () => {
             Choose Your Package
           </h2>
           <p className="text-[#4A5565] text-[18px] font-normal leading-[28px] max-w-2xl">
-            Select the package that best fits your needs. All packages include direct chat with {consultant.name}.
+            Select the package that best fits your needs. All packages include
+            direct chat with {consultant.name}.
           </p>
         </div>
 
@@ -152,11 +193,11 @@ const ChoosePackagePage = () => {
           {packages.map((pkg) => {
             const isSelected = selectedPackage === pkg.id;
             return (
-              <div 
+              <div
                 key={pkg.id}
                 onClick={() => setSelectedPackage(pkg.id)}
                 className={`relative bg-white rounded-[14px] flex flex-col cursor-pointer transition-all duration-200
-                  ${isSelected ? 'border-[2px] border-[#C77752] shadow-md scale-[1.01]' : 'border-[2px] border-[#E5E7EB] hover:border-[#C77752]/50'}`}
+                  ${isSelected ? "border-[2px] border-[#C77752] shadow-md scale-[1.01]" : "border-[2px] border-[#E5E7EB] hover:border-[#C77752]/50"}`}
               >
                 {/* Popular Badge */}
                 {pkg.popular && (
@@ -168,7 +209,11 @@ const ChoosePackagePage = () => {
                 <div className="p-6 flex flex-col h-full">
                   {/* Image Placeholder */}
                   <div className="w-full h-[172px] bg-gray-200 rounded-[10px] mb-6 overflow-hidden">
-                     <img src={`https://placehold.co/306x172`} alt={pkg.title} className="w-full h-full object-cover" />
+                    <img
+                      src={`https://placehold.co/306x172`}
+                      alt={pkg.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <h3 className="text-[24px] font-bold text-[#101828] leading-[32px] tracking-[0.07px] mb-1">
@@ -177,7 +222,7 @@ const ChoosePackagePage = () => {
                   <p className="text-[#4A5565] text-[14px] font-normal leading-[20px] mb-6 min-h-[40px]">
                     {pkg.desc}
                   </p>
-                  
+
                   <div className="border-b border-[#E5E7EB] pb-6 mb-6 flex items-end gap-2">
                     <span className="text-[#C77752] text-[36px] font-bold leading-[40px] tracking-[0.37px]">
                       ${pkg.price}
@@ -189,8 +234,14 @@ const ChoosePackagePage = () => {
 
                   <ul className="flex flex-col gap-3 flex-grow mb-6">
                     {pkg.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-3 text-[#364153] text-[14px] font-normal leading-[20px]">
-                        <Check size={16} className="text-[#C77752] shrink-0 mt-0.5" />
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-[#364153] text-[14px] font-normal leading-[20px]"
+                      >
+                        <Check
+                          size={16}
+                          className="text-[#C77752] shrink-0 mt-0.5"
+                        />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -208,13 +259,15 @@ const ChoosePackagePage = () => {
 
         {/* 6. Checkout Action */}
         <div className="flex justify-center mt-6">
-          <button 
+          <button
             onClick={handleContinue}
             disabled={!selectedPackage}
             className={`px-12 py-3 rounded-full text-[18px] font-medium leading-[28px] transition-all duration-200
-              ${selectedPackage 
-                ? 'bg-[#C77752] text-white hover:bg-[#b06745] shadow-lg cursor-pointer' 
-                : 'bg-[#D1D5DC] text-[#6A7282] opacity-50 cursor-not-allowed'}`}
+              ${
+                selectedPackage
+                  ? "bg-[#C77752] text-white hover:bg-[#b06745] shadow-lg cursor-pointer"
+                  : "bg-[#D1D5DC] text-[#6A7282] opacity-50 cursor-not-allowed"
+              }`}
           >
             Continue to Checkout
           </button>
@@ -226,25 +279,36 @@ const ChoosePackagePage = () => {
             <div className="w-12 h-12 bg-[#FCE8E0] rounded-full flex items-center justify-center">
               <MessageCircle size={24} className="text-[#C77752]" />
             </div>
-            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">Instant Chat Access</h4>
-            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">Start chatting immediately after payment</p>
+            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">
+              Instant Chat Access
+            </h4>
+            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">
+              Start chatting immediately after payment
+            </p>
           </div>
           <div className="flex flex-col items-center text-center gap-3">
             <div className="w-12 h-12 bg-[#FCE8E0] rounded-full flex items-center justify-center">
               <Shield size={24} className="text-[#C77752]" />
             </div>
-            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">Local Expert</h4>
-            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">Verified locals with deep knowledge</p>
+            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">
+              Local Expert
+            </h4>
+            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">
+              Verified locals with deep knowledge
+            </p>
           </div>
           <div className="flex flex-col items-center text-center gap-3">
             <div className="w-12 h-12 bg-[#FCE8E0] rounded-full flex items-center justify-center">
               <Clock size={24} className="text-[#C77752]" />
             </div>
-            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">Flexible Duration</h4>
-            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">Choose the timeframe that works for you</p>
+            <h4 className="text-[#101828] text-[16px] font-semibold leading-[24px]">
+              Flexible Duration
+            </h4>
+            <p className="text-[#4A5565] text-[14px] font-normal leading-[20px]">
+              Choose the timeframe that works for you
+            </p>
           </div>
         </div>
-
       </main>
 
       {/* 8. Footer Match (From specific code snippet) */}
@@ -261,9 +325,15 @@ const ChoosePackagePage = () => {
               </p>
             </div>
             <div className="flex items-center gap-6 text-[#737373] text-[14px] font-normal leading-[20px] font-['Helvetica',sans-serif]">
-              <Link to="/privacy" className="hover:text-black">Privacy</Link>
-              <Link to="/terms" className="hover:text-black">Terms</Link>
-              <Link to="/contact" className="hover:text-black">Contact</Link>
+              <Link to="/privacy" className="hover:text-black">
+                Privacy
+              </Link>
+              <Link to="/terms" className="hover:text-black">
+                Terms
+              </Link>
+              <Link to="/contact" className="hover:text-black">
+                Contact
+              </Link>
             </div>
           </div>
           <div className="border-t border-[#DED9D3] pt-6 text-center">
