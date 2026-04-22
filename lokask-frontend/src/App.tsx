@@ -19,10 +19,9 @@ import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import ChoosePackagePage from "./pages/ChoosePackagePage"; 
 
 const queryClient = new QueryClient();
-
-// src/App.tsx
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -43,6 +42,8 @@ const App = () => (
               <Route path="/become-local" element={<BecomeLocal />} />
               <Route path="/consultants" element={<ExploreLocals />} />
             </Route>
+
+            <Route path="/consultant/:id/packages" element={<ChoosePackagePage />} />
 
             {/* auth & dashboard */}
             <Route path="/login" element={<Login />} />
