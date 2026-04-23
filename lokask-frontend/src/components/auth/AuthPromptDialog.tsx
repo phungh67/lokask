@@ -20,7 +20,6 @@ interface AuthPromptDialogProps {
   onOpenChange: (open: boolean) => void;
   message?: string;
   defaultRole?: "traveller" | "consultant";
-  // 🟢 Added missing props to fix type error
   onLogin?: () => void;
   onSignup?: () => void;
   onGoogleAuth?: () => void;
@@ -60,14 +59,16 @@ const AuthPromptDialog = ({
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // 1. Initial Step Logic
-  const handleContinueWithEmail = async () => {
+  // 1. Initial Step Logic (Now handles form submit)
+  const handleInitialSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!isValidEmail(email)) return;
     setStep("login");
   };
 
-  // 🟢 2. Handle Login with Smart Redirect
-  const handleLogin = async () => {
+  // 2. Handle Login with Smart Redirect
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     try {
       const res = await login({ email, password });
@@ -83,10 +84,10 @@ const AuthPromptDialog = ({
 
       onOpenChange(false); // Close dialog
 
-      // 🟢 Trigger external login callback if provided
+      // Trigger external login callback if provided
       if (onLogin) onLogin();
 
-      // 🟢 REDIRECT LOGIC
+      // REDIRECT LOGIC
       const userRole = (res.user as any).role;
 
       if (userRole === "consultant") {
@@ -102,7 +103,8 @@ const AuthPromptDialog = ({
   };
 
   // 3. Handle Signup
-  const handleSignup = async () => {
+  const handleSignup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     try {
       if (defaultRole === "consultant") {
@@ -122,7 +124,7 @@ const AuthPromptDialog = ({
         toast.success("Traveller account created! Please log in.");
       }
 
-      // 🟢 Trigger external signup callback if provided
+      // Trigger external signup callback if provided
       if (onSignup) onSignup();
 
       // After signup, force login step
@@ -142,7 +144,8 @@ const AuthPromptDialog = ({
         <DialogTitle className="text-2xl font-display font-semibold">Log in or sign up</DialogTitle>
         <DialogDescription className="text-base">{message}</DialogDescription>
       </DialogHeader>
-      <div className="mt-6 space-y-4">
+      
+      <form onSubmit={handleInitialSubmit} className="mt-6 space-y-4">
         <Input
           type="email"
           placeholder="Email address"
@@ -151,9 +154,9 @@ const AuthPromptDialog = ({
           className="h-12 rounded-xl border-2 px-4 text-base"
         />
         <Button
+          type="submit"
           className="w-full h-12 rounded-full font-medium text-base"
           disabled={!isValidEmail(email)}
-          onClick={() => setStep("login")}
         >
           Continue with email
         </Button>
@@ -163,10 +166,15 @@ const AuthPromptDialog = ({
           <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
         </div>
 
-        <Button variant="outline" className="w-full h-12 rounded-full" onClick={() => setStep("signup")}>
+        <Button 
+          type="button" // stops Enter key from triggering this button
+          variant="outline" 
+          className="w-full h-12 rounded-full" 
+          onClick={() => setStep("signup")}
+        >
           New here? Create an account
         </Button>
-      </div>
+      </form>
     </>
   );
 
@@ -175,7 +183,8 @@ const AuthPromptDialog = ({
       <DialogHeader className="text-left space-y-2">
         <DialogTitle className="text-2xl font-display font-semibold">Welcome back</DialogTitle>
       </DialogHeader>
-      <div className="mt-4 space-y-4">
+      
+      <form onSubmit={handleLogin} className="mt-4 space-y-4">
         <Input
           value={email}
           disabled
@@ -193,13 +202,17 @@ const AuthPromptDialog = ({
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
-        <Button className="w-full h-12 rounded-full" onClick={handleLogin} disabled={isLoading}>
+        <Button type="submit" className="w-full h-12 rounded-full" disabled={isLoading}>
           {isLoading ? <Loader2 className="animate-spin" /> : "Log in"}
         </Button>
-        <button onClick={() => setStep("initial")} className="text-sm text-center w-full text-muted-foreground hover:text-primary">
+        <button 
+          type="button" // prevent accidental submission
+          onClick={() => setStep("initial")} 
+          className="text-sm text-center w-full text-muted-foreground hover:text-primary"
+        >
           Back
         </button>
-      </div>
+      </form>
     </>
   );
 
@@ -210,7 +223,8 @@ const AuthPromptDialog = ({
           Join as {defaultRole === "consultant" ? "Consultant" : "Traveller"}
         </DialogTitle>
       </DialogHeader>
-      <div className="mt-4 space-y-4">
+      
+      <form onSubmit={handleSignup} className="mt-4 space-y-4">
         <Input
           placeholder="Full Name"
           value={fullName}
@@ -218,13 +232,13 @@ const AuthPromptDialog = ({
           className="h-12 rounded-xl border-2 px-4"
         />
         <Input
+          type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-12 rounded-xl border-2 px-4"
         />
 
-        {/* City Input - Only for Consultants */}
         {defaultRole === "consultant" && (
           <Input
             placeholder="City (e.g., Tokyo)"
@@ -247,13 +261,17 @@ const AuthPromptDialog = ({
           </button>
         </div>
 
-        <Button className="w-full h-12 rounded-full" onClick={handleSignup} disabled={isLoading}>
+        <Button type="submit" className="w-full h-12 rounded-full" disabled={isLoading}>
           {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
         </Button>
-        <button onClick={() => setStep("initial")} className="text-sm text-center w-full text-muted-foreground hover:text-primary">
+        <button 
+          type="button" // prevent accidental submission
+          onClick={() => setStep("initial")} 
+          className="text-sm text-center w-full text-muted-foreground hover:text-primary"
+        >
           Back
         </button>
-      </div>
+      </form>
     </>
   );
 
