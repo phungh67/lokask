@@ -57,7 +57,8 @@ const AuthPromptDialog = ({
     }
   }, [open]);
 
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   // 1. Initial Step Logic (Now handles form submit)
   const handleInitialSubmit = (e: React.FormEvent) => {
@@ -94,7 +95,6 @@ const AuthPromptDialog = ({
         console.log("Redirecting to Consultant Dashboard");
         navigate("/dashboard");
       }
-
     } catch (error: any) {
       toast.error(error.message || "Login failed");
     } finally {
@@ -141,10 +141,12 @@ const AuthPromptDialog = ({
   const renderInitialStep = () => (
     <>
       <DialogHeader className="text-left space-y-2">
-        <DialogTitle className="text-2xl font-display font-semibold">Log in or sign up</DialogTitle>
+        <DialogTitle className="text-2xl font-display font-semibold">
+          Log in or sign up
+        </DialogTitle>
         <DialogDescription className="text-base">{message}</DialogDescription>
       </DialogHeader>
-      
+
       <form onSubmit={handleInitialSubmit} className="mt-6 space-y-4">
         <Input
           type="email"
@@ -162,14 +164,18 @@ const AuthPromptDialog = ({
         </Button>
 
         <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-          <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">or</span>
+          </div>
         </div>
 
-        <Button 
+        <Button
           type="button" // stops Enter key from triggering this button
-          variant="outline" 
-          className="w-full h-12 rounded-full" 
+          variant="outline"
+          className="w-full h-12 rounded-full"
           onClick={() => setStep("signup")}
         >
           New here? Create an account
@@ -181,9 +187,11 @@ const AuthPromptDialog = ({
   const renderLoginStep = () => (
     <>
       <DialogHeader className="text-left space-y-2">
-        <DialogTitle className="text-2xl font-display font-semibold">Welcome back</DialogTitle>
+        <DialogTitle className="text-2xl font-display font-semibold">
+          Welcome back
+        </DialogTitle>
       </DialogHeader>
-      
+
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
         <Input
           value={email}
@@ -196,18 +204,36 @@ const AuthPromptDialog = ({
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleLogin();
+              }
+            }}
             className="h-12 rounded-xl border-2 px-4 pr-12"
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-muted-foreground">
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-3 text-muted-foreground"
+          >
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
           </button>
         </div>
-        <Button type="submit" className="w-full h-12 rounded-full" disabled={isLoading}>
+        <Button
+          type="submit"
+          className="w-full h-12 rounded-full"
+          disabled={isLoading}
+        >
           {isLoading ? <Loader2 className="animate-spin" /> : "Log in"}
         </Button>
-        <button 
+        <button
           type="button" // prevent accidental submission
-          onClick={() => setStep("initial")} 
+          onClick={() => setStep("initial")}
           className="text-sm text-center w-full text-muted-foreground hover:text-primary"
         >
           Back
@@ -223,7 +249,7 @@ const AuthPromptDialog = ({
           Join as {defaultRole === "consultant" ? "Consultant" : "Traveller"}
         </DialogTitle>
       </DialogHeader>
-      
+
       <form onSubmit={handleSignup} className="mt-4 space-y-4">
         <Input
           placeholder="Full Name"
@@ -256,17 +282,29 @@ const AuthPromptDialog = ({
             onChange={(e) => setPassword(e.target.value)}
             className="h-12 rounded-xl border-2 px-4 pr-12"
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-muted-foreground">
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-3 text-muted-foreground"
+          >
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
           </button>
         </div>
 
-        <Button type="submit" className="w-full h-12 rounded-full" disabled={isLoading}>
+        <Button
+          type="submit"
+          className="w-full h-12 rounded-full"
+          disabled={isLoading}
+        >
           {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
         </Button>
-        <button 
+        <button
           type="button" // prevent accidental submission
-          onClick={() => setStep("initial")} 
+          onClick={() => setStep("initial")}
           className="text-sm text-center w-full text-muted-foreground hover:text-primary"
         >
           Back
