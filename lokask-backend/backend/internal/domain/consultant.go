@@ -15,6 +15,13 @@ type PaginatedConsultants struct {
 	Limit      int                 `json:"limit"`
 }
 
+type PaginatedReviews struct {
+	Data       []Review `json:"data"`
+	TotalCount int      `json:"total_count"`
+	Page       int      `json:"page"`
+	Limit      int      `json:"limit"`
+}
+
 // consultant object
 type ConsultantProfile struct {
 	// basic data for a consultant profile

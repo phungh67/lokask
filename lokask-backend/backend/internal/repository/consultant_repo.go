@@ -400,3 +400,8 @@ func (r *ConsultantRepository) UpdateCoverImage(userID uuid.UUID, coverURL strin
 
 	return err
 }
+
+func (r *ConsultantRepository) ShowAllReviews() {
+	// profile := &domain.ConsultantProfile{}
+
+}
