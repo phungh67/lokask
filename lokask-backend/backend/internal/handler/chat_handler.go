@@ -71,6 +71,8 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	}
 	convID, _ := uuid.Parse(c.Params("id"))
 
+	ctx := c.UserContext()
+
 	var isParticipant bool
 	err = h.Repo.DB.Get(&isParticipant, `
 		SELECT EXISTS (
@@ -92,7 +94,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid content"})
 	}
 
-	if err := h.Repo.CreateMessage(convID, myID, req.Content); err != nil {
+	if err := h.Repo.CreateMessage(ctx, convID, myID, req.Content); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "detail": err.Error()})
 	}
 
