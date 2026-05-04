@@ -13,7 +13,8 @@ import {
   getChatHistory,
   sendMessage,
   startChat,
-  ChatMessage
+  ChatMessage,
+  getChatSession,
 } from "@/lib/api";
 
 import { Consultant } from "@/types/consultant";
@@ -43,7 +44,7 @@ const fallbackProfile: Consultant = {
   languages: [],
   responseTime: "1 hour",
   isOnline: false,
-  galleryImages: []
+  galleryImages: [],
 };
 
 const mapConversationToDashboard = (apiConv: any) => {
@@ -63,7 +64,7 @@ const mapConversationToDashboard = (apiConv: any) => {
     time: apiConv.last_message_at || new Date().toISOString(),
     unread: apiConv.unread_count || 0,
     travelerId: apiConv.traveler_id,
-    consultantId: apiConv.consultant_id
+    consultantId: apiConv.consultant_id,
   };
 };
 
@@ -72,8 +73,14 @@ const ConsultantDashboard = () => {
   const location = useLocation();
   const state = location.state as DashboardLocationState;
 
-  const [activeSection, setActiveSection] = useState<"inbox" | "bookings" | "profile">("inbox");
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<
+    "inbox" | "bookings" | "profile"
+  >("inbox");
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [currentMessages, setCurrentMessages] = useState<any[]>([]);
 
@@ -81,25 +88,34 @@ const ConsultantDashboard = () => {
 
   // Store both id, consultant ID and user ID
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
-  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
+  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
+    null,
+  );
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // 🟢 Smart Navigation: Handles jumping to existing chats OR creating new ones
+  // Handles jumping to existing chats OR creating new ones
   useEffect(() => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;
 
       // If no intent, or profiles are still loading, do nothing
-      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
+      if (
+        !state ||
+        (!state.targetId && !state.openChatWith) ||
+        isProfileLoading
+      )
+        return;
 
       const targetConsultantId = state.targetId || state.openChatWith;
 
       if (state.intent === "startChat" || targetConsultantId) {
         // 1. Check if we already have an active conversation with this consultant
         const existingConv = conversations.find(
-          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId
+          (c) =>
+            c.consultantId === targetConsultantId ||
+            c.id === targetConsultantId,
         );
 
         if (existingConv) {
@@ -115,13 +131,11 @@ const ConsultantDashboard = () => {
             const newConvApi = await startChat(targetConsultantId);
 
             // Map the newly created backend conversation to our frontend UI format
-            const mappedNewConv = mapConversationToDashboard(
-              newConvApi
-            );
+            const mappedNewConv = mapConversationToDashboard(newConvApi);
 
             // Inject it into the top of our inbox list and switch to it
             setConversations((prev) => {
-              if (prev.some(c => c.id === mappedNewConv.id)) return prev;
+              if (prev.some((c) => c.id === mappedNewConv.id)) return prev;
               return [mappedNewConv, ...prev];
             });
             setActiveConversationId(mappedNewConv.id);
@@ -134,7 +148,7 @@ const ConsultantDashboard = () => {
             toast({
               title: "Error",
               description: "Could not start a chat with this expert.",
-              variant: "destructive"
+              variant: "destructive",
             });
           }
         }
@@ -143,7 +157,13 @@ const ConsultantDashboard = () => {
 
     // We only want to run this once the initial conversations list has loaded
     handleIncomingChatIntent();
-  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
+  }, [
+    location.state,
+    conversations,
+    isProfileLoading,
+    accountUserId,
+    consultantProfile,
+  ]);
 
   // 1. Check the stored ID pair (Updated Traveler Fallback)
   useEffect(() => {
@@ -163,18 +183,28 @@ const ConsultantDashboard = () => {
 
         if (user.role === "consultant") {
           const response = await fetch(`/api/v1/users/${user.id}/consultant`, {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
 
           if (response.ok) {
             const consultantData = await response.json();
             setConsultantProfile(consultantData); // consultantID
           } else {
-            setConsultantProfile({ ...fallbackProfile, id: user.id, name: user.full_name || "User", avatarUrl: user.avatar_url || "" });
+            setConsultantProfile({
+              ...fallbackProfile,
+              id: user.id,
+              name: user.full_name || "User",
+              avatarUrl: user.avatar_url || "",
+            });
           }
         } else {
           // Clean state for travelers (empty ID instead of duplicated User ID)
-          setConsultantProfile({ ...fallbackProfile, id: "", name: user.full_name || "User", avatarUrl: user.avatar_url || "" });
+          setConsultantProfile({
+            ...fallbackProfile,
+            id: "",
+            name: user.full_name || "User",
+            avatarUrl: user.avatar_url || "",
+          });
         }
       } catch (error) {
         console.error("Dashboard Identity Error:", error);
@@ -198,10 +228,12 @@ const ConsultantDashboard = () => {
 
         // Pass BOTH IDs to correctly map the "Other User"
         const mapped = safeData.map((apiConv: any) =>
-          mapConversationToDashboard(apiConv)
+          mapConversationToDashboard(apiConv),
         );
 
-        const uniqueConversations = Array.from(new Map(mapped.map((item: any) => [item.id, item])).values());
+        const uniqueConversations = Array.from(
+          new Map(mapped.map((item: any) => [item.id, item])).values(),
+        );
 
         setConversations(mapped);
 
@@ -214,11 +246,22 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
+  }, [
+    consultantProfile,
+    accountUserId,
+    isProfileLoading,
+    activeConversationId,
+  ]);
 
   // 3. Poll message
   useEffect(() => {
-    if (!activeConversationId || !accountUserId || !consultantProfile || isProfileLoading) return;
+    if (
+      !activeConversationId ||
+      !accountUserId ||
+      !consultantProfile ||
+      isProfileLoading
+    )
+      return;
 
     const fetchMessages = async () => {
       try {
@@ -226,8 +269,11 @@ const ConsultantDashboard = () => {
         const safeHistory = history ?? [];
 
         const uiMessages = safeHistory.map((m: any) => {
-          const actualSenderId = m.sender_id || m.senderId || m.SenderID || m.SenderId;
-          const isMe = actualSenderId === accountUserId || actualSenderId === consultantProfile.id;
+          const actualSenderId =
+            m.sender_id || m.senderId || m.SenderID || m.SenderId;
+          const isMe =
+            actualSenderId === accountUserId ||
+            actualSenderId === consultantProfile.id;
 
           return {
             id: (m.id || Date.now()).toString(),
@@ -239,6 +285,9 @@ const ConsultantDashboard = () => {
         });
 
         setCurrentMessages(uiMessages);
+
+        const sessionData = await getChatSession(activeConversationId);
+        setActiveSession(sessionData);
       } catch (error) {
         console.error("Failed to load history", error);
       }
@@ -246,8 +295,15 @@ const ConsultantDashboard = () => {
 
     fetchMessages();
     pollInterval.current = setInterval(fetchMessages, 3000);
-    return () => { if (pollInterval.current) clearInterval(pollInterval.current); };
-  }, [activeConversationId, consultantProfile, accountUserId, isProfileLoading]);
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, [
+    activeConversationId,
+    consultantProfile,
+    accountUserId,
+    isProfileLoading,
+  ]);
 
   // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
@@ -268,7 +324,7 @@ const ConsultantDashboard = () => {
       content,
       sender: "user",
       timestamp: new Date(),
-      type: "text"
+      type: "text",
     };
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
 
@@ -277,12 +333,19 @@ const ConsultantDashboard = () => {
       console.log("[DEBUG] Message sent successfully to API!");
     } catch (error: any) {
       console.error("[DEBUG] Backend rejected the message:", error);
-      toast({
-        title: "Message Failed",
-        description: error.message || "The server rejected your message.",
-        variant: "destructive"
-      });
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
+      if (
+        error.message?.toLowerCase().include("expired") ||
+        error.status === 403
+      ) {
+        setShowPurchaseDialog(true);
+      } else {
+        toast({
+          title: "Message Failed",
+          description: error.message || "The server rejected your message.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -294,7 +357,8 @@ const ConsultantDashboard = () => {
         <AlertCircle className="w-12 h-12 text-amber-500 mb-4" />
         <h2 className="text-xl font-bold mb-2">Consultant Feature Only</h2>
         <p className="text-muted-foreground max-w-sm mb-6">
-          Managing bookings and schedules is only available for local consultants.
+          Managing bookings and schedules is only available for local
+          consultants.
         </p>
         <button
           onClick={() => navigate("/become-local")}
@@ -309,13 +373,19 @@ const ConsultantDashboard = () => {
   if (isProfileLoading || !consultantProfile) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F5F2EE]">
-        <div className="animate-pulse text-xl font-semibold text-gray-500">Loading Dashboard...</div>
+        <div className="animate-pulse text-xl font-semibold text-gray-500">
+          Loading Dashboard...
+        </div>
       </div>
     );
   }
 
-  const foundConversation = conversations.find((c) => c.id === activeConversationId);
-  const activeConversationData = foundConversation ? { ...foundConversation, messages: currentMessages } : null;
+  const foundConversation = conversations.find(
+    (c) => c.id === activeConversationId,
+  );
+  const activeConversationData = foundConversation
+    ? { ...foundConversation, messages: currentMessages }
+    : null;
 
   return (
     <div className="h-screen flex flex-col bg-[#F5F2EE]">
@@ -339,9 +409,13 @@ const ConsultantDashboard = () => {
               {activeConversationData ? (
                 <ChatPanel
                   conversation={activeConversationData}
+                  session={activeSession}
+                  userRole={userRole}
                   onSendMessage={handleSendMessage}
-                  onScheduleCall={() => { }}
-                  onCancelCall={() => { }}
+                  onTriggerPurchase{() => setShowPurchaseDialog(true)}
+                  onScheduleCall={() => {}}
+                  onCancelCall={() => {}}
+                  
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -351,19 +425,23 @@ const ConsultantDashboard = () => {
             </>
           )}
 
-          {activeSection === "bookings" &&
+          {activeSection === "bookings" && (
             // renderConsultantOnly(<BookingsPanel consultantId={consultantProfile.id} />)
             <BookingsPanel
               consultantId={consultantProfile.id}
-              userId = {accountUserId}
-              userRole = {userRole}
+              userId={accountUserId}
+              userRole={userRole}
             />
-          }
+          )}
 
           {activeSection === "profile" && (
             <ProfilePanel
               consultant={consultantProfile}
-              onSave={(updates) => setConsultantProfile((prev) => prev ? ({ ...prev, ...updates }) : null)}
+              onSave={(updates) =>
+                setConsultantProfile((prev) =>
+                  prev ? { ...prev, ...updates } : null,
+                )
+              }
             />
           )}
         </main>
