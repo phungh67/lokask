@@ -13,11 +13,13 @@ import (
 )
 
 type Conversation struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	TravelerID    uuid.UUID `db:"traveler_id" json:"traveler_id"`
-	ConsultantID  uuid.UUID `db:"consultant_id" json:"consultant_id"`
-	LastMessage   *string   `db:"last_message" json:"last_message"`
-	LastMessageAt time.Time `db:"last_message_at" json:"last_message_at"`
+	ID            uuid.UUID  `db:"id" json:"id"`
+	TravelerID    uuid.UUID  `db:"traveler_id" json:"traveler_id"`
+	ConsultantID  uuid.UUID  `db:"consultant_id" json:"consultant_id"`
+	LastMessage   *string    `db:"last_message" json:"last_message"`
+	LastMessageAt *time.Time `db:"last_message_at" json:"last_message_at"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 
 	// Extra fields for UI (Joined via SQL)
 	// name for the one that you are communicated with
@@ -74,7 +76,7 @@ func (r *ChatRepository) sessionValidation(ctx context.Context, conversationID u
 	query := `
 		SELECT * FROM consultation_sessions
 		WHERE conversation_id = $1 AND status != 'pending_payment'
-		ORDER BY created_aat DESC
+		ORDER BY created_at DESC
 		LIMIT 1
 	`
 	err := r.DB.GetContext(ctx, &session, query, conversationID)
@@ -103,6 +105,19 @@ func (r *ChatRepository) sessionValidation(ctx context.Context, conversationID u
 	}
 
 	return &session, nil
+}
+
+func (r *ChatRepository) GetChatSession(ctx context.Context, conversationID uuid.UUID) (*domain.ConsultantSession, error) {
+	session, err := r.sessionValidation(ctx, conversationID)
+
+	// sessionValidation conveniently returns the session object even if it throws an "expired" error.
+	// We WANT to send expired sessions to the frontend so the UI knows to show the "Buy Package" modal!
+	if session != nil {
+		return session, nil
+	}
+
+	// If session is nil, it means ErrNoRows (no package ever bought) or a severe DB crash.
+	return nil, err
 }
 
 // create message method

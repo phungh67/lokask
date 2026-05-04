@@ -136,6 +136,39 @@ func (h *ChatHandler) GetHistory(c *fiber.Ctx) error {
 	return c.JSON(msgs)
 }
 
+// GET /conversations/:id/session
+func (h *ChatHandler) GetSession(c *fiber.Ctx) error {
+	// Auth check
+	myIDStr, err := getUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	_, err = uuid.Parse(myIDStr)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid User ID format"})
+	}
+
+	// Parse conversation ID safely
+	convID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid Conversation ID"})
+	}
+
+	// Fetch the session using our new Repo method
+	session, err := h.Repo.GetChatSession(c.UserContext(), convID)
+	if err != nil {
+		// A 404 tells the React frontend: "There is no package history here at all"
+		return c.Status(404).JSON(fiber.Map{
+			"error":  "No active session found",
+			"detail": err.Error(),
+		})
+	}
+
+	// Return the session to React!
+	return c.JSON(session)
+}
+
 // GET /conversations (Inbox)
 func (h *ChatHandler) GetInbox(c *fiber.Ctx) error {
 	myIDStr, err := getUserID(c)
