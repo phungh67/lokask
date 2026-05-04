@@ -377,3 +377,16 @@ export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery
 
     return response.json();
 }
+
+// adding chat session for billing purpose
+export const getChatSession = async (conversationId: string) => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`/api/v1/conversations/${conversationId}/session`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error("Failed to fetch session");
+  }
+  return response.json();
+}
