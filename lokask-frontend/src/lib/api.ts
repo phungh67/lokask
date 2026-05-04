@@ -31,7 +31,10 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     });
 
     if (!res.ok) {
-        throw new ApiError(res.status, `API Error: ${res.statusText}`);
+        // We throw an ApiError here so the frontend can catch the exact status code
+        // We use JSON parsing to extract the real error message if the server provided one
+        const errorData = await res.json().catch(() => null);
+        throw errorData || new ApiError(res.status, `API Error: ${res.statusText}`);
     }
 
     return res.json();
@@ -244,10 +247,24 @@ export async function getChatHistory(conversationId: string): Promise<ChatMessag
 // send a message
 // POST /api/v1/conversations/:id/messages
 export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
-    return fetchJson<ChatMessage>(`/conversations/${conversationId}/messages`, {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${BASE_URL}/conversations/${conversationId}/messages`, {
         method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({ content }),
     });
+
+    if (!response.ok) {
+        // 🟢 CRITICAL FIX: Parse the JSON error body from Go and throw IT, 
+        // instead of throwing a generic "Internal Server Error"
+        const errorData = await response.json().catch(() => null);
+        throw errorData || new Error("Failed to send message");
+    }
+
+    return response.json();
 }
 
 // get inbox
@@ -343,7 +360,7 @@ export async function uploadAvatar(file: File){
 
     const token = localStorage.getItem("token")
 
-    const res = await fetch("/api/v1/users/avatar", {
+    const res = await fetch(`${BASE_URL}/users/avatar`, {
         method: "POST",
         headers: token ? {"Authorization": `Bearer ${token}`} : {},
         body: formData,
@@ -362,7 +379,7 @@ export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery
     formData.append("file", file);
     formData.append("type", type);
 
-    const response = await fetch("api/v1/consultant/media", {
+    const response = await fetch(`${BASE_URL}/consultant/media`, {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${token}`
@@ -381,7 +398,7 @@ export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery
 // adding chat session for billing purpose
 export const getChatSession = async (conversationId: string) => {
     const token = localStorage.getItem("token");
-    const response = await fetch(`/api/v1/conversations/${conversationId}/session`, {
+    const response = await fetch(`${BASE_URL}/conversations/${conversationId}/session`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!response.ok) {

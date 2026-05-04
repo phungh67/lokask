@@ -309,7 +309,7 @@ const ConsultantDashboard = () => {
   // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
     console.log("[DEBUG] Attempting to send message...");
-    
+
     if (!activeConversationId || !accountUserId) {
       toast({ title: "Error", description: "Missing active chat or profile." });
       return;
@@ -332,11 +332,14 @@ const ConsultantDashboard = () => {
     } catch (error: any) {
       console.error("[DEBUG] Backend rejected the message:", error);
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
-      
+
+      const errorStr = JSON.stringify(error).toLowerCase();
       // 🟢 FIX: Corrected "includes" syntax
       if (
-        error.message?.toLowerCase().includes("expired") ||
-        error.status === 403
+        errorStr.includes("expired") ||
+        errorStr.includes("package") || // Catches "no active package found"
+        error.status === 403 ||
+        error.status === 404
       ) {
         setShowPurchaseDialog(true);
       } else {
@@ -429,30 +432,35 @@ const ConsultantDashboard = () => {
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
         <DialogContent className="max-w-md rounded-2xl p-6">
           <div className="text-center space-y-4">
-             <div className="w-16 h-16 bg-[#FCE8E0] rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-8 h-8 text-[#C77752]" />
-             </div>
-             <h2 className="text-2xl font-bold text-[#101828]">Time to top up!</h2>
-             <p className="text-[#4A5565]">
-               Your previous consultation session has ended. To continue getting advice and real-time support, please select a new package.
-             </p>
-             <div className="pt-4 flex flex-col gap-3">
-               <button 
-                 onClick={() => {
-                   setShowPurchaseDialog(false);
-                   navigate(`/consultant/${activeConversationData?.consultantId}/packages`);
-                 }}
-                 className="w-full h-12 rounded-full bg-[#C77752] hover:bg-[#b06745] text-white font-medium transition-colors"
-               >
-                 View Packages
-               </button>
-               <button 
-                 onClick={() => setShowPurchaseDialog(false)}
-                 className="w-full h-12 rounded-full text-[#6A7282] hover:bg-gray-100 font-medium transition-colors"
-               >
-                 Cancel
-               </button>
-             </div>
+            <div className="w-16 h-16 bg-[#FCE8E0] rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-[#C77752]" />
+            </div>
+            <h2 className="text-2xl font-bold text-[#101828]">
+              Time to top up!
+            </h2>
+            <p className="text-[#4A5565]">
+              Your previous consultation session has ended. To continue getting
+              advice and real-time support, please select a new package.
+            </p>
+            <div className="pt-4 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowPurchaseDialog(false);
+                  navigate(
+                    `/consultant/${activeConversationData?.consultantId}/packages`,
+                  );
+                }}
+                className="w-full h-12 rounded-full bg-[#C77752] hover:bg-[#b06745] text-white font-medium transition-colors"
+              >
+                View Packages
+              </button>
+              <button
+                onClick={() => setShowPurchaseDialog(false)}
+                className="w-full h-12 rounded-full text-[#6A7282] hover:bg-gray-100 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
