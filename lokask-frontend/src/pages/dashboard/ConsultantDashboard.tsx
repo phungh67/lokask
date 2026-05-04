@@ -6,6 +6,7 @@ import InboxPanel from "@/components/dashboard/InboxPanel";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
 import BookingsPanel from "@/components/dashboard/BookingsPanel";
+import { Dialog, DialogContent } from "@/components/ui/dialog"; // 🟢 ADDED IMPORT
 import { toast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import {
@@ -308,10 +309,7 @@ const ConsultantDashboard = () => {
   // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
     console.log("[DEBUG] Attempting to send message...");
-    console.log("  - Active Conv ID:", activeConversationId);
-    console.log("  - My Account ID:", accountUserId);
-    console.log("  - My Consultant ID:", consultantProfile?.id);
-
+    
     if (!activeConversationId || !accountUserId) {
       toast({ title: "Error", description: "Missing active chat or profile." });
       return;
@@ -334,8 +332,10 @@ const ConsultantDashboard = () => {
     } catch (error: any) {
       console.error("[DEBUG] Backend rejected the message:", error);
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
+      
+      // 🟢 FIX: Corrected "includes" syntax
       if (
-        error.message?.toLowerCase().include("expired") ||
+        error.message?.toLowerCase().includes("expired") ||
         error.status === 403
       ) {
         setShowPurchaseDialog(true);
@@ -347,27 +347,6 @@ const ConsultantDashboard = () => {
         });
       }
     }
-  };
-
-  const renderConsultantOnly = (component: React.ReactNode) => {
-    if (userRole === "consultant") return component;
-
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white text-center">
-        <AlertCircle className="w-12 h-12 text-amber-500 mb-4" />
-        <h2 className="text-xl font-bold mb-2">Consultant Feature Only</h2>
-        <p className="text-muted-foreground max-w-sm mb-6">
-          Managing bookings and schedules is only available for local
-          consultants.
-        </p>
-        <button
-          onClick={() => navigate("/become-local")}
-          className="bg-primary text-primary-foreground px-6 py-2 rounded-full font-medium"
-        >
-          Become a Local
-        </button>
-      </div>
-    );
   };
 
   if (isProfileLoading || !consultantProfile) {
@@ -412,10 +391,10 @@ const ConsultantDashboard = () => {
                   session={activeSession}
                   userRole={userRole}
                   onSendMessage={handleSendMessage}
-                  onTriggerPurchase{() => setShowPurchaseDialog(true)}
+                  // 🟢 FIX: Added missing "="
+                  onTriggerPurchase={() => setShowPurchaseDialog(true)}
                   onScheduleCall={() => {}}
                   onCancelCall={() => {}}
-                  
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -426,7 +405,6 @@ const ConsultantDashboard = () => {
           )}
 
           {activeSection === "bookings" && (
-            // renderConsultantOnly(<BookingsPanel consultantId={consultantProfile.id} />)
             <BookingsPanel
               consultantId={consultantProfile.id}
               userId={accountUserId}
@@ -446,6 +424,38 @@ const ConsultantDashboard = () => {
           )}
         </main>
       </div>
+
+      {/* 🟢 FIX: Added the missing Dialog component for the Purchase Popup */}
+      <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
+        <DialogContent className="max-w-md rounded-2xl p-6">
+          <div className="text-center space-y-4">
+             <div className="w-16 h-16 bg-[#FCE8E0] rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-[#C77752]" />
+             </div>
+             <h2 className="text-2xl font-bold text-[#101828]">Time to top up!</h2>
+             <p className="text-[#4A5565]">
+               Your previous consultation session has ended. To continue getting advice and real-time support, please select a new package.
+             </p>
+             <div className="pt-4 flex flex-col gap-3">
+               <button 
+                 onClick={() => {
+                   setShowPurchaseDialog(false);
+                   navigate(`/consultant/${activeConversationData?.consultantId}/packages`);
+                 }}
+                 className="w-full h-12 rounded-full bg-[#C77752] hover:bg-[#b06745] text-white font-medium transition-colors"
+               >
+                 View Packages
+               </button>
+               <button 
+                 onClick={() => setShowPurchaseDialog(false)}
+                 className="w-full h-12 rounded-full text-[#6A7282] hover:bg-gray-100 font-medium transition-colors"
+               >
+                 Cancel
+               </button>
+             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

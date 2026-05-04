@@ -12,6 +12,9 @@ interface ChatPanelProps {
   onSendMessage: (message: string) => void;
   onScheduleCall: (callData: any) => void;
   onCancelCall?: (callId: string) => void;
+  session?: any;
+  userRole?: string | null;
+  onTriggerPurchase?: () => void;
 }
 
 const ChatPanel = ({
@@ -19,6 +22,10 @@ const ChatPanel = ({
   onSendMessage,
   onScheduleCall,
   onCancelCall,
+
+  session,
+  userRole,
+  onTriggerPurchase
 }: ChatPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
