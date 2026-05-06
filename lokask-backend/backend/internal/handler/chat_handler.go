@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
+	"context"
 	"fmt"
 	"log"
 
@@ -10,7 +12,8 @@ import (
 )
 
 type ChatHandler struct {
-	Repo *repository.ChatRepository
+	Repo   *repository.ChatRepository
+	Mailer *mailer.MailService
 }
 
 // helper function to get user ID
@@ -97,6 +100,40 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	if err := h.Repo.CreateMessage(ctx, convID, myID, req.Content); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "detail": err.Error()})
 	}
+
+	go func(senderID, conversationID uuid.UUID, message string) {
+		bgCtx := context.Background()
+
+		var info struct {
+			ReceiverEmail string `db:"receiver_email"`
+			ReceiverName  string `db:"receiver_name"`
+			SenderName    string `db:"sender_name"`
+		}
+
+		query := `
+			SELECT 
+				receiver.email AS receiver_email,
+				receiver.full_name AS receiver_name,
+				sender.full_name AS sender_name
+			FROM conversations c
+			LEFT JOIN users sender ON sender.id = $1
+			LEFT JOIN consultants cons ON c.consultant_id = cons.id
+			LEFT JOIN users receiver ON (receiver.id = c.traveler_id OR receiver.id = cons.user_id) AND receiver.id != $1
+			WHERE c.id = $2
+		`
+
+		err := h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
+		if err == nil && info.ReceiverEmail != "" {
+			preview := message
+			if len(preview) > 50 {
+				preview = preview[:47] + "..."
+			}
+
+			h.Mailer.SendMessageNotification(info.ReceiverEmail, info.ReceiverName, info.SenderName, preview)
+		} else {
+			log.Printf("[WARN] Could not fetch receiver info for email notification: %v", err)
+		}
+	}(myID, convID, req.Content)
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",

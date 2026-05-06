@@ -8,6 +8,7 @@ import (
 
 	"asklocal/internal/config"
 	"asklocal/internal/handler"
+	"asklocal/internal/mailer"
 	"asklocal/internal/middleware"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
@@ -43,6 +44,15 @@ func main() {
 	// setup redis
 	config.ConnectRedis()
 
+	// mail service
+	mailService := mailer.NewMailService(
+		getEnv("MAIL_SERVER", "smtp.mailtrap.io"),
+		getEnv("MAIL_PORT", "25"),
+		getEnv("MAIL_USERNAME", "username"),
+		getEnv("MAIL_API_KEY", "password"),
+		"noreply@lokask.com",
+	)
+
 	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatalf("[CONN] Failed to connect to DB: %v", err)
@@ -70,7 +80,7 @@ func main() {
 
 	// message
 	chatRepo := repository.NewChatRepository(db)
-	chatHandler := &handler.ChatHandler{Repo: chatRepo}
+	chatHandler := &handler.ChatHandler{Repo: chatRepo, Mailer: mailService}
 
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
