@@ -55,6 +55,10 @@ func (m *MailService) SendMessageNotification(toEmail, toName, senderName, messa
 	auth := smtp.PlainAuth("", m.Username, m.Password, m.Host)
 	addr := fmt.Sprintf("%s:%s", m.Host, m.Port)
 
+	// log here
+	log.Printf("[MAILER] Current information destination address: %s, sender: %s", addr, senderName)
+	log.Printf("[MAILER] Preview msg: %s", messagePreview)
+
 	err := smtp.SendMail(addr, auth, m.From, []string{toEmail}, msg)
 	if err != nil {
 		log.Printf("[ERROR] Failed to send email to %s: %v", toEmail, err)
