@@ -32,3 +32,6 @@ dist-ssr
 
 # sensitive
 *.pem
+
+# scrap
+*.txt
