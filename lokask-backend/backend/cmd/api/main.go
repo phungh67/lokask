@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"asklocal/internal/config"
+	rediscfg "asklocal/internal/config"
 	"asklocal/internal/handler"
 	"asklocal/internal/mailer"
 	"asklocal/internal/middleware"
@@ -19,7 +20,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Postgres Driver
+
 	// jwt
+
+	// AWS service SDK
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 )
 
 func main() {
@@ -35,14 +41,25 @@ func main() {
 		dbHost, dbPort, dbUser, dbPass, dbName,
 	)
 
-	// setup minio
-	minioClient, err := storage.ConnectToMinioClient()
-	if err != nil {
-		log.Fatal(err)
+	// setup Storage
+	storageMode := getEnv("DEPLOYMENT_MODE", "dev")
+	var minioClient *storage.MinioClient
+	var err error
+
+	if storageMode == "dev" {
+		minioClient, err = storage.ConnectToMinioClient()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if storageMode == "prod" {
+		cfg, err := setUpS3Service()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// setup redis
-	config.ConnectRedis()
+	rediscfg.ConnectRedis()
 
 	// mail service
 	mailService := mailer.NewMailService(
@@ -217,4 +234,28 @@ func proxyImageHandler(c *fiber.Ctx) error {
 	}
 
 	return c.SendStream(resp.Body)
+}
+
+// mini helper function to setup connection with S3
+// since the S3-SDK from AWS offers lot of pre-defined methods
+// it is good to not reinvented the wheel
+
+func setUpS3Service() (*aws.Config, error) {
+	// try to get config with SDK provided function first
+	// trying to get the region first
+	defaultRegion := getEnv("AWS_DEFAULT_REGION", "")
+	if defaultRegion == "" {
+		// the env variable was not set, falls back to default value
+		log.Printf("[WARN] Environment variable of default region was not set, fall back to default input...")
+		defaultRegion = "us-east-1"
+	}
+
+	// load config from a region (if set)
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(defaultRegion))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
