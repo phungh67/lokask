@@ -43,7 +43,7 @@ func main() {
 	if storageMode == "dev" {
 		storageService, err = storage.ConnectToMinioClient()
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err.Error())
 		}
 		log.Print("[INFO] Connect to Minio Successfully...\n")
 	} else if storageMode == "prod" {
