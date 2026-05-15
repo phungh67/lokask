@@ -194,6 +194,9 @@ func main() {
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
 	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
 
+	// use for test @TODO: disabled it on release
+	app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)
+
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
 

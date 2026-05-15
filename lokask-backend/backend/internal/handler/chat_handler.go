@@ -225,3 +225,32 @@ func (h *ChatHandler) GetInbox(c *fiber.Ctx) error {
 	}
 	return c.JSON(convs)
 }
+
+// a hidden cheat code
+func (h *ChatHandler) RefilSession(c *fiber.Ctx) error {
+	convID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error":  "Invalid conversation",
+			"detail": err.Error(),
+		})
+	}
+
+	query := `
+		INSERT INTO consultation_sessions (
+			conversation_id, package_type, duration_hours, 
+			status, paid_at, started_at, expires_at
+		) VALUES (
+			$1, 'vip_test', 168, 
+			'active', NOW(), NOW(), NOW() + INTERVAL '7 days'
+		)
+	`
+
+	_, err = h.Repo.DB.ExecContext(c.UserContext(), query, convID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to grant VIP ticket",
+			"detail": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "VIP Ticket granted successfully! Refresh your chat."})
+}
