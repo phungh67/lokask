@@ -13,10 +13,10 @@ import (
 
 type ConsultantHandler struct {
 	Repo    *repository.ConsultantRepository
-	Storage *storage.MinioClient
+	Storage storage.FileStorage
 }
 
-func NewConsultantHandler(repo *repository.ConsultantRepository, storage *storage.MinioClient) *ConsultantHandler {
+func NewConsultantHandler(repo *repository.ConsultantRepository, storage storage.FileStorage) *ConsultantHandler {
 	return &ConsultantHandler{Repo: repo, Storage: storage}
 }
 

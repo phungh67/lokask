@@ -36,10 +36,22 @@ func main() {
 	)
 
 	// setup Storage
+	storageMode := getEnv("DEPLOYMENT_MODE", "dev")
+	var storageService storage.FileStorage
+	var err error
 
-	minioClient, err := storage.ConnectToMinioClient()
-	if err != nil {
-		log.Fatal(err)
+	if storageMode == "dev" {
+		storageService, err = storage.ConnectToMinioClient()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		log.Print("[INFO] Connect to Minio Successfully...\n")
+	} else if storageMode == "prod" {
+		storageService, err = storage.ConnectToS3Client()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Print("[INFO] Connect to S3 successfully...\n")
 	}
 
 	// setup redis
@@ -66,17 +78,17 @@ func main() {
 
 	// consultant
 	consultantRepo := repository.NewConsultantRepository(db)
-	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo, Storage: minioClient}
+	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo, Storage: storageService}
 
 	// user
 	userRepo := repository.NewUserRepository(db)
-	userHandler := handler.NewUserHandler(userRepo, minioClient)
+	userHandler := handler.NewUserHandler(userRepo, storageService)
 
 	// blog
 	blogRepo := repository.NewBlogRepository(db)
 	blogHandler := &handler.BlogHandler{
 		Repo:    blogRepo,
-		Storage: minioClient,
+		Storage: storageService,
 	}
 
 	// message

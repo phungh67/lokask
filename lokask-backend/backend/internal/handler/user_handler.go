@@ -11,10 +11,10 @@ import (
 
 type UserHandler struct {
 	Repo    *repository.UserRepository
-	Storage *storage.MinioClient
+	Storage storage.FileStorage
 }
 
-func NewUserHandler(repo *repository.UserRepository, storage *storage.MinioClient) *UserHandler {
+func NewUserHandler(repo *repository.UserRepository, storage storage.FileStorage) *UserHandler {
 	return &UserHandler{Repo: repo, Storage: storage}
 }
 

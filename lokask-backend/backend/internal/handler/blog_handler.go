@@ -13,7 +13,7 @@ import (
 
 type BlogHandler struct {
 	Repo    *repository.BlogRepository
-	Storage *storage.MinioClient
+	Storage storage.FileStorage
 }
 
 // Create handles posting a new blog with a cover image
