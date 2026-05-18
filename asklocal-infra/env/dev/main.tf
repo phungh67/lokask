@@ -23,3 +23,12 @@ module "compute" {
 
   depends_on = [module.networking]
 }
+
+module "storage" {
+  source               = "../modules/storage"
+  environment_code     = var.environment_code
+  policy_specified     = 0
+  region_code          = var.region_code
+  cors_specified       = 0
+  life_cycle_specified = 0
+}
