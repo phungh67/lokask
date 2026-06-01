@@ -77,7 +77,8 @@ const ChatPanel = ({
               isMe ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
-            {format(new Date(message.timestamp), "h:mm a")}
+            {/** two number for timestamp - match with data type */}
+            {message.timestamp ? format(message.timestamp, "hh:mm a") : ""}
           </p>
         </div>
       </div>

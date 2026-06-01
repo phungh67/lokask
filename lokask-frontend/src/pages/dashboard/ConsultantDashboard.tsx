@@ -317,13 +317,19 @@ const ConsultantDashboard = () => {
 
     const tempId = "temp-" + Date.now();
 
+    // match with interface update 
     const optimisticMsg = {
       id: tempId,
+      conversation_id: activeConversationId, 
+      sender_id: accountUserId, 
       content,
-      sender: "user",
+      is_read: true, 
+      created_at: new Date().toISOString(), 
       timestamp: new Date(),
-      type: "text",
+      sender: "user" as const, 
+      type: "text" as const,
     };
+    
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
 
     try {
@@ -334,7 +340,6 @@ const ConsultantDashboard = () => {
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
 
       const errorStr = JSON.stringify(error).toLowerCase();
-      // 🟢 FIX: Corrected "includes" syntax
       if (
         errorStr.includes("expired") ||
         errorStr.includes("package") || // Catches "no active package found"
