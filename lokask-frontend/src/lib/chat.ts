@@ -1,18 +1,6 @@
 import { fetchJson } from "./core";
+import { ChatMessage } from "@/types/chat";
 // data type
-
-export interface ChatMessage {
-    id: number,
-    conversation_id: string,
-    sender_id: string, // mapped with DB uuid
-    content: string,
-    is_read: boolean,
-    created_at: string, // mapped with DB timestamp
-
-    // helper, for future development
-    type?: "text" | "image" | "map";
-    imageUrl?: string;
-}
 
 export interface Conversation {
     id: string,

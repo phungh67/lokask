@@ -10,10 +10,19 @@ export interface ScheduledCall {
 }
 
 export interface ChatMessage {
-  id: string;
+  // backend properties, must have
+  id: string | number;
+  conversation_id: string;
+  sender_id: string;
   content: string;
-  sender: "user" | "consultant" | "traveler"; // Updated to match your Dashboard logic
-  timestamp: Date;
+  is_read: boolean;
+  created_at: string;
+
+  // heleper for front end display (chat, booking, etc,...)
+  sender?: "user" | "consultant" | "traveler";
+  timestamp?: Date;
+
+  // other contents (avatar, address,...)
   type?: "text" | "image" | "map";
   imageUrl?: string;
   mapData?: {
