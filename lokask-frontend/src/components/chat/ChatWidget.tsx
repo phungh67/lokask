@@ -1,8 +1,7 @@
 import { useChat } from "@/context/ChatContext";
 import ChatFloatingButton from "./ChatFloatingButton";
 import ChatWindow from "./ChatWindow";
-import { Consultant } from "@/types/consultant"; // 🟢 Import the new type
-
+import { Consultant } from "@/types/consultant";
 const ChatWidget = () => {
   const {
     isWidgetVisible,
