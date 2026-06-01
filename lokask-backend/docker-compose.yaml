@@ -12,31 +12,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mounts our SQL script to auto-create tables on first startup
-      # TODO: create start-up script
       - ./infra/db/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # 2. Object Storage (S3 Compatible for Images)
-  minio:
-    image: minio/minio:latest
-    container_name: lokask_minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-      MINIO_API_CORS_ALLOW_ORIGIN: "*"
-    ports:
-      - "9000:9000" # API Port (Go connects here)
-      - "9001:9001" # Console Port (You login here via Browser)
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -55,21 +33,19 @@ services:
       timeout: 3s
       retries: 5
 
-  # 2.5. Backend image
+  # 2. Backend image
   backend:
-    build: ./backend # Points to the folder containing your Go code
+    build: ./backend
     container_name: lokask_api
     depends_on:
       db:
-        condition: service_healthy   # Wait for PostGIS to be ready
-      minio:
-        condition: service_healthy   # Wait for MinIO API to be ready
+        condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080" # Maps your machine's 8080 to container's 8080
+      - "8080:8080"
     environment:
-      # Networking: Inside Docker, we use service names (postgres, minio)
+      DEPLOYMENT_MODE: "prod"
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER}
@@ -79,12 +55,10 @@ services:
       MAIL_PORT: ${MAIL_PORT}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_API_KEY: ${MAIL_API_KEY}
-      MINIO_ACCESS_KEY: ${MINIO_USER}
-      MINIO_SECRET_KEY: ${MINIO_PASSWORD}
-      MINIO_USE_SSL: "false"
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_PUBLIC_URL: "https://34.234.138.97.nip.io"
       REDIS_ADDR: "redis:6379"
+      # AWS configuration (Keys are handled by EC2 Instance Profile!)
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_S3_AVATAR_BUCKET: ${AWS_S3_AVATAR_BUCKET}
   
   frontend:
     build: ../lokask-frontend
@@ -98,10 +72,8 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
 
-
 volumes:
   postgres_data:
-  minio_data:
   redis_data:
 
 networks:
