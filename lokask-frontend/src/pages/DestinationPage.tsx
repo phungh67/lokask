@@ -1,6 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
-// 🟢 Navbar and Footer removed because they are handled by Layout in App.tsx
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
 import { getConsultants } from "@/lib/api"; 
