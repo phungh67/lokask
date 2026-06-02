@@ -347,6 +347,23 @@ func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, 
 	return niches, nil
 }
 
+func (r *ConsultantRepository) ListUniqueLanguages(ctx context.Context) ([]string, error) {
+	languages := []string{}
+
+	query := `
+        SELECT DISTINCT unnest(languages) AS language 
+        FROM consultants 
+        ORDER BY language
+    `
+
+	err := r.DB.SelectContext(ctx, &languages, query)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching unique languages: %w", err)
+	}
+
+	return languages, nil
+}
+
 // calculateBadges logic remains largely the same, but uses Tags
 func calculateBadges(profile *domain.ConsultantProfile) []domain.Badge {
 	var badges []domain.Badge

@@ -103,6 +103,14 @@ func (h *ConsultantHandler) GetNiches(c *fiber.Ctx) error {
 	return c.JSON(niches)
 }
 
+func (h *ConsultantHandler) GetLanguages(c *fiber.Ctx) error {
+	language, err := h.Repo.ListUniqueLanguages(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(language)
+}
+
 // get city helper
 func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 	var cities []struct {

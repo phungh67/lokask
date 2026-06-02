@@ -9,7 +9,7 @@ import {
   getConsultantBookings,
   updateBookingStatus,
   getMyTrips,
-} from "@/lib/api";
+} from "@/lib/bookings";
 
 interface BookingsPanelProps {
   consultantId: string;

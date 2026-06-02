@@ -157,6 +157,7 @@ func main() {
 
 	// filter
 	api.Get("/cities", consultantHandler.GetCities)
+	api.Get("/languages", consultantHandler.GetLanguages)
 
 	// public get
 	api.Get("/public/:id", bookHandler.PublicGetConsultantSchedule)

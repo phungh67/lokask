@@ -105,10 +105,13 @@ export async function getConsultantById(id: string): Promise<Consultant> {
     return mapConsultant(data);
 }
 
-// Assumes endpoint is /api/v1/niches
 export async function getNiches(): Promise<Niche[]> {
     const data = await fetchJson<Niche[]>("/niches");
     return data || [];
+}
+
+export async function getLanguages(): Promise<string[]> {
+    return fetchJson<string[]>("/languages"); 
 }
 
 // upload media function
