@@ -1,7 +1,7 @@
 import { useState, useRef } from "react"; // 🟢 Added useRef
 import { Play, Loader2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"; // 🟢 Added Chevron icons
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/api";
+import { getConsultants } from "@/lib/consultants"
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
 import heroDesertPoster from "@/assets/hero-desert-poster.jpg";

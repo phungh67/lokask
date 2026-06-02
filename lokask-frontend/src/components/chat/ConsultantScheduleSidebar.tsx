@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getConsultantBookings, getPublicConsultantBookings } from "@/lib/api";
+import { getConsultantBookings, getPublicConsultantBookings } from "@/lib/bookings";
 import { Booking } from "@/types/booking";
 import BookingMiniCalendar from "../dashboard/bookings/BookingMiniCalendar"; // Adjust import path if needed
 

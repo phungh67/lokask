@@ -2,18 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom"; // 🟢 Added for routing
 import { Consultant } from "@/types/consultant";
 import ChatHeader from "./ChatHeader";
-import ChatAISummary from "./ChatAISummary";
 import ChatMessages from "./ChatMessages";
 import ChatComposer from "./ChatComposer";
 import { Dialog, DialogContent } from "@/components/ui/dialog"; // 🟢 Added Dialog
 import { AlertCircle, Loader2 } from "lucide-react"; // 🟢 Added AlertCircle
 import {
-  ChatMessage as APIChatMessage,
   startChat,
   getChatHistory,
   sendMessage,
-  getChatSession, // 🟢 Added Session Fetch
-} from "@/lib/api";
+  getChatSession,
+} from "@/lib/chat";
+import { ChatMessage } from "@/types/chat";
 import { toast } from "sonner";
 
 interface ChatWindowProps {
@@ -25,7 +24,7 @@ interface ChatWindowProps {
 const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
   const navigate = useNavigate();
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<APIChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("traveller");
@@ -105,7 +104,7 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     if (!conversationId || !currentUserId) return;
 
     const tempId = Date.now();
-    const optimisticMsg: APIChatMessage = {
+    const optimisticMsg: ChatMessage = {
       id: tempId,
       conversation_id: conversationId,
       content,
@@ -146,13 +145,11 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     }
   };
 
-  const uiMessages = messages.map((m) => ({
+  const uiMessages: ChatMessage[] = messages.map((m) => ({
+    ...m,
     id: m.id.toString(),
     sender: m.sender_id === currentUserId ? "user" : "consultant",
-    content: m.content,
-    type: m.type || "text",
     timestamp: new Date(m.created_at),
-    imageUrl: m.imageUrl,
   }));
 
   // 🟢 Logic Lock
@@ -176,7 +173,7 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
-        <ChatMessages messages={uiMessages as any} />
+        <ChatMessages messages={uiMessages} />
       )}
 
       {/* 🟢 Conditionally show Composer or Interceptor */}

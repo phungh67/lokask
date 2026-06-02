@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { login, registerTraveller, registerConsultant } from "@/lib/api";
+import { login, registerTraveller, registerConsultant } from "@/lib/auth";
 import { toast } from "sonner";
 
 type AuthStep = "initial" | "login" | "signup";

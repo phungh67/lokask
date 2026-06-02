@@ -7,7 +7,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
-import { getMe } from "@/lib/api";
+import { getMe } from "@/lib/auth";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
