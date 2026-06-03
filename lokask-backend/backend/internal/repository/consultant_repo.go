@@ -2,6 +2,7 @@ package repository
 
 import (
 	"asklocal/internal/domain"
+	"asklocal/internal/helper"
 	"context"
 	"fmt"
 	"log"
@@ -83,6 +84,12 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		profile.Languages = pq.StringArray{"English"}
 	}
 
+	// construct image url
+	ConsultantCoverURL, _ := helper.BuildMediaURL(profile.CoverURL)
+	if ConsultantCoverURL != "" {
+		profile.CoverURL = ConsultantCoverURL
+	}
+
 	// temp removal reviews field
 	profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
@@ -137,8 +144,8 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	imgQuery := `SELECT image_url FROM portfolio_items WHERE consultant_id = $1 LIMIT 6`
 	_ = r.DB.SelectContext(ctx, &images, imgQuery, id)
 
-	if images != nil {
-		profile.GalleryImages = images
+	for i, imgPath := range images {
+		profile.GalleryImages[i], _ = helper.BuildMediaURL(imgPath)
 	}
 
 	// 4. Calculate Badges

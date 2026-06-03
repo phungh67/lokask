@@ -2,11 +2,13 @@ package handler
 
 import (
 	"asklocal/internal/domain"
+	"asklocal/internal/helper"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -162,7 +164,7 @@ func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 	return c.JSON(cities)
 }
 
-// func
+// func to handle media upload (not avatar)
 func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 	userIDStr := c.Locals("user_id").(string) // cast to only string
 	userID, err := uuid.Parse(userIDStr)      // convert to uuid format (assume that we get the string)
@@ -183,13 +185,17 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 	}
 
 	mediaType := c.FormValue("type") // to check if it meant to be cover or galleries
+	// uniformed filename (for tracking)
+	var objectKey string
+	fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), fileHeader.Filename)
 
-	bucketName := "galleries"
 	if mediaType == "cover" {
-		bucketName = "covers"
+		objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)
+	} else {
+		objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)
 	}
 
-	url, err := h.Storage.UploadFile(fileHeader, userID.String(), bucketName)
+	url, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -208,8 +214,16 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 
 	log.Printf("[LOG] Upload media successfully to %s\n", url)
 
+	mediaURL, err := helper.BuildMediaURL(objectKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Error in constructing URL",
+			"error":   err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"media_url": url,
+		"media_url": mediaURL,
 		"message":   "Successfully upload media.",
 	})
 }
