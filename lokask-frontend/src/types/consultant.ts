@@ -9,7 +9,7 @@ export interface Review {
   id: string;
   review_name: string;
   review_avatar: string;
-  rating: number;  
+  rating: number;
   comment: string;
   verified_stay: boolean;
   date: string;
@@ -36,6 +36,18 @@ export interface Consultant {
   responseTime?: string;
   isOnline?: boolean;
   galleryImages?: string[]; // Matches the gallery images field
-  badges?: Badge [];
+  badges?: Badge[];
   reviews?: Review[];
+}
+
+export interface UpdateProfileRequest {
+  full_name: string;
+  display_name: string;
+  city_id: number;
+  quote: string;
+  bio: string;
+  language: string[];
+
+  main_niche_id: number;
+  tags: string[];
 }

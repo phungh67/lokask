@@ -194,6 +194,7 @@ func main() {
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
 	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
+	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
 
 	// use for test @TODO: disabled it on release
 	app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)

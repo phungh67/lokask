@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -38,6 +39,44 @@ func (h *ConsultantHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(profile)
+}
+
+func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
+	tokenUserID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	userID, err := uuid.Parse(tokenUserID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid token ID"})
+	}
+
+	var payload repository.UpdateProfilePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body format",
+		})
+	}
+
+	if payload.FullName == "" || payload.CityID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Full name and City are required",
+		})
+	}
+
+	err = h.Repo.UpdateProfile(c.Context(), userID, payload)
+	if err != nil {
+		fmt.Printf("[Error] UpdateProfile failed: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":  "Failed to update profile",
+			"detail": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Profile updated successfully",
+	})
 }
 
 func (h *ConsultantHandler) List(c *fiber.Ctx) error {

@@ -1,5 +1,5 @@
 import { fetchJson } from "./core";
-import { Consultant, Badge, Review } from "@/types/consultant";
+import { Consultant, Badge, Review, UpdateProfileRequest } from "@/types/consultant";
 
 // interface to apply filter in search nav bar
 interface ConsultantFilters {
@@ -124,4 +124,11 @@ export async function uploadConsultantMedia(file: File, type: "cover" | "gallery
         method: "POST",
         body: formData,
     });
+}
+
+export async function updateConsultantProfile(data: UpdateProfileRequest){
+    return fetchJson<any>("/updateprofile", {
+        method: "PATCH",
+        body:JSON.stringify(data)
+    })
 }

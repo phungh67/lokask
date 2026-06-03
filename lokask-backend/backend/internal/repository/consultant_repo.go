@@ -22,6 +22,17 @@ type Consultant struct {
 	HourlyRate *float64 `db:"hourly_rate"`
 }
 
+type UpdateProfilePayload struct {
+	FullName    string   `json:"full_name"`
+	DisplayName string   `json:"display_name"`
+	CityID      int      `json:"city_id"`
+	Quote       string   `json:"quote"`
+	Bio         string   `json:"bio"`
+	Languages   []string `json:"languages"`
+	MainNicheID int      `json:"main_niche_id"`
+	Tags        []string `json:"tags"`
+}
+
 type ConsultantRepository struct {
 	DB *sqlx.DB
 }
@@ -319,6 +330,61 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	}
 
 	return consultants, totalCount, nil
+}
+
+func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UUID, data UpdateProfilePayload) error {
+	tx, err := r.DB.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("could not begin transaction: %w", err)
+	}
+
+	defer tx.Rollback()
+
+	// users
+	userQuery := `
+		UPDATE users 
+		SET full_name = $1, alias = $2, updated_at = NOW() 
+		WHERE id = $3
+	`
+	_, err = tx.ExecContext(ctx, userQuery, data.FullName, data.DisplayName, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update users table: %w", err)
+	}
+
+	// consultants Table
+	consultantQuery := `
+		UPDATE consultants 
+		SET city_id = $1, quote = $2, bio = $3, languages = $4
+		WHERE user_id = $5
+	`
+	_, err = tx.ExecContext(ctx, consultantQuery, data.CityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
+	if err != nil {
+		return fmt.Errorf("failed to update consultants table: %w", err)
+	}
+
+	// niches
+	deleteNichesQuery := `DELETE FROM consultant_niches WHERE consultant_id = (SELECT id FROM consultants WHERE user_id = $1)`
+	_, err = tx.ExecContext(ctx, deleteNichesQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to clear old niches: %w", err)
+	}
+
+	if data.MainNicheID > 0 {
+		insertNicheQuery := `
+			INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+			VALUES ((SELECT id FROM consultants WHERE user_id = $1), $2, true)
+		`
+		_, err = tx.ExecContext(ctx, insertNicheQuery, userID, data.MainNicheID)
+		if err != nil {
+			return fmt.Errorf("failed to insert main niche: %w", err)
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("could not commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, error) {

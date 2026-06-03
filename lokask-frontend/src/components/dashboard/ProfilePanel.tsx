@@ -8,22 +8,34 @@ import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
 import {
-  getCities,
   getNiches,
-  CityOption,
-  uploadAvatar,
   uploadConsultantMedia,
-} from "@/lib/api"; // 🟢 Wire up the API calls!
+  updateConsultantProfile,
+  Niche,
+} from "@/lib/consultants";
 
-// Import Niche from api.ts to match types
-import { Niche } from "@/lib/api";
+import { getCities, CityOption, uploadAvatar } from "@/lib/users";
+
+export interface ProfileUpdatePayload {
+  full_name: string;
+  display_name: string;
+  city_id: number | "";
+  quote: string;
+  bio: string;
+  main_niche_id: number | "";
+  tags: string[];
+  languages: string[];
+
+  avatar_url: string;
+  cover_url: string;
+  gallery_images: string[];
+}
 
 interface ProfilePanelProps {
   consultant: Consultant;
-  onSave: (updates: Partial<Consultant> & any) => void; // Added & any to accept new backend keys
+  onSaveSuccess?: () => void;
 }
 
-// 🟢 1. Updated the internal form state to match our new database columns
 interface ProfileFormData {
   fullName: string;
   displayName: string;
@@ -38,24 +50,23 @@ interface ProfileFormData {
   languages: string[];
 }
 
-const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
+const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
   const { toast } = useToast();
 
-  // 🟢 2. Added state for our API-driven dropdowns
   const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
   const [availableNiches, setAvailableNiches] = useState<Niche[]>([]);
 
   const [formData, setFormData] = useState<ProfileFormData>({
-    // Map initial consultant data (falling back safely if some new keys aren't on the type yet)
-    fullName: (consultant as any).fullName || consultant.name || "",
-    displayName: consultant.displayName || consultant.name || "",
-    cityId: (consultant as any).cityId || "",
+    fullName: consultant.name || "",
+    displayName: consultant.displayName || "",
+    cityId: (consultant as Consultant & { cityId?: number }).cityId || "",
     quote: consultant.quote || "",
     bio: consultant.bio || "",
     avatar: consultant.avatarUrl || "",
     coverImage: consultant.coverUrl || "",
     galleryImages: consultant.galleryImages || [],
-    mainNicheId: (consultant as any).mainNicheId || "",
+    mainNicheId:
+      (consultant as Consultant & { mainNicheId?: number }).mainNicheId || "",
     tags: consultant.tags || [],
     languages: consultant.languages || [],
   });
@@ -63,7 +74,6 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const [initialData, setInitialData] = useState<ProfileFormData>(formData);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // 🟢 3. The API Wiring: Fetch Cities and Niches when the panel loads
   useEffect(() => {
     const loadDropdownData = async () => {
       try {
@@ -91,26 +101,36 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     setHasChanges(changed);
   }, [formData, initialData]);
 
-  const handleSave = () => {
-    // 🟢 4. Map the data back for the parent component to send to the backend
-    onSave({
-      full_name: formData.fullName,
-      alias: formData.displayName,
-      city_id: formData.cityId,
-      quote: formData.quote,
-      bio: formData.bio,
-      avatar_url: formData.avatar,
-      cover_url: formData.coverImage,
-      gallery_images: formData.galleryImages,
-      niche_id: formData.mainNicheId,
-      tags: formData.tags,
-      languages: formData.languages,
-    });
-    setInitialData(formData);
-    toast({
-      title: "Profile updated!",
-      description: "Your changes have been saved successfully.",
-    });
+  const handleSave = async () => {
+    try {
+      await updateConsultantProfile({
+        full_name: formData.fullName,
+        display_name: formData.displayName,
+        city_id: formData.cityId === "" ? 0 : formData.cityId,
+        quote: formData.quote,
+        bio: formData.bio,
+        main_niche_id: formData.mainNicheId === "" ? 0 : formData.mainNicheId,
+        tags: formData.tags,
+        language: formData.languages,
+      });
+
+      setInitialData(formData);
+      toast({
+        title: "Profile updated!",
+        description: "Your changes have been saved successfully.",
+      });
+
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
+    } catch (error: any) {
+      console.error("Save failed:", error);
+      toast({
+        title: "Failed to update profile",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDiscard = () => {
@@ -125,13 +145,11 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     window.open(`/consultant/${consultant.id}`, "_blank");
   };
 
-  // File upload handlers
+  // File Upload Handlers
   const handleAvatarChange = async (file: File) => {
     try {
       const response = await uploadAvatar(file);
-
       setFormData((prev) => ({ ...prev, avatar: response.avatar_url }));
-
       toast({ title: "Avatar uploaded successfully!" });
     } catch (error) {
       toast({ title: "Upload failed", variant: "destructive" });
@@ -140,16 +158,14 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
 
   const handleCoverChange = async (file: File) => {
     const localOptimisticUrl = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, coverUrl: localOptimisticUrl }));
+    setFormData((prev) => ({ ...prev, coverImage: localOptimisticUrl }));
 
     try {
       const response = await uploadConsultantMedia(file, "cover");
-
-      setFormData((prev) => ({ ...prev, coverUrl: response.media_url }));
-
+      setFormData((prev) => ({ ...prev, coverImage: response.media_url }));
       toast({ title: "Cover updated successfully!" });
     } catch (error) {
-      toast({ title: "Cover uploaded failed", variant: "destructive" });
+      toast({ title: "Cover upload failed", variant: "destructive" });
     }
   };
 
@@ -162,14 +178,12 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
 
     try {
       const response = await uploadConsultantMedia(file, "gallery");
-
       setFormData((prev) => ({
         ...prev,
         galleryImages: prev.galleryImages.map((img) =>
           img === localOptimisticUrl ? response.media_url : img,
         ),
       }));
-
       toast({ title: "Image added to gallery!" });
     } catch (error) {
       toast({ title: "Gallery upload failed", variant: "destructive" });
@@ -215,7 +229,6 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
           <div className="bg-card rounded-2xl p-6 border border-border">
             <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Photos */}
               <ProfilePhotoSection
                 avatar={formData.avatar}
                 coverImage={formData.coverImage}
@@ -226,7 +239,6 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
                 onGalleryRemove={handleGalleryRemove}
               />
 
-              {/* 🟢 5. Bug 1 Fixed: Passing the new props to ProfileBasicInfo */}
               <ProfileBasicInfo
                 fullName={formData.fullName}
                 displayName={formData.displayName}
@@ -249,13 +261,11 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
             </div>
           </div>
 
-          {/* Bio */}
           <ProfileBioSection
             bio={formData.bio}
             onBioChange={(bio) => setFormData((prev) => ({ ...prev, bio }))}
           />
 
-          {/* 🟢 6. Bug 2 Fixed: Passing the new props to ProfileExpertise */}
           <ProfileExpertise
             mainNicheId={formData.mainNicheId}
             availableNiches={availableNiches}
