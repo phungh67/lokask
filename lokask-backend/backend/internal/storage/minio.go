@@ -7,7 +7,6 @@ import (
 	"mime/multipart" // <--- Import this
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -110,40 +109,32 @@ func (m *MinioClient) UploadProfilePicture(file *multipart.FileHeader, userID st
 // generic function
 // ADD: this function now tries to match that object under a directory, starts
 // with owner's UUID
-func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, bucketName string) (string, error) {
+func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", err
 	}
 	defer src.Close()
 
-	// 1. Generate unique filename (image_123456789.jpg)
-	ext := filepath.Ext(file.Filename)
-	name := strings.TrimSuffix(filepath.Base(file.Filename), ext)
-	cleanName := strings.ReplaceAll(name, " ", "_") // Basic sanitization
-	objectName := fmt.Sprintf("%s/%s_%d%s", ownerID, cleanName, time.Now().Unix(), ext)
-
 	ctx := context.Background()
 	contentType := file.Header.Get("Content-Type")
 
-	// perform check
+	bucketName := getEnv("MINIO_MEDIA_BUCKET", "lokask-media")
+
 	if err := m.CreateIfNotExist(ctx, bucketName); err != nil {
 		log.Printf("[ERR][MINIO] Bucket created failed: %v", err)
 		return "", err
 	}
 
-	// 2. Upload to MinIO
-	_, err = m.Client.PutObject(ctx, bucketName, objectName, src, file.Size, minio.PutObjectOptions{
+	_, err = m.Client.PutObject(ctx, bucketName, objectKey, src, file.Size, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	// 3. Construct Public URL
-	// Default to port 9000 (API) to avoid the "Grey Image" console port issue
 	publicURL := getEnv("MINIO_PUBLIC_URL", "http://localhost:9000")
-	url := fmt.Sprintf("%s/%s/%s", publicURL, bucketName, objectName)
+	url := fmt.Sprintf("%s/%s/%s", publicURL, bucketName, objectKey)
 
 	return url, nil
 }

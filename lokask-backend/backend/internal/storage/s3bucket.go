@@ -6,7 +6,6 @@ import (
 	"log"
 	"mime/multipart"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,7 +15,7 @@ import (
 
 type FileStorage interface {
 	UploadProfilePicture(file *multipart.FileHeader, userID string) (string, error)
-	UploadFile(file *multipart.FileHeader, ownerID string, bucketName string) (string, error)
+	UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error)
 }
 
 type S3Client struct {
@@ -70,18 +69,14 @@ func (s *S3Client) UploadProfilePicture(file *multipart.FileHeader, userID strin
 	return url, nil
 }
 
-func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, bucketName string) (string, error) {
+func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", err
 	}
 	defer src.Close()
 
-	ext := filepath.Ext(file.Filename)
-	name := strings.TrimSuffix(filepath.Base(file.Filename), ext)
-	cleanName := strings.ReplaceAll(name, " ", "_")
-	objectKey := fmt.Sprintf("%s/%s_%d%s", ownerID, cleanName, time.Now().Unix(), ext)
-
+	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
 	contentType := file.Header.Get("Content-Type")
 
 	_, err = s.Client.PutObject(context.TODO(), &s3.PutObjectInput{

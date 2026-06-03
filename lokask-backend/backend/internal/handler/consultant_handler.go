@@ -199,7 +199,7 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
-			"message": "DB upload failed",
+			"message": "Bucket upload failed",
 			"error":   err.Error(),
 		})
 	}

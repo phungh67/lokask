@@ -144,8 +144,10 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	imgQuery := `SELECT image_url FROM portfolio_items WHERE consultant_id = $1 LIMIT 6`
 	_ = r.DB.SelectContext(ctx, &images, imgQuery, id)
 
-	for i, imgPath := range images {
-		profile.GalleryImages[i], _ = helper.BuildMediaURL(imgPath)
+	profile.GalleryImages = []string{}
+	for _, imgPath := range images {
+		fullPath, _ := helper.BuildMediaURL(imgPath)
+		profile.GalleryImages = append(profile.GalleryImages, fullPath)
 	}
 
 	// 4. Calculate Badges
