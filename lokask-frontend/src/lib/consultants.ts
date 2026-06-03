@@ -126,7 +126,7 @@ export async function uploadConsultantMedia(file: File, type: "cover" | "gallery
     });
 }
 
-export async function updateConsultantProfile(data: UpdateProfileRequest){
+export async function updateConsultantProfile(data: Partial<UpdateProfileRequest>){
     return fetchJson<any>("/updateprofile", {
         method: "PATCH",
         body:JSON.stringify(data)

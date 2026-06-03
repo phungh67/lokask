@@ -19,10 +19,10 @@ import { getCities, CityOption, uploadAvatar } from "@/lib/users";
 export interface ProfileUpdatePayload {
   full_name: string;
   display_name: string;
-  city_id: number | "";
+  city_id: number | null;
   quote: string;
   bio: string;
-  main_niche_id: number | "";
+  main_niche_id: number | null;
   tags: string[];
   languages: string[];
 
@@ -101,28 +101,50 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
     setHasChanges(changed);
   }, [formData, initialData]);
 
+  // only take changed property
   const handleSave = async () => {
-    try {
-      await updateConsultantProfile({
-        full_name: formData.fullName,
-        display_name: formData.displayName,
-        city_id: formData.cityId === "" ? 0 : formData.cityId,
-        quote: formData.quote,
-        bio: formData.bio,
-        main_niche_id: formData.mainNicheId === "" ? 0 : formData.mainNicheId,
-        tags: formData.tags,
-        language: formData.languages,
+    const payload: Partial<ProfileUpdatePayload> = {};
+
+    if (formData.fullName !== initialData.fullName)
+      payload.full_name = formData.fullName;
+    if (formData.displayName !== initialData.displayName)
+      payload.display_name = formData.displayName;
+    if (formData.quote !== initialData.quote) payload.quote = formData.quote;
+    if (formData.bio !== initialData.bio) payload.bio = formData.bio;
+
+    if (formData.cityId !== initialData.cityId) {
+      payload.city_id = formData.cityId === "" ? null : formData.cityId;
+    }
+
+    if (formData.mainNicheId !== initialData.mainNicheId) {
+      payload.main_niche_id =
+        formData.mainNicheId === "" ? null : formData.mainNicheId;
+    }
+
+    if (JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags))
+      payload.tags = formData.tags;
+    if (
+      JSON.stringify(formData.languages) !==
+      JSON.stringify(initialData.languages)
+    )
+      payload.languages = formData.languages;
+
+    if (Object.keys(payload).length === 0) {
+      toast({
+        title: "No changes detected",
+        description: "Your profile is already up to date.",
       });
+      return;
+    }
+
+    try {
+      await updateConsultantProfile(payload);
 
       setInitialData(formData);
       toast({
         title: "Profile updated!",
         description: "Your changes have been saved successfully.",
       });
-
-      if (onSaveSuccess) {
-        onSaveSuccess();
-      }
     } catch (error: any) {
       console.error("Save failed:", error);
       toast({

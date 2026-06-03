@@ -43,11 +43,11 @@ export interface Consultant {
 export interface UpdateProfileRequest {
   full_name: string;
   display_name: string;
-  city_id: number;
+  city_id: number| null;
   quote: string;
   bio: string;
-  language: string[];
+  languages: string[];
 
-  main_niche_id: number;
+  main_niche_id: number | null;
   tags: string[];
 }

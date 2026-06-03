@@ -59,12 +59,6 @@ func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
 		})
 	}
 
-	if payload.FullName == "" || payload.CityID == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Full name and City are required",
-		})
-	}
-
 	err = h.Repo.UpdateProfile(c.Context(), userID, payload)
 	if err != nil {
 		fmt.Printf("[Error] UpdateProfile failed: %v\n", err)
