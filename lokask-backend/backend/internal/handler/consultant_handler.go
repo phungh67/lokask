@@ -204,10 +204,15 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.Repo.UpdateCoverImage(userID, url)
+	if mediaType == "cover" {
+		err = h.Repo.UpdateCoverImage(userID, objectKey)
+	} else if mediaType == "gallery" {
+		err = h.Repo.AddGalleryImage(userID, objectKey)
+	}
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
-			"message": "Failed to update avatar, something happened",
+			"message": "Failed to update database with image key",
 			"error":   err.Error(),
 		})
 	}
