@@ -28,9 +28,9 @@ type UpdateProfilePayload struct {
 	CityID      *int     `json:"city_id"`
 	Quote       *string  `json:"quote"`
 	Bio         *string  `json:"bio"`
-	Languages   []string `json:"languages"`
 	MainNicheID *int     `json:"main_niche_id"`
 	Tags        []string `json:"tags"`
+	Languages   []string `json:"languages"`
 }
 
 type ConsultantRepository struct {
@@ -337,10 +337,9 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 	if err != nil {
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
-
 	defer tx.Rollback()
 
-	// users
+	// user information
 	userQuery := `
 		UPDATE users 
 		SET full_name = COALESCE($1, full_name), 
@@ -353,7 +352,7 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 		return fmt.Errorf("failed to update users table: %w", err)
 	}
 
-	// consultants Table
+	// consultant information
 	consultantQuery := `
 		UPDATE consultants 
 		SET city_id = COALESCE($1, city_id), 
@@ -367,25 +366,75 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 		return fmt.Errorf("failed to update consultants table: %w", err)
 	}
 
-	// niches
-	if data.MainNicheID != nil {
-		deleteNichesQuery := `DELETE FROM consultant_niches WHERE consultant_id = (SELECT id FROM consultants WHERE user_id = $1)`
-		_, err = tx.ExecContext(ctx, deleteNichesQuery, userID)
+	// look up: consultant - consultant_niches - niches
+	if data.MainNicheID != nil || data.Tags != nil {
+		// A. Get the internal consultant UUID
+		var consultantID uuid.UUID
+		err = tx.GetContext(ctx, &consultantID, "SELECT id FROM consultants WHERE user_id = $1", userID)
+		if err != nil {
+			return fmt.Errorf("failed to find consultant ID: %w", err)
+		}
 
-		if *data.MainNicheID > 0 {
-			insertNicheQuery := `
+		var currentMainNicheID *int
+		_ = tx.GetContext(ctx, &currentMainNicheID, "SELECT niche_id FROM consultant_niches WHERE consultant_id = $1 AND is_primary = true", consultantID)
+
+		var currentTags []string
+		_ = tx.SelectContext(ctx, &currentTags, `
+			SELECT n.display_name 
+			FROM consultant_niches cn 
+			JOIN niches n ON cn.niche_id = n.id 
+			WHERE cn.consultant_id = $1 AND cn.is_primary = false`,
+			consultantID,
+		)
+
+		activeMainNicheID := currentMainNicheID
+		if data.MainNicheID != nil {
+			activeMainNicheID = data.MainNicheID
+		}
+
+		activeTags := currentTags
+		if data.Tags != nil {
+			activeTags = data.Tags
+		}
+
+		_, err = tx.ExecContext(ctx, "DELETE FROM consultant_niches WHERE consultant_id = $1", consultantID)
+		if err != nil {
+			return fmt.Errorf("failed to clear old niches: %w", err)
+		}
+
+		if activeMainNicheID != nil && *activeMainNicheID > 0 {
+			_, err = tx.ExecContext(ctx, `
 				INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
-				VALUES ((SELECT id FROM consultants WHERE user_id = $1), $2, true)
-			`
-			_, err = tx.ExecContext(ctx, insertNicheQuery, userID, *data.MainNicheID)
+				VALUES ($1, $2, true)`, consultantID, *activeMainNicheID)
+			if err != nil {
+				return fmt.Errorf("failed to insert primary niche: %w", err)
+			}
+		}
+
+		if len(activeTags) > 0 {
+			var secondaryNicheIDs []int
+			query := `SELECT id FROM niches WHERE display_name = ANY($1) OR slug = ANY($1)`
+			err = tx.SelectContext(ctx, &secondaryNicheIDs, query, pq.Array(activeTags))
+			if err != nil {
+				return fmt.Errorf("failed to resolve tag strings to niche ids: %w", err)
+			}
+
+			for _, nid := range secondaryNicheIDs {
+				if activeMainNicheID != nil && nid == *activeMainNicheID {
+					continue
+				}
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+					VALUES ($1, $2, false)
+					ON CONFLICT DO NOTHING`, consultantID, nid)
+				if err != nil {
+					return fmt.Errorf("failed to insert secondary niche: %w", err)
+				}
+			}
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("could not commit transaction: %w", err)
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, error) {

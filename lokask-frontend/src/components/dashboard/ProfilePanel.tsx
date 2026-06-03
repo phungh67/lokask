@@ -105,6 +105,14 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
   const handleSave = async () => {
     const payload: Partial<ProfileUpdatePayload> = {};
 
+    const nicheChanged = formData.mainNicheId !== initialData.mainNicheId;
+    const tagsChanged = JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags);
+
+    if (nicheChanged || tagsChanged) {
+      payload.main_niche_id = formData.mainNicheId === "" ? null : formData.mainNicheId;
+      payload.tags = formData.tags;
+    }
+
     if (formData.fullName !== initialData.fullName)
       payload.full_name = formData.fullName;
     if (formData.displayName !== initialData.displayName)
