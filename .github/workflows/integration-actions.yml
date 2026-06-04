@@ -42,3 +42,6 @@ jobs:
         steps:
             - name: git checkout the repo
               uses: actions/checkout@v4
+            - name: login into DockerHub
+              uses: docker/login-action@v3
+              
