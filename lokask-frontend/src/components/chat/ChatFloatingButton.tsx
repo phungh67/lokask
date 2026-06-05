@@ -1,4 +1,5 @@
-import { Consultant } from "@/data/mockData";
+import { Consultant } from "@/types/consultant";
+// @TODO: inspect later
 
 interface ChatFloatingButtonProps {
   consultant: Consultant;

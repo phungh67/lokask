@@ -13,9 +13,11 @@ interface ChatPanelHeaderProps {
   };
   consultantId: string; // 🟢 Add this explicitly to catch the raw DB ID
   onScheduleCall?: (callData: any) => void;
+  // allow "info" button to be clickable
+  onOpenInfo?: () => void;
 }
 
-const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo }: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
       <div className="h-16 px-4 flex items-center border-b border-border bg-card shrink-0">
@@ -67,7 +69,11 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall }: ChatPanelH
           hourlyRate={otherUser.hourlyRate || 50}
         />
         
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onOpenInfo}
+          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-transparent hover:border hover:border-border">
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>
       </div>

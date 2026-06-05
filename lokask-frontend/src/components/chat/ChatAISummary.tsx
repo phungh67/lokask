@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ConversationSummary } from "./types";
+import { ConversationSummary } from "@/types/chat";
 
 interface ChatAISummaryProps {
   summary: ConversationSummary;

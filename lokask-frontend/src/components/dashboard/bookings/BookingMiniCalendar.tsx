@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 interface BookingMiniCalendarProps {
   selectedDate: Date | undefined;
   bookings: Booking[];
+  // 🟢 1. Added the selection prop so the parent component knows what day the user clicked
+  onDateSelect?: (date: Date | undefined) => void; 
 }
 
 interface TimeSlot {
@@ -18,7 +20,7 @@ interface TimeSlot {
   booking?: Booking;
 }
 
-const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProps) => {
+const BookingMiniCalendar = ({ selectedDate, bookings, onDateSelect }: BookingMiniCalendarProps) => {
   // Get dates that have bookings
   const bookedDates = useMemo(() => {
     return bookings
@@ -56,25 +58,27 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
   }, [selectedDate, bookings]);
 
   return (
-    <div className="w-[280px] border-l border-border bg-card flex flex-col">
+    // 🟢 2. Changed w-[280px] to w-full so it naturally fills your new Sidebar Sheet
+    <div className="w-full h-full bg-card flex flex-col">
+      
       {/* Monthly Calendar */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border flex justify-center">
         <Calendar
           mode="single"
           selected={selectedDate}
-          className="pointer-events-none" // Note: This prevents clicking other days, acting purely as a display!
+          onSelect={onDateSelect} // 🟢 3. Wired up the interactive click handler
+          // 🟢 4. Removed 'pointer-events-none' so the user can actually click the days
           modifiers={{
             booked: bookedDates,
           }}
           modifiersClassNames={{
-            // booked: "bg-primary/20 text-primary font-medium",
             booked: "bg-primary/20 text-primary font-medium rounded-md",
           }}
         />
       </div>
 
       {/* Time Slots for Selected Date */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-[300px]">
         <div className="px-4 pt-4 pb-2">
           <h4 className="font-medium text-sm">
             {selectedDate ? format(selectedDate, "EEEE, MMM d") : "Schedule"}
@@ -84,12 +88,11 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
         <ScrollArea className="flex-1 px-4 pb-4">
           {!selectedDate ? (
             <div className="text-sm text-muted-foreground text-center py-8">
-              Select a booking to view its schedule.
+              Select a date to view available times.
             </div>
           ) : (
             <div className="space-y-2">
               {timeSlots.map((slot) => (
-                // ... keep your existing slot mapping logic here ...
                 <div
                   key={slot.hour}
                   className={cn(
@@ -107,7 +110,9 @@ const BookingMiniCalendar = ({ selectedDate, bookings }: BookingMiniCalendarProp
                   >
                     {slot.time}
                   </span>
+                  
                   {slot.isBooked ? (
+                    // This will now safely display "Busy" for travelers due to our Sidebar sanitizer!
                     <span className="text-xs text-primary truncate max-w-[80px]">
                       {slot.booking?.traveller_name}
                     </span>

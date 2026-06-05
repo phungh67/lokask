@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { Video, Phone, Check, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScheduledCall } from "@/data/dashboardMockData";
+import { ScheduledCall } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
 interface ScheduledCallMessageProps {

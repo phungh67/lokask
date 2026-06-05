@@ -9,6 +9,30 @@ export interface ScheduledCall {
   createdAt: Date;
 }
 
+export interface ChatMessage {
+  // backend properties, must have
+  id: string | number;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+
+  // heleper for front end display (chat, booking, etc,...)
+  sender?: "user" | "consultant" | "traveler";
+  timestamp?: Date;
+
+  // other contents (avatar, address,...)
+  type?: "text" | "image" | "map";
+  imageUrl?: string;
+  mapData?: {
+    name: string;
+    address: string;
+    thumbnailUrl: string;
+    mapsUrl: string;
+  };
+}
+
 // src/types/chat.ts
 
 /**

@@ -15,6 +15,13 @@ type PaginatedConsultants struct {
 	Limit      int                 `json:"limit"`
 }
 
+type PaginatedReviews struct {
+	Data       []Review `json:"data"`
+	TotalCount int      `json:"total_count"`
+	Page       int      `json:"page"`
+	Limit      int      `json:"limit"`
+}
+
 // consultant object
 type ConsultantProfile struct {
 	// basic data for a consultant profile
@@ -56,6 +63,20 @@ type ConsultantProfile struct {
 	ResponseTime string         `db:"response_time" json:"response_time"`
 	JoinedAt     time.Time      `json:"joinedAt" db:"created_at"`
 	Badges       []Badge        `json:"badges"`
+	Reviews      []Review       `json:"reviews"`
+}
+
+// for session and billing system
+type ConsultantSession struct {
+	ID             uuid.UUID `db:"id" json:"id"`
+	ConversationID uuid.UUID `db:"conversation_id" json:"conversation_id"`
+	PackageType    string    `db:"package_type" json:"package_type"`
+	DurationHours  int       `db:"duration_hours" json:"duration_hours"`
+	Status         string    `db:"status" json:"status"`
+	PaidAt         time.Time `db:"paid_at" json:"paid_at"`
+	StartedAt      time.Time `db:"started_at" json:"started_at"`
+	ExpiresAt      time.Time `db:"expires_at" json:"expires_at"`
+	CreatedAt      time.Time `db:"created_at" json:"created_at"`
 }
 
 // for mapping the review to consultant (e.g review from previous clients)

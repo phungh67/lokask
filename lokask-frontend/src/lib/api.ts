@@ -31,7 +31,10 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     });
 
     if (!res.ok) {
-        throw new ApiError(res.status, `API Error: ${res.statusText}`);
+        // We throw an ApiError here so the frontend can catch the exact status code
+        // We use JSON parsing to extract the real error message if the server provided one
+        const errorData = await res.json().catch(() => null);
+        throw errorData || new ApiError(res.status, `API Error: ${res.statusText}`);
     }
 
     return res.json();
@@ -84,41 +87,6 @@ const mapConsultant = (c: any): Consultant => ({
     galleryImages: c.gallery_images || []
 });
 
-// endpoint for fetching the consultant
-// export async function getConsultants(filters?: {
-//     page?: number; city?: string, country?: string,
-// }): Promise<Consultant[]> {
-//     const params = new URLSearchParams();
-//     if (filters?.city) params.append("city", filters.city);
-//     if (filters?.country) params.append("country", filters.country);
-
-//     // limit page
-//     if (filters?.page) params.append("page", filters.page.toString());
-
-//     // returned result
-//     const data = await fetchJson<Consultant[]>(`/consultants?${params.toString()}`);
-
-//     // data transform step(s)
-//     return data.map((c: any) => ({
-//         ...c,
-
-//         name: c.full_name || c.name,
-//         displayName: c.display_name || c.full_name,
-//         city: c.city_name || c.city,
-//         country: c.country_code || c.country || "",
-//         coverUrl: c.cover_url || c.coverUrl || "",
-
-//         avatarUrl: getAvatar(c.avatar_url || c.avatarUrl, c.full_name),
-
-//         rating: Number(c.rating_avg) || Number(c.rating) || 0,
-//         helpedCount: Number(c.helped_count) || Number(c.helpedCount) || 0,
-//         hourlyRate: Number(c.hourly_rate) || Number(c.hourlyRate) || 0,
-
-//         tags: c.tags || [],
-//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-//     }));
-// }
-
 export async function getConsultants(filters?: {
     page?: number;
     city?: string;
@@ -142,27 +110,6 @@ export async function getConsultants(filters?: {
         limit: response.limit || 12
     };
 }
-
-// function to get a specific consultant by 
-// looking in the consultant id
-// export async function getConsultantById(id: string): Promise<Consultant> {
-//     const c = await fetchJson<any>(`/consultants/${id}`);
-//     return {
-//         id: c.id,
-//         name: c.full_name,
-//         displayName: c.display_name || c.full_name,
-//         avatarUrl: c.avatar_url,
-//         coverUrl: c.cover_url || "", // 🟢 Added
-//         city: c.city_name,
-//         country: c.country_code || "",
-//         bio: c.bio || "",
-//         quote: c.quote || "",
-//         tags: c.tags || [],
-//         tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
-//         rating: Number(c.rating_avg) || 0,
-//         helpedCount: Number(c.helped_count) || 0,
-//     };
-// }
 
 export async function getConsultantById(id: string): Promise<Consultant> {
     const data = await fetchJson<any>(`/consultants/${id}`);
@@ -300,10 +247,24 @@ export async function getChatHistory(conversationId: string): Promise<ChatMessag
 // send a message
 // POST /api/v1/conversations/:id/messages
 export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
-    return fetchJson<ChatMessage>(`/conversations/${conversationId}/messages`, {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${BASE_URL}/conversations/${conversationId}/messages`, {
         method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({ content }),
     });
+
+    if (!response.ok) {
+        // 🟢 CRITICAL FIX: Parse the JSON error body from Go and throw IT, 
+        // instead of throwing a generic "Internal Server Error"
+        const errorData = await response.json().catch(() => null);
+        throw errorData || new Error("Failed to send message");
+    }
+
+    return response.json();
 }
 
 // get inbox
@@ -347,6 +308,14 @@ export async function getConsultantBookings(consultantId: string) {
 }
 
 /**
+ * 3.5. Public function to view consultant schedule (User dashboard)
+ * Does not require authentication, only show official bookings (i.e. confirmed)
+ */
+export async function getPublicConsultantBookings(consultantId: string){
+    return fetchJson<Booking[]>(`/public/${consultantId}`);
+}
+
+/**
  * 4. Update booking status (Confirm/Cancel)
  * Matches: protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
  */
@@ -365,4 +334,76 @@ export async function deleteBooking(id: string) {
     return fetchJson(`/bookings/${id}`, {
         method: "DELETE",
     });
+}
+
+/**
+ * User profile
+ * 
+ */
+
+export interface CityOption {
+    id: number;
+    name: string;
+    country: string;
+}
+
+// API call
+export async function getCities(): Promise<CityOption[]> {
+    const data = await fetchJson<CityOption[]>("/cities");
+    return data || [];
+}
+
+// user's profile modification
+export async function uploadAvatar(file: File){
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`${BASE_URL}/users/avatar`, {
+        method: "POST",
+        headers: token ? {"Authorization": `Bearer ${token}`} : {},
+        body: formData,
+    });
+
+    if (!res.ok) throw new Error ("Avatar upload failed");
+    return res.json();
+}
+
+// consultant's cover and gallery upload
+export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery") => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No authentication token found");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+
+    const response = await fetch(`${BASE_URL}/consultant/media`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to upload media");
+    }
+
+    return response.json();
+}
+
+// adding chat session for billing purpose
+export const getChatSession = async (conversationId: string) => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${BASE_URL}/conversations/${conversationId}/session`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error("Failed to fetch session");
+  }
+  return response.json();
 }

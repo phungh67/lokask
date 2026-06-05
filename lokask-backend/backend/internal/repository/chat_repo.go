@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"asklocal/internal/domain"
+	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -9,11 +13,13 @@ import (
 )
 
 type Conversation struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	TravelerID    uuid.UUID `db:"traveler_id" json:"traveler_id"`
-	ConsultantID  uuid.UUID `db:"consultant_id" json:"consultant_id"`
-	LastMessage   *string   `db:"last_message" json:"last_message"`
-	LastMessageAt time.Time `db:"last_message_at" json:"last_message_at"`
+	ID            uuid.UUID  `db:"id" json:"id"`
+	TravelerID    uuid.UUID  `db:"traveler_id" json:"traveler_id"`
+	ConsultantID  uuid.UUID  `db:"consultant_id" json:"consultant_id"`
+	LastMessage   *string    `db:"last_message" json:"last_message"`
+	LastMessageAt *time.Time `db:"last_message_at" json:"last_message_at"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 
 	// Extra fields for UI (Joined via SQL)
 	// name for the one that you are communicated with
@@ -63,26 +69,102 @@ func (r *ChatRepository) GetOrCreateConversation(travelerID uuid.UUID, consultan
 	return &conv, err
 }
 
+// internal method for session validation
+func (r *ChatRepository) sessionValidation(ctx context.Context, conversationID uuid.UUID) (*domain.ConsultantSession, error) {
+	var session domain.ConsultantSession
+
+	query := `
+		SELECT * FROM consultation_sessions
+		WHERE conversation_id = $1 AND status != 'pending_payment'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+	err := r.DB.GetContext(ctx, &session, query, conversationID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no active package found. Please purchase a package to chat")
+		}
+		return nil, err
+	}
+
+	if session.Status == "expired" {
+		return &session, fmt.Errorf("your consultant package has expired, purchase new package to continue.")
+	}
+
+	if !session.ExpiresAt.IsZero() && time.Now().After(session.ExpiresAt) {
+		_, updateErr := r.DB.ExecContext(ctx, `
+			UPDATE consultation_sessions SET status = 'expired' WHERE id = $1
+		`, session.ID)
+
+		if updateErr != nil {
+			return nil, fmt.Errorf("failed to update expired session: %w", updateErr)
+		}
+
+		session.Status = "expired"
+		return &session, fmt.Errorf("your consultant package has expired, purchase new package to continue.")
+	}
+
+	return &session, nil
+}
+
+func (r *ChatRepository) GetChatSession(ctx context.Context, conversationID uuid.UUID) (*domain.ConsultantSession, error) {
+	session, err := r.sessionValidation(ctx, conversationID)
+
+	// sessionValidation conveniently returns the session object even if it throws an "expired" error.
+	// We WANT to send expired sessions to the frontend so the UI knows to show the "Buy Package" modal!
+	if session != nil {
+		return session, nil
+	}
+
+	// If session is nil, it means ErrNoRows (no package ever bought) or a severe DB crash.
+	return nil, err
+}
+
 // create message method
-func (r *ChatRepository) CreateMessage(conversationID uuid.UUID, senderID uuid.UUID, content string) error {
-	tx, err := r.DB.Beginx()
+func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.UUID, senderID uuid.UUID, content string) error {
+	// get the conversation first
+	var conv Conversation
+	err := r.DB.GetContext(ctx, &conv, "SELECT * FROM conversations WHERE id = $1", conversationID)
 	if err != nil {
 		return err
 	}
 
+	session, err := r.sessionValidation(ctx, conversationID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := r.DB.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if session.Status == "awaiting_reply" && senderID == conv.ConsultantID {
+		expiresAt := time.Now().Add(time.Duration(session.DurationHours) * time.Hour)
+
+		_, err = tx.ExecContext(ctx, `
+			UPDATE consultation_sessions
+			SET status = 'active', started_at = NOW(), expires_at = $1
+			WHERE id = $2
+		`, expiresAt, session.ID)
+
+		if err != nil {
+			return err
+		}
+	}
+
 	// Insert Message
-	_, err = tx.Exec(`INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)`,
+	_, err = tx.ExecContext(ctx, `INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)`,
 		conversationID, senderID, content)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
 	// Update Conversation "Last Message" (for inbox sorting)
-	_, err = tx.Exec(`UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2`,
+	_, err = tx.ExecContext(ctx, `UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2`,
 		content, conversationID)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 

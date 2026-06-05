@@ -27,5 +27,11 @@ dist-ssr
 */env/*/.terraform/*
 */env/*/*.tfstate*
 
+# terraform plan
+*.out
+
 # sensitive
 *.pem
+
+# scrap
+*.txt

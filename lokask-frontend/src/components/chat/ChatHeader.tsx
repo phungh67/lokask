@@ -9,7 +9,6 @@ interface ChatHeaderProps {
 }
 
 const ChatHeader = ({ consultant, onMinimize, onClose }: ChatHeaderProps) => {
-  // 🟢 1. Safety Guard: prevents crashes if consultant data is still loading
   if (!consultant) {
     return (
       <div className="flex items-center justify-between p-4 border-b border-border bg-warm-white/50 backdrop-blur-sm shrink-0">
@@ -29,12 +28,11 @@ const ChatHeader = ({ consultant, onMinimize, onClose }: ChatHeaderProps) => {
       <div className="flex items-center gap-3">
         <div className="relative">
           <img
-            // 🟢 2. Fallback Image: ensures something shows if avatarUrl is broken/missing
             src={consultant.avatarUrl || `https://ui-avatars.com/api/?name=${consultant.name}&background=random`}
             alt={consultant.name}
             className="w-12 h-12 rounded-lg object-cover"
           />
-          {/* 🟢 3. Dynamic Status: Only show green if actually online */}
+          {/* Dynamic Status: Only show green if actually online */}
           {consultant.isOnline && (
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
           )}

@@ -12,11 +12,11 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine3.23-perl AS runner
 
-RUN rm -rf /usr/share/nginx/html/*
+#RUN rm -rf /usr/share/nginx/html/*
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-dev.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

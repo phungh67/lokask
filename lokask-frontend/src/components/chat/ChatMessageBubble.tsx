@@ -1,5 +1,5 @@
 import { MapPin, ExternalLink } from "lucide-react";
-import { ChatMessage } from "./types";
+import { ChatMessage } from "@/types/chat";
 import { format } from "date-fns";
 
 interface ChatMessageBubbleProps {

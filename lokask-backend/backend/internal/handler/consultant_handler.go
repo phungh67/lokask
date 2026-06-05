@@ -2,16 +2,25 @@ package handler
 
 import (
 	"asklocal/internal/domain"
+	"asklocal/internal/helper"
 	"asklocal/internal/repository"
+	"asklocal/internal/storage"
+	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
 type ConsultantHandler struct {
-	Repo *repository.ConsultantRepository
+	Repo    *repository.ConsultantRepository
+	Storage storage.FileStorage
+}
+
+func NewConsultantHandler(repo *repository.ConsultantRepository, storage storage.FileStorage) *ConsultantHandler {
+	return &ConsultantHandler{Repo: repo, Storage: storage}
 }
 
 // handle GET request /api/v1/consultants/:id
@@ -32,6 +41,38 @@ func (h *ConsultantHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(profile)
+}
+
+func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
+	tokenUserID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	userID, err := uuid.Parse(tokenUserID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid token ID"})
+	}
+
+	var payload repository.UpdateProfilePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body format",
+		})
+	}
+
+	err = h.Repo.UpdateProfile(c.Context(), userID, payload)
+	if err != nil {
+		fmt.Printf("[Error] UpdateProfile failed: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":  "Failed to update profile",
+			"detail": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Profile updated successfully",
+	})
 }
 
 func (h *ConsultantHandler) List(c *fiber.Ctx) error {
@@ -97,6 +138,14 @@ func (h *ConsultantHandler) GetNiches(c *fiber.Ctx) error {
 	return c.JSON(niches)
 }
 
+func (h *ConsultantHandler) GetLanguages(c *fiber.Ctx) error {
+	language, err := h.Repo.ListUniqueLanguages(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(language)
+}
+
 // get city helper
 func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 	var cities []struct {
@@ -113,4 +162,73 @@ func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 		})
 	}
 	return c.JSON(cities)
+}
+
+// func to handle media upload (not avatar)
+func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
+	userIDStr := c.Locals("user_id").(string) // cast to only string
+	userID, err := uuid.Parse(userIDStr)      // convert to uuid format (assume that we get the string)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "UUID error, either malformed or mismatched",
+			"error":   err.Error(),
+		})
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "No file was uploaded",
+			"error":   err.Error(),
+		})
+	}
+
+	mediaType := c.FormValue("type") // to check if it meant to be cover or galleries
+	// uniformed filename (for tracking)
+	var objectKey string
+	fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), fileHeader.Filename)
+
+	if mediaType == "cover" {
+		objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)
+	} else {
+		objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)
+	}
+
+	url, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Bucket upload failed",
+			"error":   err.Error(),
+		})
+	}
+
+	if mediaType == "cover" {
+		err = h.Repo.UpdateCoverImage(userID, objectKey)
+	} else if mediaType == "gallery" {
+		err = h.Repo.AddGalleryImage(userID, objectKey)
+	}
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Failed to update database with image key",
+			"error":   err.Error(),
+		})
+	}
+
+	log.Printf("[LOG] Upload media successfully to %s\n", url)
+
+	mediaURL, err := helper.BuildMediaURL(objectKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Error in constructing URL",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"media_url": mediaURL,
+		"message":   "Successfully upload media.",
+	})
 }

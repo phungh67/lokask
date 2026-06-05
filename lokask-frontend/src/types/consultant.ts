@@ -5,6 +5,16 @@ export interface Badge {
   description: string;
 }
 
+export interface Review {
+  id: string;
+  review_name: string;
+  review_avatar: string;
+  rating: number;
+  comment: string;
+  verified_stay: boolean;
+  date: string;
+}
+
 export interface Consultant {
   id: string;
   name: string; // full name
@@ -26,5 +36,18 @@ export interface Consultant {
   responseTime?: string;
   isOnline?: boolean;
   galleryImages?: string[]; // Matches the gallery images field
-  badges?: Badge [];
+  badges?: Badge[];
+  reviews?: Review[];
+}
+
+export interface UpdateProfileRequest {
+  full_name: string;
+  display_name: string;
+  city_id: number| null;
+  quote: string;
+  bio: string;
+  languages: string[];
+
+  main_niche_id: number | null;
+  tags: string[];
 }

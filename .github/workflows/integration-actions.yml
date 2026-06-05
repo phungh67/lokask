@@ -1,0 +1,47 @@
+name: containerized-integration-workflows
+run-name: continuous integration
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+concurrency:
+    group: ${{github.workflow}}-${{github.ref}}
+
+jobs:
+    evaluate-target-environment:
+        if: ${{github.ref == '/refs/heads/main'}}
+        runs-on: ubuntu-latest
+        steps:
+            - name: output environment variable
+              id: verbose_log
+              run: |
+                ENV_TO_RUN="dev"
+                echo "Currently take code from $GITHUB_REF, with env $ENV_TO_RUN"
+                echo "target_env=$ENV_TO_RUN" >> $GITHUB_OUTPUT
+        outputs:
+            env_value: ${{steps.verbose_log.outputs.target_env}}
+    
+    build-and-push-backend:
+        runs-on: ubuntu-latest
+        needs: evaluate-target-environment
+
+        # check env
+        environment: ${{needs.evaluate-target-environment.outputs.env_value}}
+
+        # working dir
+        defaults:
+            run:
+                working-directory: ./lokask-backend
+
+        # token permission
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - name: git checkout the repo
+              uses: actions/checkout@v4
+            - name: login into DockerHub
+              uses: docker/login-action@v3
+              

@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"asklocal/internal/config"
+	rediscfg "asklocal/internal/config"
 	"asklocal/internal/handler"
+	"asklocal/internal/mailer"
 	"asklocal/internal/middleware"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
@@ -34,14 +35,36 @@ func main() {
 		dbHost, dbPort, dbUser, dbPass, dbName,
 	)
 
-	// setup minio
-	minioClient, err := storage.ConnectToMinioClient()
-	if err != nil {
-		log.Fatal(err)
+	// setup Storage
+	storageMode := getEnv("DEPLOYMENT_MODE", "dev")
+	var storageService storage.FileStorage
+	var err error
+
+	if storageMode == "dev" {
+		storageService, err = storage.ConnectToMinioClient()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		log.Print("[INFO] Connect to Minio Successfully...\n")
+	} else if storageMode == "prod" {
+		storageService, err = storage.ConnectToS3Client()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Print("[INFO] Connect to S3 successfully...\n")
 	}
 
 	// setup redis
-	config.ConnectRedis()
+	rediscfg.ConnectRedis()
+
+	// mail service
+	mailService := mailer.NewMailService(
+		getEnv("MAIL_SERVER", "smtp.mailtrap.io"),
+		getEnv("MAIL_PORT", "25"),
+		getEnv("MAIL_USERNAME", "username"),
+		getEnv("MAIL_API_KEY", "password"),
+		"noreply@lokask.com",
+	)
 
 	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
@@ -55,22 +78,22 @@ func main() {
 
 	// consultant
 	consultantRepo := repository.NewConsultantRepository(db)
-	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo}
+	consultantHandler := &handler.ConsultantHandler{Repo: consultantRepo, Storage: storageService}
 
 	// user
 	userRepo := repository.NewUserRepository(db)
-	userHandler := handler.NewUserHandler(userRepo, minioClient)
+	userHandler := handler.NewUserHandler(userRepo, storageService)
 
 	// blog
 	blogRepo := repository.NewBlogRepository(db)
 	blogHandler := &handler.BlogHandler{
 		Repo:    blogRepo,
-		Storage: minioClient,
+		Storage: storageService,
 	}
 
 	// message
 	chatRepo := repository.NewChatRepository(db)
-	chatHandler := &handler.ChatHandler{Repo: chatRepo}
+	chatHandler := &handler.ChatHandler{Repo: chatRepo, Mailer: mailService}
 
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
@@ -85,6 +108,8 @@ func main() {
 
 	// 3. Setup Fiber App
 	app := fiber.New(fiber.Config{
+		// limit size in avatar or image upload
+		BodyLimit: 20 * 1024 * 1024,
 		// custom error hanlder
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Printf("Server error: %v", err)
@@ -132,6 +157,10 @@ func main() {
 
 	// filter
 	api.Get("/cities", consultantHandler.GetCities)
+	api.Get("/languages", consultantHandler.GetLanguages)
+
+	// public get
+	api.Get("/public/:id", bookHandler.PublicGetConsultantSchedule)
 
 	// upload avatar
 	// move to protected
@@ -154,6 +183,7 @@ func main() {
 	protected.Get("/auth/me", authHandler.GetMe)
 	protected.Post("/conversations", chatHandler.StartChat)
 	protected.Get("/conversations", chatHandler.GetInbox)
+	protected.Get("/conversations/:id/session", chatHandler.GetSession)
 	protected.Post("/conversations/:id/messages", chatHandler.SendMessage)
 	protected.Get("/conversations/:id/messages", chatHandler.GetHistory)
 	protected.Post("/users/avatar", userHandler.UploadAvatar)
@@ -163,6 +193,11 @@ func main() {
 	protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
+	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
+	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
+
+	// use for test @TODO: disabled it on release
+	app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)
 
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))

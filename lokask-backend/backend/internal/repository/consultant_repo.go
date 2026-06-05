@@ -2,6 +2,7 @@ package repository
 
 import (
 	"asklocal/internal/domain"
+	"asklocal/internal/helper"
 	"context"
 	"fmt"
 	"log"
@@ -20,6 +21,17 @@ type Consultant struct {
 
 	Bio        *string  `db:"bio"`
 	HourlyRate *float64 `db:"hourly_rate"`
+}
+
+type UpdateProfilePayload struct {
+	FullName    *string  `json:"full_name"`
+	DisplayName *string  `json:"display_name"`
+	CityID      *int     `json:"city_id"`
+	Quote       *string  `json:"quote"`
+	Bio         *string  `json:"bio"`
+	MainNicheID *int     `json:"main_niche_id"`
+	Tags        []string `json:"tags"`
+	Languages   []string `json:"languages"`
 }
 
 type ConsultantRepository struct {
@@ -72,8 +84,14 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		profile.Languages = pq.StringArray{"English"}
 	}
 
+	// construct image url
+	ConsultantCoverURL, _ := helper.BuildMediaURL(profile.CoverURL)
+	if ConsultantCoverURL != "" {
+		profile.CoverURL = ConsultantCoverURL
+	}
+
 	// temp removal reviews field
-	// profile.Reviews = []domain.Review{}
+	profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
 	profile.GalleryImages = []string{}
 
@@ -95,9 +113,9 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 		LIMIT 5
 	`
 	_ = r.DB.SelectContext(ctx, &reviews, reviewQuery, id)
-	// if reviews != nil {
-	// 	profile.Reviews = reviews
-	// }
+	if reviews != nil {
+		profile.Reviews = reviews
+	}
 
 	// 2. Fetch Tags (mapped from Niches table)
 	var tags []string
@@ -126,8 +144,10 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	imgQuery := `SELECT image_url FROM portfolio_items WHERE consultant_id = $1 LIMIT 6`
 	_ = r.DB.SelectContext(ctx, &images, imgQuery, id)
 
-	if images != nil {
-		profile.GalleryImages = images
+	profile.GalleryImages = []string{}
+	for _, imgPath := range images {
+		fullPath, _ := helper.BuildMediaURL(imgPath)
+		profile.GalleryImages = append(profile.GalleryImages, fullPath)
 	}
 
 	// 4. Calculate Badges
@@ -321,6 +341,111 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	return consultants, totalCount, nil
 }
 
+func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UUID, data UpdateProfilePayload) error {
+	tx, err := r.DB.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("could not begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// user information
+	userQuery := `
+		UPDATE users 
+		SET full_name = COALESCE($1, full_name), 
+		    alias = COALESCE($2, alias), 
+		    updated_at = NOW() 
+		WHERE id = $3
+	`
+	_, err = tx.ExecContext(ctx, userQuery, data.FullName, data.DisplayName, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update users table: %w", err)
+	}
+
+	// consultant information
+	consultantQuery := `
+		UPDATE consultants 
+		SET city_id = COALESCE($1, city_id), 
+		    quote = COALESCE($2, quote), 
+		    bio = COALESCE($3, bio), 
+		    languages = COALESCE($4, languages)
+		WHERE user_id = $5
+	`
+	_, err = tx.ExecContext(ctx, consultantQuery, data.CityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
+	if err != nil {
+		return fmt.Errorf("failed to update consultants table: %w", err)
+	}
+
+	// look up: consultant - consultant_niches - niches
+	if data.MainNicheID != nil || data.Tags != nil {
+		// A. Get the internal consultant UUID
+		var consultantID uuid.UUID
+		err = tx.GetContext(ctx, &consultantID, "SELECT id FROM consultants WHERE user_id = $1", userID)
+		if err != nil {
+			return fmt.Errorf("failed to find consultant ID: %w", err)
+		}
+
+		var currentMainNicheID *int
+		_ = tx.GetContext(ctx, &currentMainNicheID, "SELECT niche_id FROM consultant_niches WHERE consultant_id = $1 AND is_primary = true", consultantID)
+
+		var currentTags []string
+		_ = tx.SelectContext(ctx, &currentTags, `
+			SELECT n.display_name 
+			FROM consultant_niches cn 
+			JOIN niches n ON cn.niche_id = n.id 
+			WHERE cn.consultant_id = $1 AND cn.is_primary = false`,
+			consultantID,
+		)
+
+		activeMainNicheID := currentMainNicheID
+		if data.MainNicheID != nil {
+			activeMainNicheID = data.MainNicheID
+		}
+
+		activeTags := currentTags
+		if data.Tags != nil {
+			activeTags = data.Tags
+		}
+
+		_, err = tx.ExecContext(ctx, "DELETE FROM consultant_niches WHERE consultant_id = $1", consultantID)
+		if err != nil {
+			return fmt.Errorf("failed to clear old niches: %w", err)
+		}
+
+		if activeMainNicheID != nil && *activeMainNicheID > 0 {
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+				VALUES ($1, $2, true)`, consultantID, *activeMainNicheID)
+			if err != nil {
+				return fmt.Errorf("failed to insert primary niche: %w", err)
+			}
+		}
+
+		if len(activeTags) > 0 {
+			var secondaryNicheIDs []int
+			query := `SELECT id FROM niches WHERE display_name = ANY($1) OR slug = ANY($1)`
+			err = tx.SelectContext(ctx, &secondaryNicheIDs, query, pq.Array(activeTags))
+			if err != nil {
+				return fmt.Errorf("failed to resolve tag strings to niche ids: %w", err)
+			}
+
+			for _, nid := range secondaryNicheIDs {
+				if activeMainNicheID != nil && nid == *activeMainNicheID {
+					continue
+				}
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+					VALUES ($1, $2, false)
+					ON CONFLICT DO NOTHING`, consultantID, nid)
+				if err != nil {
+					return fmt.Errorf("failed to insert secondary niche: %w", err)
+				}
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, error) {
 	var niches []domain.Niche
 	query := `
@@ -345,6 +470,23 @@ func (r *ConsultantRepository) ListNiches(ctx context.Context) ([]domain.Niche, 
 	}
 
 	return niches, nil
+}
+
+func (r *ConsultantRepository) ListUniqueLanguages(ctx context.Context) ([]string, error) {
+	languages := []string{}
+
+	query := `
+        SELECT DISTINCT unnest(languages) AS language 
+        FROM consultants 
+        ORDER BY language
+    `
+
+	err := r.DB.SelectContext(ctx, &languages, query)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching unique languages: %w", err)
+	}
+
+	return languages, nil
 }
 
 // calculateBadges logic remains largely the same, but uses Tags
@@ -384,4 +526,38 @@ func calculateBadges(profile *domain.ConsultantProfile) []domain.Badge {
 	}
 
 	return badges
+}
+
+func (r *ConsultantRepository) UpdateCoverImage(userID uuid.UUID, coverURL string) error {
+	query := `
+		UPDATE consultants
+		SET cover_url = $1
+		WHERE user_id = $2
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.DB.ExecContext(ctx, query, coverURL, userID)
+
+	return err
+}
+
+func (r *ConsultantRepository) AddGalleryImage(userID uuid.UUID, imageKey string) error {
+	query := `
+		UPDATE consultants
+		SET gallery_images = array_append(gallery_images, $1)
+		WHERE user_id = $2
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.DB.ExecContext(ctx, query, imageKey, userID)
+	return err
+}
+
+func (r *ConsultantRepository) ShowAllReviews() {
+	// profile := &domain.ConsultantProfile{}
+
 }

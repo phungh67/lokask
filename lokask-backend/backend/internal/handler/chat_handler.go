@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
+	"context"
 	"fmt"
 	"log"
 
@@ -10,7 +12,8 @@ import (
 )
 
 type ChatHandler struct {
-	Repo *repository.ChatRepository
+	Repo   *repository.ChatRepository
+	Mailer *mailer.MailService
 }
 
 // helper function to get user ID
@@ -71,6 +74,8 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	}
 	convID, _ := uuid.Parse(c.Params("id"))
 
+	ctx := c.UserContext()
+
 	var isParticipant bool
 	err = h.Repo.DB.Get(&isParticipant, `
 		SELECT EXISTS (
@@ -92,9 +97,43 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid content"})
 	}
 
-	if err := h.Repo.CreateMessage(convID, myID, req.Content); err != nil {
+	if err := h.Repo.CreateMessage(ctx, convID, myID, req.Content); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "detail": err.Error()})
 	}
+
+	go func(senderID, conversationID uuid.UUID, message string) {
+		bgCtx := context.Background()
+
+		var info struct {
+			ReceiverEmail string `db:"receiver_email"`
+			ReceiverName  string `db:"receiver_name"`
+			SenderName    string `db:"sender_name"`
+		}
+
+		query := `
+			SELECT 
+				receiver.email AS receiver_email,
+				receiver.full_name AS receiver_name,
+				sender.full_name AS sender_name
+			FROM conversations c
+			LEFT JOIN users sender ON sender.id = $1
+			LEFT JOIN consultants cons ON c.consultant_id = cons.id
+			LEFT JOIN users receiver ON (receiver.id = c.traveler_id OR receiver.id = cons.user_id) AND receiver.id != $1
+			WHERE c.id = $2
+		`
+
+		err := h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
+		if err == nil && info.ReceiverEmail != "" {
+			preview := message
+			if len(preview) > 50 {
+				preview = preview[:47] + "..."
+			}
+
+			h.Mailer.SendMessageNotification(info.ReceiverEmail, info.ReceiverName, info.SenderName, preview)
+		} else {
+			log.Printf("[WARN] Could not fetch receiver info for email notification: %v", err)
+		}
+	}(myID, convID, req.Content)
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",
@@ -134,6 +173,39 @@ func (h *ChatHandler) GetHistory(c *fiber.Ctx) error {
 	return c.JSON(msgs)
 }
 
+// GET /conversations/:id/session
+func (h *ChatHandler) GetSession(c *fiber.Ctx) error {
+	// Auth check
+	myIDStr, err := getUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	_, err = uuid.Parse(myIDStr)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid User ID format"})
+	}
+
+	// Parse conversation ID safely
+	convID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid Conversation ID"})
+	}
+
+	// Fetch the session using our new Repo method
+	session, err := h.Repo.GetChatSession(c.UserContext(), convID)
+	if err != nil {
+		// A 404 tells the React frontend: "There is no package history here at all"
+		return c.Status(404).JSON(fiber.Map{
+			"error":  "No active session found",
+			"detail": err.Error(),
+		})
+	}
+
+	// Return the session to React!
+	return c.JSON(session)
+}
+
 // GET /conversations (Inbox)
 func (h *ChatHandler) GetInbox(c *fiber.Ctx) error {
 	myIDStr, err := getUserID(c)
@@ -152,4 +224,33 @@ func (h *ChatHandler) GetInbox(c *fiber.Ctx) error {
 		return c.JSON([]repository.Conversation{})
 	}
 	return c.JSON(convs)
+}
+
+// a hidden cheat code
+func (h *ChatHandler) RefilSession(c *fiber.Ctx) error {
+	convID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error":  "Invalid conversation",
+			"detail": err.Error(),
+		})
+	}
+
+	query := `
+		INSERT INTO consultation_sessions (
+			conversation_id, package_type, duration_hours, 
+			status, paid_at, started_at, expires_at
+		) VALUES (
+			$1, 'vip_test', 168, 
+			'active', NOW(), NOW(), NOW() + INTERVAL '7 days'
+		)
+	`
+
+	_, err = h.Repo.DB.ExecContext(c.UserContext(), query, convID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to grant VIP ticket",
+			"detail": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "VIP Ticket granted successfully! Refresh your chat."})
 }

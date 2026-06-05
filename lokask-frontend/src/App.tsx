@@ -13,15 +13,15 @@ import ConsultantPage from "./pages/ConsultantPage";
 import BecomeLocal from "./pages/BecomeLocal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import CallPage from "./pages/CallPage";
 import SignupTraveller from "./pages/SignupTraveller";
 import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import ChoosePackagePage from "./pages/ChoosePackagePage"; 
 
 const queryClient = new QueryClient();
-
-// src/App.tsx
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -43,12 +43,17 @@ const App = () => (
               <Route path="/consultants" element={<ExploreLocals />} />
             </Route>
 
+            <Route path="/consultant/:id/packages" element={<ChoosePackagePage />} />
+
             {/* auth & dashboard */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signup/traveller" element={<SignupTraveller />} />
             <Route path="/signup/consultant" element={<SignupConsultant />} />
             <Route path="/dashboard" element={<ConsultantDashboard />} />
+
+            {/* Calling */}
+            <Route path="/call/:roomId" element={<CallPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

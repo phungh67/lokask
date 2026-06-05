@@ -8,33 +8,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface ProfileBasicInfoProps {
+// Define the shape of the city data coming from your Go backend
+interface CityOption {
+  id: number;
   name: string;
-  city: string;
   country: string;
-  quote: string;
-  onNameChange: (value: string) => void;
-  onCityChange: (city: string, country: string) => void;
+}
+
+interface ProfileBasicInfoProps {
+  fullName: string;      // Maps to users.full_name
+  displayName: string;   // Maps to users.alias
+  cityId: number | "";   // Maps to consultants.city_id
+  quote: string;         // Maps to consultants.quote
+  availableCities: CityOption[]; // Fetched dynamically from the database
+  onFullNameChange: (value: string) => void;
+  onDisplayNameChange: (value: string) => void;
+  onCityChange: (cityId: number) => void;
   onQuoteChange: (value: string) => void;
 }
 
-const cityOptions = [
-  { city: "Rome", country: "Italy" },
-  { city: "Paris", country: "France" },
-  { city: "Tokyo", country: "Japan" },
-  { city: "Bangkok", country: "Thailand" },
-  { city: "Barcelona", country: "Spain" },
-  { city: "London", country: "UK" },
-  { city: "New York", country: "USA" },
-  { city: "Amsterdam", country: "Netherlands" },
-];
-
 const ProfileBasicInfo = ({
-  name,
-  city,
-  country,
+  fullName,
+  displayName,
+  cityId,
   quote,
-  onNameChange,
+  availableCities,
+  onFullNameChange,
+  onDisplayNameChange,
   onCityChange,
   onQuoteChange,
 }: ProfileBasicInfoProps) => {
@@ -43,49 +43,67 @@ const ProfileBasicInfo = ({
 
   return (
     <div className="space-y-5">
-      {/* Name */}
+      {/* Full Legal Name (users.full_name) */}
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-sm font-medium text-muted-foreground">
-          Display Name
-        </Label>
+        <div className="flex justify-between items-center">
+          <Label htmlFor="fullName" className="text-sm font-medium text-muted-foreground">
+            Full Legal Name
+          </Label>
+          <span className="text-xs text-muted-foreground">Private (Not shown to travelers)</span>
+        </div>
         <Input
-          id="name"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Your name"
+          id="fullName"
+          value={fullName}
+          onChange={(e) => onFullNameChange(e.target.value)}
+          placeholder="Your full legal name"
           className="rounded-xl"
-          maxLength={50}
+          maxLength={100} // Matches your varchar(100)
         />
       </div>
 
-      {/* City */}
+      {/* Display Name (users.alias) */}
+      <div className="space-y-2">
+        <Label htmlFor="displayName" className="text-sm font-medium text-muted-foreground">
+          Public Display Name
+        </Label>
+        <Input
+          id="displayName"
+          value={displayName}
+          onChange={(e) => onDisplayNameChange(e.target.value)}
+          placeholder="How travelers will see you"
+          className="rounded-xl"
+          maxLength={50} // Matches your varchar(50)
+        />
+      </div>
+
+      {/* City (consultants.city_id) */}
       <div className="space-y-2">
         <Label htmlFor="city" className="text-sm font-medium text-muted-foreground">
           Location
         </Label>
         <Select
-          value={`${city}, ${country}`}
+          // Convert integer to string for the Select component
+          value={cityId ? cityId.toString() : ""}
           onValueChange={(value) => {
-            const option = cityOptions.find((o) => `${o.city}, ${o.country}` === value);
-            if (option) {
-              onCityChange(option.city, option.country);
-            }
+            // Parse back to integer when the user selects an option
+            onCityChange(parseInt(value, 10));
           }}
         >
           <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Select your city" />
           </SelectTrigger>
           <SelectContent>
-            {cityOptions.map((option) => (
-              <SelectItem key={`${option.city}-${option.country}`} value={`${option.city}, ${option.country}`}>
-                {option.city}, {option.country}
+            {/* Dynamically render the actual cities from your database */}
+            {(availableCities || []).map((option) => (
+              <SelectItem key={option.id} value={option.id.toString()}>
+                {option.name}, {option.country}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Quote */}
+      {/* Quote (consultants.quote) */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <Label htmlFor="quote" className="text-sm font-medium text-muted-foreground">

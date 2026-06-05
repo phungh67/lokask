@@ -7,40 +7,66 @@ import ProfilePhotoSection from "./profile/ProfilePhotoSection";
 import ProfileBasicInfo from "./profile/ProfileBasicInfo";
 import ProfileBioSection from "./profile/ProfileBioSection";
 import ProfileExpertise from "./profile/ProfileExpertise";
+import {
+  getNiches,
+  uploadConsultantMedia,
+  updateConsultantProfile,
+  Niche,
+} from "@/lib/consultants";
+
+import { getCities, CityOption, uploadAvatar } from "@/lib/users";
+
+export interface ProfileUpdatePayload {
+  full_name: string;
+  display_name: string;
+  city_id: number | null;
+  quote: string;
+  bio: string;
+  main_niche_id: number | null;
+  tags: string[];
+  languages: string[];
+
+  avatar_url: string;
+  cover_url: string;
+  gallery_images: string[];
+}
 
 interface ProfilePanelProps {
   consultant: Consultant;
-  onSave: (updates: Partial<Consultant>) => void;
+  onSaveSuccess?: () => void;
 }
 
 interface ProfileFormData {
-  name: string;
-  city: string;
-  country: string;
+  fullName: string;
+  displayName: string;
+  cityId: number | "";
   quote: string;
   bio: string;
   avatar: string;
   coverImage: string;
   galleryImages: string[];
-  mainTag: string;
+  mainNicheId: number | "";
   tags: string[];
   languages: string[];
 }
 
-const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
+const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
   const { toast } = useToast();
-  
-  // Map the real backend keys (avatarUrl, coverUrl, tag) to the form data
+
+  const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
+  const [availableNiches, setAvailableNiches] = useState<Niche[]>([]);
+
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: consultant.name || "",
-    city: consultant.city || "",
-    country: consultant.country || "",
+    fullName: consultant.name || "",
+    displayName: consultant.displayName || "",
+    cityId: (consultant as Consultant & { cityId?: number }).cityId || "",
     quote: consultant.quote || "",
     bio: consultant.bio || "",
     avatar: consultant.avatarUrl || "",
     coverImage: consultant.coverUrl || "",
     galleryImages: consultant.galleryImages || [],
-    mainTag: consultant.tag || "",
+    mainNicheId:
+      (consultant as Consultant & { mainNicheId?: number }).mainNicheId || "",
     tags: consultant.tags || [],
     languages: consultant.languages || [],
   });
@@ -49,30 +75,92 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
+    const loadDropdownData = async () => {
+      try {
+        const [citiesData, nichesData] = await Promise.all([
+          getCities(),
+          getNiches(),
+        ]);
+        setAvailableCities(citiesData);
+        setAvailableNiches(nichesData);
+      } catch (error) {
+        console.error("Failed to load dropdown options", error);
+        toast({
+          title: "Warning",
+          description: "Could not load cities and niches from the server.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadDropdownData();
+  }, [toast]);
+
+  useEffect(() => {
     const changed = JSON.stringify(formData) !== JSON.stringify(initialData);
     setHasChanges(changed);
   }, [formData, initialData]);
 
-  const handleSave = () => {
-    // Map the form data back to the database keys when saving
-    onSave({
-      name: formData.name,
-      city: formData.city,
-      country: formData.country,
-      quote: formData.quote,
-      bio: formData.bio,
-      avatarUrl: formData.avatar, 
-      coverUrl: formData.coverImage,
-      galleryImages: formData.galleryImages,
-      tag: formData.mainTag,
-      tags: formData.tags,
-      languages: formData.languages,
-    });
-    setInitialData(formData);
-    toast({
-      title: "Profile updated!",
-      description: "Your changes have been saved successfully.",
-    });
+  // only take changed property
+  const handleSave = async () => {
+    const payload: Partial<ProfileUpdatePayload> = {};
+
+    const nicheChanged = formData.mainNicheId !== initialData.mainNicheId;
+    const tagsChanged = JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags);
+
+    if (nicheChanged || tagsChanged) {
+      payload.main_niche_id = formData.mainNicheId === "" ? null : formData.mainNicheId;
+      payload.tags = formData.tags;
+    }
+
+    if (formData.fullName !== initialData.fullName)
+      payload.full_name = formData.fullName;
+    if (formData.displayName !== initialData.displayName)
+      payload.display_name = formData.displayName;
+    if (formData.quote !== initialData.quote) payload.quote = formData.quote;
+    if (formData.bio !== initialData.bio) payload.bio = formData.bio;
+
+    if (formData.cityId !== initialData.cityId) {
+      payload.city_id = formData.cityId === "" ? null : formData.cityId;
+    }
+
+    if (formData.mainNicheId !== initialData.mainNicheId) {
+      payload.main_niche_id =
+        formData.mainNicheId === "" ? null : formData.mainNicheId;
+    }
+
+    if (JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags))
+      payload.tags = formData.tags;
+    if (
+      JSON.stringify(formData.languages) !==
+      JSON.stringify(initialData.languages)
+    )
+      payload.languages = formData.languages;
+
+    if (Object.keys(payload).length === 0) {
+      toast({
+        title: "No changes detected",
+        description: "Your profile is already up to date.",
+      });
+      return;
+    }
+
+    try {
+      await updateConsultantProfile(payload);
+
+      setInitialData(formData);
+      toast({
+        title: "Profile updated!",
+        description: "Your changes have been saved successfully.",
+      });
+    } catch (error: any) {
+      console.error("Save failed:", error);
+      toast({
+        title: "Failed to update profile",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDiscard = () => {
@@ -87,23 +175,55 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
     window.open(`/consultant/${consultant.id}`, "_blank");
   };
 
-  // File upload handlers (create object URLs for preview)
-  const handleAvatarChange = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, avatar: url }));
+  // File Upload Handlers
+  const handleAvatarChange = async (file: File) => {
+    try {
+      const response = await uploadAvatar(file);
+      setFormData((prev) => ({ ...prev, avatar: response.avatar_url }));
+      toast({ title: "Avatar uploaded successfully!" });
+    } catch (error) {
+      toast({ title: "Upload failed", variant: "destructive" });
+    }
   };
 
-  const handleCoverChange = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, coverImage: url }));
+  const handleCoverChange = async (file: File) => {
+    const localOptimisticUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({ ...prev, coverImage: localOptimisticUrl }));
+
+    try {
+      const response = await uploadConsultantMedia(file, "cover");
+      setFormData((prev) => ({ ...prev, coverImage: response.media_url }));
+      toast({ title: "Cover updated successfully!" });
+    } catch (error) {
+      toast({ title: "Cover upload failed", variant: "destructive" });
+    }
   };
 
-  const handleGalleryAdd = (file: File) => {
-    const url = URL.createObjectURL(file);
+  const handleGalleryAdd = async (file: File) => {
+    const localOptimisticUrl = URL.createObjectURL(file);
     setFormData((prev) => ({
       ...prev,
-      galleryImages: [...prev.galleryImages, url],
+      galleryImages: [...prev.galleryImages, localOptimisticUrl],
     }));
+
+    try {
+      const response = await uploadConsultantMedia(file, "gallery");
+      setFormData((prev) => ({
+        ...prev,
+        galleryImages: prev.galleryImages.map((img) =>
+          img === localOptimisticUrl ? response.media_url : img,
+        ),
+      }));
+      toast({ title: "Image added to gallery!" });
+    } catch (error) {
+      toast({ title: "Gallery upload failed", variant: "destructive" });
+      setFormData((prev) => ({
+        ...prev,
+        galleryImages: prev.galleryImages.filter(
+          (img) => img !== localOptimisticUrl,
+        ),
+      }));
+    }
   };
 
   const handleGalleryRemove = (index: number) => {
@@ -124,7 +244,11 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
               Update your public profile information
             </p>
           </div>
-          <Button variant="outline" onClick={handlePreview} className="gap-2 rounded-full">
+          <Button
+            variant="outline"
+            onClick={handlePreview}
+            className="gap-2 rounded-full"
+          >
             Preview
             <ExternalLink className="h-4 w-4" />
           </Button>
@@ -132,11 +256,9 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
 
         {/* Form Sections */}
         <div className="space-y-8">
-          {/* Photos + Basic Info */}
           <div className="bg-card rounded-2xl p-6 border border-border">
             <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Photos */}
               <ProfilePhotoSection
                 avatar={formData.avatar}
                 coverImage={formData.coverImage}
@@ -147,34 +269,42 @@ const ProfilePanel = ({ consultant, onSave }: ProfilePanelProps) => {
                 onGalleryRemove={handleGalleryRemove}
               />
 
-              {/* Basic Info */}
               <ProfileBasicInfo
-                name={formData.name}
-                city={formData.city}
-                country={formData.country}
+                fullName={formData.fullName}
+                displayName={formData.displayName}
+                cityId={formData.cityId}
                 quote={formData.quote}
-                onNameChange={(name) => setFormData((prev) => ({ ...prev, name }))}
-                onCityChange={(city, country) =>
-                  setFormData((prev) => ({ ...prev, city, country }))
+                availableCities={availableCities}
+                onFullNameChange={(fullName) =>
+                  setFormData((prev) => ({ ...prev, fullName }))
                 }
-                onQuoteChange={(quote) => setFormData((prev) => ({ ...prev, quote }))}
+                onDisplayNameChange={(displayName) =>
+                  setFormData((prev) => ({ ...prev, displayName }))
+                }
+                onCityChange={(cityId) =>
+                  setFormData((prev) => ({ ...prev, cityId }))
+                }
+                onQuoteChange={(quote) =>
+                  setFormData((prev) => ({ ...prev, quote }))
+                }
               />
             </div>
           </div>
 
-          {/* Bio */}
           <ProfileBioSection
             bio={formData.bio}
             onBioChange={(bio) => setFormData((prev) => ({ ...prev, bio }))}
           />
 
-          {/* Expertise */}
           <ProfileExpertise
-            mainTag={formData.mainTag}
+            mainNicheId={formData.mainNicheId}
+            availableNiches={availableNiches}
             tags={formData.tags}
             languages={formData.languages}
             responseTime={consultant.responseTime || "~2 hours"}
-            onMainTagChange={(mainTag) => setFormData((prev) => ({ ...prev, mainTag }))}
+            onMainNicheChange={(mainNicheId) =>
+              setFormData((prev) => ({ ...prev, mainNicheId }))
+            }
             onTagsChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
             onLanguagesChange={(languages) =>
               setFormData((prev) => ({ ...prev, languages }))

@@ -1,49 +1,73 @@
+import { useState } from "react";
 import { Star } from "lucide-react";
-import { Review } from "@/data/mockData";
+import { Review } from "@/types/consultant"; 
 
 interface ReviewCardProps {
   review: Review;
 }
 
 const ReviewCard = ({ review }: ReviewCardProps) => {
-  const formatDate = (dateString: string) => {
+  const initialAvatar = review.review_avatar || "https://placehold.co/40x40";
+  const [imgSrc, setImgSrc] = useState(initialAvatar);
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Recent";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    if (isNaN(date.getTime())) return "Recent";
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getInitial = (name: string) => {
+    return name ? name.charAt(0).toUpperCase() : "?";
   };
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-soft">
-      {/* Rating stars */}
-      <div className="flex items-center gap-1 mb-3">
+    <div className="bg-white border border-[#E5E7EB] rounded-[14px] p-6 flex flex-col h-full">
+      
+      {/* 1. Stars & Rating (top: 25 in Figma) */}
+      <div className="flex items-center gap-1 mb-6">
         {Array.from({ length: 5 }).map((_, i) => (
           <Star
             key={i}
             size={16}
-            className={i < review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}
+            className={i < review.rating ? "fill-[#FDC700] text-[#FDC700]" : "text-zinc-200"}
           />
         ))}
+        <span className="text-[#101828] text-[14px] font-semibold leading-[20px] ml-1">
+          {review.rating || 5}
+        </span>
       </div>
 
-      {/* Comment */}
-      <p className="text-foreground/80 text-sm leading-relaxed mb-4">
-        "{review.comment}"
-      </p>
-
-      {/* Reviewer info */}
-      <div className="flex items-center gap-3">
+      {/* 2. Reviewer Info (top: 81 in Figma) */}
+      <div className="flex items-center gap-3 mb-6">
         <img
-          src={review.reviewerAvatar}
-          alt={review.reviewerName}
-          className="w-10 h-10 rounded-full object-cover"
+          src={imgSrc} 
+          alt={review.review_name}
+          onError={() => {
+            setImgSrc(`https://placehold.co/40x40/C56A49/FFFFFF?text=${getInitial(review.review_name)}`);
+          }}
+          className="w-[40px] h-[40px] rounded-full object-cover bg-zinc-100 shrink-0"
         />
-        <div>
-          <p className="text-sm font-medium text-foreground">{review.reviewerName}</p>
-          <p className="text-xs text-muted-foreground">
-            {review.tripType && `${review.tripType} · `}
-            {formatDate(review.date)}
+        <div className="flex flex-col">
+          <p className="text-[#101828] text-[16px] font-semibold leading-[24px]">
+            {review.review_name}
+          </p>
+          <p className="text-[#6A7282] text-[12px] font-normal leading-[16px]">
+            {formatDate(review.date)} {review.verified_stay && "· Verified booking"}
           </p>
         </div>
       </div>
+
+      {/* 3. Comment (top: 159 in Figma) */}
+      <p className="text-[#364153] text-[14px] font-normal leading-[20px] mb-6 flex-grow line-clamp-3">
+        "{review.comment}"
+      </p>
+
+      {/* 4. Read More Link (Centered per Figma specs) */}
+      <button className="w-full py-2 flex justify-center items-center rounded-lg hover:bg-zinc-50 transition-colors text-[#C77752] text-[14px] font-medium leading-[20px] mt-auto">
+        Read more
+      </button>
+
     </div>
   );
 };
