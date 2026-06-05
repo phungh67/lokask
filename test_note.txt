@@ -1,0 +1,26 @@
+curl -X POST http://localhost:8080/api/v1/conversations/9172a9b1-2d25-4e09-8baf-1d4ec39e9b00/messages \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer 893c8831-ced1-4c20-9408-55ea7e57d9f7" \
+  -d '{"content": "Hey! This is a test message to check if the background email trigger is working properly."}'
+
+INSERT INTO consultation_sessions (
+    conversation_id,
+    package_type,
+    duration_hours,
+    status,
+    paid_at,
+    started_at,
+    expires_at
+) VALUES (
+    '9172a9b1-2d25-4e09-8baf-1d4ec39e9b00',
+    'vip_test',               -- Or 'extended', 'standard'
+    168,                      -- 168 hours = 7 days
+    'active',                 -- Bypasses 'pending_payment' and 'awaiting_reply'
+    NOW(),                    -- Simulates immediate payment
+    NOW(),                    -- Starts the clock now
+    NOW() + INTERVAL '7 days' -- Sets the expiration
+);
+
+UPDATE users
+SET email = 'lhpespoir39@gmail.com'
+WHERE id = '7d04bfd7-e470-462d-8ea1-4cd2723c12a5';
