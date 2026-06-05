@@ -22,7 +22,7 @@ func BuildMediaURL(key string) (string, error) {
 	}
 
 	if mode == "prod" {
-		cdnBase := os.Getenv("S3_BASE_URL")
+		cdnBase := os.Getenv("AWS_S3_MEDIA_BUCKET")
 		if cdnBase == "" {
 			return "", fmt.Errorf("Error, no S3 was set")
 		}

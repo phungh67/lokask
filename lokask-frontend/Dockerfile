@@ -10,7 +10,7 @@ COPY . .
 
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:alpine3.23-perl AS runner
+FROM nginx:stable-alpine3.23-perl AS runner
 
 RUN rm -rf /usr/share/nginx/html/*
 
