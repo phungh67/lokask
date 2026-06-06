@@ -26,9 +26,20 @@ func BuildMediaURL(key string) (string, error) {
 		if cdnBase == "" {
 			return "", fmt.Errorf("Error, no S3 was set")
 		}
-		return fmt.Sprintf("%s/%s", strings.TrimRight(cdnBase, "/"), key), nil
+		region := os.Getenv("AWS_DEFAULT_REGION")
+		if region == "" {
+			region = "eu-north-1"
+		}
+		return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cdnBase, region, key), nil
 	}
 
-	minioBase := os.Getenv("MINIO_BASE_URL")
-	return fmt.Sprintf("%s/%s", strings.TrimRight(minioBase, "/"), key), nil
+	minioBase := os.Getenv("MINIO_PUBLIC_URL")
+	if minioBase == "" {
+		minioBase = "http://localhost:9000"
+	}
+	minioBucket := os.Getenv("MININO_MEDIA_BUCKET")
+	if minioBucket == "" {
+		minioBucket = "lokask-media"
+	}
+	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(minioBase, "/"), minioBucket, key), nil
 }
