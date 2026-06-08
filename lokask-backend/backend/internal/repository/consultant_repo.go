@@ -313,6 +313,7 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 			return nil, 0, err
 		}
 
+		// construct URL
 		avatarURL, _ := helper.BuildMediaURL(p.AvatarURL)
 		if avatarURL != "" {
 			p.AvatarURL = avatarURL
