@@ -313,6 +313,16 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 			return nil, 0, err
 		}
 
+		avatarURL, _ := helper.BuildMediaURL(p.AvatarURL)
+		if avatarURL != "" {
+			p.AvatarURL = avatarURL
+		}
+
+		coverURL, _ := helper.BuildMediaURL(p.CoverURL)
+		if coverURL != "" {
+			p.CoverURL = coverURL
+		}
+
 		// Fetch tags (Acceptable N+1 for small limits)
 		var tags []string
 		tagQuery := `
