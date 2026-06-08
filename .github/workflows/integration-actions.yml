@@ -2,7 +2,7 @@ name: containerized-integration-workflows
 run-name: continuous integration
 on:
     push:
-        branches: [main]
+        branches: [main, release]
     pull_request:
         branches: [main]
 
@@ -11,7 +11,6 @@ concurrency:
 
 jobs:
     evaluate-target-environment:
-        if: ${{github.ref == '/refs/heads/main'}}
         runs-on: ubuntu-latest
         steps:
             - name: output environment variable
@@ -48,6 +47,10 @@ jobs:
               with:
                 go-version: '1.26'
                 cache-dependency-path: lokask-backend/backend/go.sum
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
             - name: login into DockerHub
               uses: docker/login-action@v4
               with:
@@ -59,9 +62,59 @@ jobs:
               with:
                 context: ./lokask-backend/backend
                 file: ./lokask-backend/backend/Dockerfile
-                push: ${{ github.event_name == 'push' }}
+                push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
                 tags: |
-                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-${{ github.sha }}
-                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-latest
-                cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache
-                cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache,mode=max
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:backend-${{ github.sha }}
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:backend-latest
+                cache-from: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:buildcache
+                cache-to: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:buildcache,mode=max
+    
+    build-and-push-frontend:
+        runs-on: ubuntu-latest
+        needs: evaluate-target-environment
+        environment: ${{needs.evaluate-target-environment.outputs.env_value}}
+
+        defaults:
+            run:
+                working-directory: ./lokask-frontend
+
+        permissions:
+            id-token: write
+            contents: read
+        
+        steps:
+            - name: git checkout repo
+              uses: actions/checkout@v4
+            - name: setup nodejs
+              uses: actions/setup-node@v4
+              with:
+                node-version: '20'
+                cache: 'npm'
+                cache-dependency-path: lokask-frontend/package-lock.json
+            
+            - name: install, lint and verification
+              run: |
+                npm ci
+                npx tsc --noEmit
+                npm run build --if-present
+
+            - name: setup docker build
+              uses: docker/setup-buildx-action@v3
+
+            - name: login into DockerHub
+              uses: docker/login-action@v3
+              with:
+                username: ${{ vars.DOCKER_HUB_USERNAME }}
+                password: ${{ secrets.DOCKER_HUB_TOKEN }}
+                
+            - name: build and tag image
+              uses: docker/build-push-action@v5
+              with:
+                context: ./lokask-frontend
+                file: ./lokask-frontend/Dockerfile
+                push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+                tags: |
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-${{ github.sha }}
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-latest
+                cache-from: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache
+                cache-to: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache,mode=max
