@@ -149,7 +149,7 @@ jobs:
                     cd ~/lokask/lokask-backend
                     ls -la
                     #debug
-                    echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+                    echo "$DOCKER_HUB_TOKEN" | sudo docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
                     echo "Pulling latest images..."
                     sudo docker compose pull
                     echo "Recreating containers..."
