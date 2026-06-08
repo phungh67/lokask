@@ -35,7 +35,7 @@ services:
 
   # 2. Backend image
   backend:
-    build: ./backend
+    image: huyhoangph99/lokask-repository:backend-latest
     container_name: lokask_api
     depends_on:
       db:
@@ -62,7 +62,7 @@ services:
       DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
   
   frontend:
-    build: ../lokask-frontend
+    image: huyhoangph99/lokask-repository:frontend-buildcache-latest
     container_name: lokask_web
     restart: on-failure
     depends_on:
