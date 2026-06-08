@@ -121,10 +121,13 @@ jobs:
     
     deploy-to-server:
         runs-on: ubuntu-latest
-        needs: [build-and-push-backend, build-and-push-frontend]
+        needs: [build-and-push-backend, build-and-push-frontend, evaluate-target-environment]
         if: >
             github.ref == 'refs/heads/main' &&
             contains(github.event.head_commit.message, 'release')
+        
+        environment: ${{needs.evaluate-target-environment.outputs.env_value}}
+        
         steps:
             - name: configure SSH
               run: |
