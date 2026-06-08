@@ -137,14 +137,14 @@ jobs:
                 echo "${{ secrets.SSH_HOST_KEY }}" > ~/.ssh/deploy_key
                 chmod 600 ~/.ssh/deploy_key
 
-                ssh-keyscan -v -H ${{ secrets.SSH_HOST_IP }} >> ~/.ssh/known_hosts
+                ssh-keyscan -v -H ${{ vars.SSH_HOST_IP }} >> ~/.ssh/known_hosts
 
             - name: depkoy via SSH
               env:
                 DOCKER_HUB_USERNAME: ${{ vars.DOCKER_HUB_USERNAME }}
                 DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
               run: |
-                ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_HOST_USER }}@${{ secrets.SSH_HOST_IP }} << EOF
+                ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_HOST_USER }}@${{ vars.SSH_HOST_IP }} << EOF
                     cd /lokask/lokask-backend
                     echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
                     echo "Pulling latest images..."
