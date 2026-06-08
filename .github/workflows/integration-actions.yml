@@ -146,13 +146,14 @@ jobs:
               run: |
                 ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_HOST_PORT }} ${{ secrets.SSH_HOST_USER }}@${{ secrets.SSH_HOST_IP }} << EOF
                     #debug 
+                    cd ~/lokask/lokask-backend
+                    ls -la
+                    #debug
                     echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
                     echo "Pulling latest images..."
                     sudo docker compose pull
                     echo "Recreating containers..."
-                    #debug
-                    ls -la ~/lokask/lokask-backend/docker-compose.yaml
-                    sudo docker compose up -f ~/lokask/lokask-backend/docker-compose.yaml -d
+                    sudo docker compose up -d
                     echo "Cleaning up..."
                     sudo docker image prune -f
                     docker logout
