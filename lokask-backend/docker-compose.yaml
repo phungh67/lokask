@@ -62,7 +62,7 @@ services:
       DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
   
   frontend:
-    image: huyhoangph99/lokask-repository:frontend-buildcache-latest
+    image: huyhoangph99/lokask-repository:frontend-latest
     container_name: lokask_web
     restart: on-failure
     depends_on:
