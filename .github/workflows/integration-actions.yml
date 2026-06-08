@@ -33,7 +33,7 @@ jobs:
         # working dir
         defaults:
             run:
-                working-directory: ./lokask-backend
+                working-directory: ./lokask-backend/backend
 
         # token permission
         permissions:
@@ -42,6 +42,26 @@ jobs:
         steps:
             - name: git checkout the repo
               uses: actions/checkout@v4
+
+            - name: setup golang
+              uses: actions/setup-go@v5
+              with:
+                go-version: '1.26'
+                cache-dependency-path: lokask-backend/backend/go.sum
             - name: login into DockerHub
-              uses: docker/login-action@v3
-              
+              uses: docker/login-action@v4
+              with:
+                username: ${{ vars.DOCKER_HUB_USERNAME }}
+                password: ${{ secrets.DOCKER_HUB_TOKEN }}
+            
+            - name: build and tag image
+              uses: docker/build-push-action@v5
+              with:
+                context: ./lokask-backend/backend
+                file: ./lokask-backend/backend/Dockerfile
+                push: ${{ github.event_name == 'push' }}
+                tags: |
+                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-${{ github.sha }}
+                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-latest
+                cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache
+                cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache,mode=max
