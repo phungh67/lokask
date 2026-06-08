@@ -2,7 +2,7 @@ name: containerized-integration-workflows
 run-name: continuous integration
 on:
     push:
-        branches: [main]
+        branches: [main, release]
     pull_request:
         branches: [main]
 
