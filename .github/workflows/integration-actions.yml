@@ -50,7 +50,7 @@ jobs:
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
-              
+
             - name: login into DockerHub
               uses: docker/login-action@v4
               with:
@@ -64,7 +64,7 @@ jobs:
                 file: ./lokask-backend/backend/Dockerfile
                 push: ${{ github.event_name == 'push' }}
                 tags: |
-                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-${{ github.sha }}
-                    ${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:backend-latest
-                cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache
-                cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/lokask-repository:buildcache,mode=max
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:backend-${{ github.sha }}
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:backend-latest
+                cache-from: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:buildcache
+                cache-to: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:buildcache,mode=max
