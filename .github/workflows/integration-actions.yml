@@ -72,7 +72,7 @@ jobs:
     build-and-push-frontend:
         runs-on: ubuntu-latest
         needs: evaluate-target-environment
-        environment: $ {{ needs.evaluate-target-environment.outputs.env_value }}
+        environment: ${{needs.evaluate-target-environment.outputs.env_value}}
 
         defaults:
             run:
@@ -106,3 +106,15 @@ jobs:
               with:
                 username: ${{ vars.DOCKER_HUB_USERNAME }}
                 password: ${{ secrets.DOCKER_HUB_TOKEN }}
+                
+            - name: build and tag image
+              uses: docker/build-push-action@v5
+              with:
+                context: ./lokask-frontend
+                file: ./lokask-frontend/Dockerfile
+                push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+                tags: |
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-${{ github.sha }}
+                    ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-latest
+                cache-from: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache
+                cache-to: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache,mode=max
