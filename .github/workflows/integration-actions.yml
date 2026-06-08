@@ -124,7 +124,6 @@ jobs:
         needs: [build-and-push-backend, build-and-push-frontend]
         if: >
             github.ref == 'refs/heads/main' &&
-            contains(github.event.head_commit.message, 'Merge pull request') &&
             contains(github.event.head_commit.message, 'release')
         steps:
             - name: configure SSH
@@ -135,7 +134,7 @@ jobs:
                 echo "${{ secrets.SSH_HOST_KEY }}" > ~/.ssh/deploy_key
                 chmod 600 ~/.ssh/deploy_key
 
-                ssh-keyscan -H ${{ secrets.HOST_IP }} >> ~/.ssh/known_hosts
+                ssh-keyscan -H ${{ secrets.SSH_HOST_IP }} >> ~/.ssh/known_hosts
 
             - name: depkoy via SSH
               env:
