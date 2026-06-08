@@ -137,7 +137,7 @@ jobs:
                 echo "${{ secrets.SSH_HOST_KEY }}" > ~/.ssh/deploy_key
                 chmod 600 ~/.ssh/deploy_key
 
-                ssh-keyscan -v -H ${{ secrets.SSH_HOST_IP }} >> ~/.ssh/known_hosts
+                ssh-keyscan -p ${{ secrets.SSH_HOST_PORT }} -H ${{ secrets.SSH_HOST_IP }} >> ~/.ssh/known_hosts
 
             - name: depkoy via SSH
               env:
