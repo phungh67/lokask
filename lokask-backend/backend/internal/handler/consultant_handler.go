@@ -40,7 +40,7 @@ func (h *ConsultantHandler) GetProfile(c *fiber.Ctx) error {
 		})
 	}
 
-	log.Printf("[LOG] Successfully get profile with %v", profile)
+	// log.Printf("[LOG] Successfully get profile with %v", profile)
 	return c.JSON(profile)
 }
 

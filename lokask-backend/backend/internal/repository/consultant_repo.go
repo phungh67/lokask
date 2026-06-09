@@ -94,7 +94,6 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	// temp removal reviews field
 	profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
-	profile.GalleryImages = []string{}
 
 	// 1. Fetch Reviews
 	var reviews []domain.Review
