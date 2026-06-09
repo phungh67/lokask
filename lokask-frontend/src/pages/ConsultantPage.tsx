@@ -76,14 +76,19 @@ const ConsultantPage = () => {
   }
 
   // 4. Gallery Logic
-  const galleryImages =
-    consultant.galleryImages?.length >= 3
-      ? consultant.galleryImages
-      : [
-          consultant.coverUrl || "https://placehold.co/600x400",
-          consultant.coverUrl || "https://placehold.co/400x300",
-          consultant.coverUrl || "https://placehold.co/400x300",
-        ];
+  const fetchedImages = consultant.galleryImages || [];
+  const fallbackImg = consultant.coverUrl || "https://placehold.co/600x400";
+
+  // Always create an array of exactly 3 slots for the UI Grid.
+  // If an image exists at that index, use it. Otherwise, fill the gap with the fallback.
+  const galleryDisplay = [
+    fetchedImages[0] || fallbackImg,
+    fetchedImages[1] || fallbackImg,
+    fetchedImages[2] || fallbackImg,
+  ];
+
+  // Calculate if we need the "+X" overlay
+  const remainingImagesCount = Math.max(0, fetchedImages.length - 3);
 
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans pb-20">
@@ -236,29 +241,33 @@ const ConsultantPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-12">
               <div className="md:col-span-2 relative h-full">
                 <img
-                  src={galleryImages[0]}
+                  src={galleryDisplay[0]}
                   className="w-full h-full object-cover"
                   alt="Main gallery"
                 />
               </div>
               <div className="hidden md:grid grid-rows-2 gap-3 h-full">
                 <img
-                  src={galleryImages[1]}
+                  src={galleryDisplay[1]}
                   className="w-full h-full object-cover"
                   alt="Gallery 2"
                 />
                 <div className="relative w-full h-full">
                   <img
-                    src={galleryImages[2]}
+                    src={galleryDisplay[2]}
                     className="w-full h-full object-cover"
                     alt="Gallery 3"
                   />
-                  <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md flex items-center gap-2">
-                    <Images size={14} className="text-zinc-800" />
-                    <span className="text-sm font-medium text-zinc-800">
-                      3+
-                    </span>
-                  </div>
+
+                  {/* Only show the "+X" pill if there are actually more than 3 images */}
+                  {remainingImagesCount > 0 && (
+                    <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md flex items-center gap-2">
+                      <Images size={14} className="text-zinc-800" />
+                      <span className="text-sm font-medium text-zinc-800">
+                        {remainingImagesCount}+
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
