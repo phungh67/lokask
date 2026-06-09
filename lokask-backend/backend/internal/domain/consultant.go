@@ -36,7 +36,7 @@ type ConsultantProfile struct {
 	// media file, avatar,...
 	AvatarURL     string         `json:"avatarUrl" db:"avatar_url"`
 	CoverURL      string         `json:"coverUrl" db:"cover_url"`
-	GalleryImages pq.StringArray `json:"gallery_images,omitempty" db:"gallery_images"`
+	GalleryImages pq.StringArray `json:"gallery_images" db:"gallery_images"`
 
 	// content
 	Bio   string `json:"bio" db:"bio"`
