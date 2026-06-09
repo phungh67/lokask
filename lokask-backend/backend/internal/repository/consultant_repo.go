@@ -60,6 +60,7 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 				COALESCE(c.bio, '') as bio,
 				COALESCE(c.quote, '') as quote,         
 				COALESCE(c.cover_url, '') as cover_url, 
+				COALESCE(c.gallery_images, '{}') as gallery_images,
 				COALESCE(c.helped_count, 0) as helped_count,                        
 				COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate, 
 				COALESCE(c.rating_avg, 0)::FLOAT as rating_avg,
@@ -140,15 +141,14 @@ func (r *ConsultantRepository) GetProfileByID(ctx context.Context, id uuid.UUID)
 	}
 
 	// 3. Fetch Images (Map to GalleryImages)
-	var images []string
-	imgQuery := `SELECT image_url FROM portfolio_items WHERE consultant_id = $1 LIMIT 6`
-	_ = r.DB.SelectContext(ctx, &images, imgQuery, id)
-
-	profile.GalleryImages = []string{}
-	for _, imgPath := range images {
+	builtImages := make([]string, 0, len(profile.GalleryImages))
+	for _, imgPath := range profile.GalleryImages {
 		fullPath, _ := helper.BuildMediaURL(imgPath)
-		profile.GalleryImages = append(profile.GalleryImages, fullPath)
+		if fullPath != "" {
+			builtImages = append(builtImages, fullPath)
+		}
 	}
+	profile.GalleryImages = builtImages
 
 	// 4. Calculate Badges
 	profile.Badges = calculateBadges(profile)
@@ -169,7 +169,8 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 				COALESCE(u.avatar_url, '') as avatar_url,
 				COALESCE(c.bio, '') as bio,
 				COALESCE(c.quote, '') as quote,         
-				COALESCE(c.cover_url, '') as cover_url, 
+				COALESCE(c.cover_url, '') as cover_url,
+				COALESCE(c.gallery_images, '{}') as gallery_images,
 				COALESCE(c.helped_count, 0) as helped_count,                         
 				COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate, 
 				COALESCE(c.rating_avg, 0)::FLOAT as rating_avg,
@@ -198,7 +199,14 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 	// Initialize slices
 	// profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
-	profile.GalleryImages = []string{}
+	builtImages := make([]string, 0, len(profile.GalleryImages))
+	for _, imgPath := range profile.GalleryImages {
+		fullPath, _ := helper.BuildMediaURL(imgPath)
+		if fullPath != "" {
+			builtImages = append(builtImages, fullPath)
+		}
+	}
+	profile.GalleryImages = builtImages
 
 	// Fetch Tags (using profile.ID retrieved from above query)
 	var tags []string
