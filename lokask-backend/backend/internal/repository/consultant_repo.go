@@ -345,7 +345,15 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 			}
 		}
 
-		p.GalleryImages = []string{}
+		galleryImages := make([]string, 0, len(p.GalleryImages))
+		for _, image := range p.GalleryImages {
+			imageURL, _ := helper.BuildMediaURL(image)
+			if imageURL != "" {
+				galleryImages = append(galleryImages, imageURL)
+			}
+		}
+
+		p.GalleryImages = galleryImages
 		consultants = append(consultants, p)
 	}
 
