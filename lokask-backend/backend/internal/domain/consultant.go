@@ -34,9 +34,9 @@ type ConsultantProfile struct {
 	DisplayName string `json:"displayName" db:"display_name"`
 
 	// media file, avatar,...
-	AvatarURL     string   `json:"avatarUrl" db:"avatar_url"`
-	CoverURL      string   `json:"coverUrl" db:"cover_url"`
-	GalleryImages []string `json:"gallery_images,omitempty" db:"-"`
+	AvatarURL     string         `json:"avatarUrl" db:"avatar_url"`
+	CoverURL      string         `json:"coverUrl" db:"cover_url"`
+	GalleryImages pq.StringArray `json:"gallery_images,omitempty" db:"gallery_images"`
 
 	// content
 	Bio   string `json:"bio" db:"bio"`
