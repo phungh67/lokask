@@ -239,27 +239,48 @@ const ConsultantPage = () => {
 
             {/* Gallery Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-12">
-              <div className="md:col-span-2 relative h-full">
+              {/* Main Image */}
+              <div className="md:col-span-2 relative h-full bg-zinc-100">
                 <img
                   src={galleryDisplay[0]}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-opacity duration-300"
                   alt="Main gallery"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://placehold.co/800x600/f4f4f5/a1a1aa?text=Image+Unavailable";
+                    e.currentTarget.onerror = null; // Prevents infinite loops if the placeholder also fails
+                  }}
                 />
               </div>
+
+              {/* Side Images */}
               <div className="hidden md:grid grid-rows-2 gap-3 h-full">
-                <img
-                  src={galleryDisplay[1]}
-                  className="w-full h-full object-cover"
-                  alt="Gallery 2"
-                />
-                <div className="relative w-full h-full">
+                <div className="relative w-full h-full bg-zinc-100">
+                  <img
+                    src={galleryDisplay[1]}
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                    alt="Gallery 2"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://placehold.co/400x400/f4f4f5/a1a1aa?text=Image+Unavailable";
+                      e.currentTarget.onerror = null;
+                    }}
+                  />
+                </div>
+
+                <div className="relative w-full h-full bg-zinc-100">
                   <img
                     src={galleryDisplay[2]}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-opacity duration-300"
                     alt="Gallery 3"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://placehold.co/400x400/f4f4f5/a1a1aa?text=Image+Unavailable";
+                      e.currentTarget.onerror = null;
+                    }}
                   />
 
-                  {/* Only show the "+X" pill if there are actually more than 3 images */}
+                  {/* Dynamic remaining images pill */}
                   {remainingImagesCount > 0 && (
                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md flex items-center gap-2">
                       <Images size={14} className="text-zinc-800" />
