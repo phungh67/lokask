@@ -58,16 +58,19 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
   const [availableNiches, setAvailableNiches] = useState<Niche[]>([]);
 
   const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: consultant.name || "",
-    displayName: consultant.displayName || "",
-    cityId: (consultant as Consultant & { cityId?: number }).cityId || "",
+    fullName: consultant.name || (consultant as any).full_name || "",
+    displayName: consultant.displayName || (consultant as any).display_name || "",
+    
+    cityId: (consultant as any).cityId || (consultant as any).city_id || "",
+    mainNicheId: (consultant as any).mainNicheId || (consultant as any).main_niche_id || "",
+    
     quote: consultant.quote || "",
     bio: consultant.bio || "",
-    avatar: consultant.avatarUrl || "",
-    coverImage: consultant.coverUrl || "",
-    galleryImages: consultant.galleryImages || [],
-    mainNicheId:
-      (consultant as Consultant & { mainNicheId?: number }).mainNicheId || "",
+    
+    avatar: consultant.avatarUrl || (consultant as any).avatar_url || "",
+    coverImage: consultant.coverUrl || (consultant as any).cover_url || "",
+    galleryImages: consultant.galleryImages || (consultant as any).gallery_images || [],
+    
     tags: consultant.tags || [],
     languages: consultant.languages || [],
   });
