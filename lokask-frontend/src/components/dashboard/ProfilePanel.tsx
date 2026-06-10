@@ -34,6 +34,7 @@ export interface ProfileUpdatePayload {
 
 interface ProfilePanelProps {
   consultant: Consultant;
+  onSave?: (updates: Partial<Consultant>) => void;
   onSaveSuccess?: () => void;
 }
 
@@ -51,7 +52,7 @@ interface ProfileFormData {
   languages: string[];
 }
 
-const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
+const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) => {
   const { toast } = useToast();
 
   const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
@@ -159,6 +160,16 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
         title: "Profile updated!",
         description: "Your changes have been saved successfully.",
       });
+      if (onSave) {
+        onSave({
+          name: formData.fullName,
+          displayName: formData.displayName,
+          quote: formData.quote,
+          bio: formData.bio,
+          tags: formData.tags,
+          languages: formData.languages,
+        });
+      }
     } catch (error: any) {
       console.error("Save failed:", error);
       toast({

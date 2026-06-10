@@ -315,21 +315,28 @@ const ConsultantDashboard = () => {
       return;
     }
 
+    // 🟢 ADDED: Find the current conversation to understand WHO is typing
+    const currentConv = conversations.find(
+      (c) => c.id === activeConversationId,
+    );
+    const isActingAsConsultant = currentConv?.consultantId === accountUserId;
+    const isSelfChat = currentConv?.consultantId === currentConv?.travelerId;
+
     const tempId = "temp-" + Date.now();
 
-    // match with interface update 
+    // match with interface update
     const optimisticMsg = {
       id: tempId,
-      conversation_id: activeConversationId, 
-      sender_id: accountUserId, 
+      conversation_id: activeConversationId,
+      sender_id: accountUserId,
       content,
-      is_read: true, 
-      created_at: new Date().toISOString(), 
+      is_read: true,
+      created_at: new Date().toISOString(),
       timestamp: new Date(),
-      sender: "user" as const, 
+      sender: "user" as const,
       type: "text" as const,
     };
-    
+
     setCurrentMessages((prev) => [...prev, optimisticMsg]);
 
     try {
@@ -340,13 +347,31 @@ const ConsultantDashboard = () => {
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
 
       const errorStr = JSON.stringify(error).toLowerCase();
-      if (
+      const isSessionError =
         errorStr.includes("expired") ||
-        errorStr.includes("package") || // Catches "no active package found"
+        errorStr.includes("package") ||
         error.status === 403 ||
-        error.status === 404
-      ) {
-        setShowPurchaseDialog(true);
+        error.status === 404;
+
+      if (isSessionError) {
+        // 🟢 FIX: Smart Routing for Session Errors
+        if (isSelfChat) {
+          toast({
+            title: "Test Chat",
+            description:
+              "You cannot purchase a package for yourself. (Self-chat exception needed on backend).",
+          });
+        } else if (isActingAsConsultant) {
+          toast({
+            title: "Session Ended",
+            description:
+              "The traveler's paid session has expired. They must top up before you can reply.",
+            variant: "destructive",
+          });
+        } else {
+          // Normal flow: The actual traveler needs to pay!
+          setShowPurchaseDialog(true);
+        }
       } else {
         toast({
           title: "Message Failed",
