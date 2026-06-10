@@ -139,6 +139,22 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, obj
 	return url, nil
 }
 
+func (m *MinioClient) DeleteFile(ctx context.Context, key string) error {
+	bucket := os.Getenv("MINIO_MEDIA_BUCKET")
+	if bucket == "" {
+		bucket = "lokask-media" // Match your fallback from helper.go
+	}
+
+	opts := minio.RemoveObjectOptions{}
+	err := m.Client.RemoveObject(ctx, bucket, key, opts)
+
+	if err != nil {
+		return fmt.Errorf("failed to delete file from MinIO: %w", err)
+	}
+
+	return nil
+}
+
 func (m *MinioClient) CreateIfNotExist(ctx context.Context, bucketName string) error {
 	exists, err := m.Client.BucketExists(ctx, bucketName)
 	if err != nil {

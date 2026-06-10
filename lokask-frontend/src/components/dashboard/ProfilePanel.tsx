@@ -11,6 +11,7 @@ import {
   getNiches,
   uploadConsultantMedia,
   updateConsultantProfile,
+  deleteConsultantMedia,
   Niche,
 } from "@/lib/consultants";
 
@@ -106,10 +107,12 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
     const payload: Partial<ProfileUpdatePayload> = {};
 
     const nicheChanged = formData.mainNicheId !== initialData.mainNicheId;
-    const tagsChanged = JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags);
+    const tagsChanged =
+      JSON.stringify(formData.tags) !== JSON.stringify(initialData.tags);
 
     if (nicheChanged || tagsChanged) {
-      payload.main_niche_id = formData.mainNicheId === "" ? null : formData.mainNicheId;
+      payload.main_niche_id =
+        formData.mainNicheId === "" ? null : formData.mainNicheId;
       payload.tags = formData.tags;
     }
 
@@ -226,11 +229,40 @@ const ProfilePanel = ({ consultant, onSaveSuccess }: ProfilePanelProps) => {
     }
   };
 
-  const handleGalleryRemove = (index: number) => {
+  const handleGalleryRemove = async (index: number) => {
+    const imageToRemove = formData.galleryImages[index];
+
     setFormData((prev) => ({
       ...prev,
       galleryImages: prev.galleryImages.filter((_, i) => i !== index),
     }));
+
+    try {
+      await deleteConsultantMedia(imageToRemove);
+      // Optional: Trigger a small success toast here!
+      toast({
+        title: "Image deleted",
+        description: "Your gallery has been successfully updated.",
+      });
+    } catch (error) {
+      console.error("Failed to delete image from backend:", error);
+
+
+      setFormData((prev) => {
+        const restoredImages = [...prev.galleryImages];
+        restoredImages.splice(index, 0, imageToRemove); // Insert it back at the exact same index
+        return {
+          ...prev,
+          galleryImages: restoredImages,
+        };
+      });
+
+      toast({
+        variant: "destructive",
+        title: "Action failed",
+        description: "We couldn't delete the image from the server. Please try again.",
+      });
+    }
   };
 
   return (

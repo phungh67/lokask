@@ -16,6 +16,7 @@ import (
 type FileStorage interface {
 	UploadProfilePicture(file *multipart.FileHeader, userID string) (string, error)
 	UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error)
+	DeleteFile(ctx context.Context, key string) error
 }
 
 type S3Client struct {
@@ -93,4 +94,22 @@ func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, object
 
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, s.Region, objectKey)
 	return url, nil
+}
+
+func (s *S3Client) DeleteFile(ctx context.Context, key string) error {
+	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	if bucketName == "" {
+		return fmt.Errorf("AWS_S3_MEDIA_BUCKET environment variable is not set.")
+	}
+
+	_, err := s.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		return fmt.Errorf("Failed to delete file: %v", err)
+	}
+
+	return nil
 }
