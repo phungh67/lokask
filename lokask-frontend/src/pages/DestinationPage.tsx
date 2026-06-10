@@ -22,7 +22,7 @@ const DestinationPage = () => {
   const destination = slug ? DESTINATION_METADATA[slug.toLowerCase()] : null;
 
   const { data: paginationResults, isLoading } = useQuery({
-    queryKey: ["consultants", "hanoi-mvp", slug ],
+    queryKey: ['fixed-consultant-data', 'city', 'Hanoi' ],
     queryFn: () => getConsultants({ city: "Hanoi" }),
     enabled: !!destination
   })
