@@ -2,34 +2,49 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/consultants"; 
-import { Consultant } from "@/types/consultant"; 
+import { getConsultants } from "@/lib/consultants";
+import { Consultant } from "@/types/consultant";
 import { PaginatedConsultants } from "@/lib/consultants";
 
-const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> = {
-  thailand: {
-    name: "Thailand",
-    imageUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
-  },
-  paris: {
-    name: "Paris",
-    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
-  },
-};
+const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> =
+  {
+    thailand: {
+      name: "Thailand",
+      imageUrl:
+        "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
+    },
+    paris: {
+      name: "Paris",
+      imageUrl:
+        "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
+    },
+  };
 
 const DestinationPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const destination = slug ? DESTINATION_METADATA[slug.toLowerCase()] : null;
+  const cleanSlug = slug ? slug.toLowerCase() : "";
+
+  let destination = cleanSlug ? DESTINATION_METADATA[cleanSlug] : null;
+
+  if (!destination && slug) {
+    const formattedName = slug.charAt(0).toUpperCase() + slug.slice(1);
+
+    destination = {
+      name: formattedName,
+      imageUrl:
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&auto=format&fit=crop",
+    };
+  }
 
   const { data: paginationResults, isLoading } = useQuery({
-    queryKey: ['fixed-consultant-data', 'city', 'Hanoi' ],
+    queryKey: ["fixed-consultant-data", "city", "Hanoi"],
     queryFn: () => getConsultants({ city: "Hanoi" }),
-    enabled: !!destination
-  })
+    enabled: !!destination,
+  });
 
-  const displayConsultants: Consultant[] = paginationResults?.data || []
-  
-  if (!destination) {
+  const displayConsultants: Consultant[] = paginationResults?.data || [];
+
+  if (!slug) {
     return (
       <div className="py-16">
         <div className="container mx-auto px-6 text-center">
@@ -56,8 +71,8 @@ const DestinationPage = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-12">
           <div className="container mx-auto">
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors"
             >
               <ArrowLeft size={20} />
@@ -69,14 +84,14 @@ const DestinationPage = () => {
           </div>
         </div>
       </div>
-
       <main className="py-12 lg:py-16">
         <div className="container mx-auto px-6">
           <h2 className="text-2xl lg:text-3xl font-display font-bold text-foreground mb-6">
             Locals in {destination.name}
           </h2>
           <p className="text-muted-foreground mb-10 max-w-2xl">
-            Connect with locals who live in {destination.name} and get insider tips for your trip.
+            Connect with locals who live in {destination.name} and get insider
+            tips for your trip.
           </p>
 
           {isLoading ? (
@@ -88,11 +103,16 @@ const DestinationPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {displayConsultants.length > 0 ? (
                 displayConsultants.map((consultant: Consultant) => (
-                  <ConsultantCardCompact key={consultant.id} consultant={consultant} />
+                  <ConsultantCardCompact
+                    key={consultant.id}
+                    consultant={consultant}
+                  />
                 ))
               ) : (
                 <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-xl">
-                  <p className="text-muted-foreground">No locals found for this destination yet.</p>
+                  <p className="text-muted-foreground">
+                    No locals found for this destination yet.
+                  </p>
                 </div>
               )}
             </div>
