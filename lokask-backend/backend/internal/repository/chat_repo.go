@@ -108,15 +108,22 @@ func (r *ChatRepository) sessionValidation(ctx context.Context, conversationID u
 }
 
 func (r *ChatRepository) GetChatSession(ctx context.Context, conversationID uuid.UUID) (*domain.ConsultantSession, error) {
+	var isSelfChat bool
+	checkQuery := `SELECT traveler_id = consultant_id FROM conversations WHERE id = $1`
+	_ = r.DB.GetContext(ctx, &isSelfChat, checkQuery, conversationID)
+
+	if isSelfChat {
+		return &domain.ConsultantSession{
+			Status: "active",
+		}, nil
+	}
+
 	session, err := r.sessionValidation(ctx, conversationID)
 
-	// sessionValidation conveniently returns the session object even if it throws an "expired" error.
-	// We WANT to send expired sessions to the frontend so the UI knows to show the "Buy Package" modal!
 	if session != nil {
 		return session, nil
 	}
 
-	// If session is nil, it means ErrNoRows (no package ever bought) or a severe DB crash.
 	return nil, err
 }
 
@@ -129,9 +136,14 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 		return err
 	}
 
-	session, err := r.sessionValidation(ctx, conversationID)
-	if err != nil {
-		return err
+	isSelfChat := conv.TravelerID == conv.ConsultantID
+	var session *domain.ConsultantSession
+
+	if !isSelfChat {
+		session, err = r.sessionValidation(ctx, conversationID)
+		if err != nil {
+			return err
+		}
 	}
 
 	tx, err := r.DB.BeginTxx(ctx, nil)
@@ -140,7 +152,7 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 	}
 	defer tx.Rollback()
 
-	if session.Status == "awaiting_reply" && senderID == conv.ConsultantID {
+	if !isSelfChat && session != nil && session.Status == "awaiting_reply" && senderID == conv.ConsultantID {
 		expiresAt := time.Now().Add(time.Duration(session.DurationHours) * time.Hour)
 
 		_, err = tx.ExecContext(ctx, `
