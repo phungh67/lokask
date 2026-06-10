@@ -198,6 +198,16 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 	// Initialize slices
 	// profile.Reviews = []domain.Review{}
 	profile.Tags = []string{}
+	avatarURL, _ := helper.BuildMediaURL(profile.AvatarURL)
+	if avatarURL != "" {
+		profile.AvatarURL = avatarURL
+	}
+
+	coverURL, _ := helper.BuildMediaURL(profile.CoverURL)
+	if coverURL != "" {
+		profile.CoverURL = coverURL
+	}
+
 	builtImages := make([]string, 0, len(profile.GalleryImages))
 	for _, imgPath := range profile.GalleryImages {
 		fullPath, _ := helper.BuildMediaURL(imgPath)
