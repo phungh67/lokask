@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,6 +18,10 @@ import (
 type ConsultantHandler struct {
 	Repo    *repository.ConsultantRepository
 	Storage storage.FileStorage
+}
+
+type DeleteMediaRequest struct {
+	ImageURL string `json:"image_url"`
 }
 
 func NewConsultantHandler(repo *repository.ConsultantRepository, storage storage.FileStorage) *ConsultantHandler {
@@ -232,4 +237,43 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		"media_url": mediaURL,
 		"message":   "Successfully upload media.",
 	})
+}
+
+func (h *ConsultantHandler) DeleteGalleryMedia(c *fiber.Ctx) error {
+	userIDstr := c.Locals("user_id").(string)
+	userID, err := uuid.Parse(userIDstr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	var req DeleteMediaRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request",
+		})
+	}
+
+	parts := strings.Split(req.ImageURL, ".com/")
+	imageKey := req.ImageURL
+	if len(parts) > 1 {
+		imageKey = parts[1]
+	}
+
+	if err := h.Repo.RemoveGalleryImage(userID, imageKey); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid request",
+		})
+	}
+
+	// clean file in S3
+	// not necessary to throw error
+	// but should warning if possible
+	err = h.Storage.DeleteFile(c.Context(), imageKey)
+	if err != nil {
+		log.Printf("[WARNING] DB Unlink successful, but failed to delete file %s from storage: %v", imageKey, err)
+	}
+
+	return c.JSON(fiber.Map{"message": "Image deleted successfully."})
 }

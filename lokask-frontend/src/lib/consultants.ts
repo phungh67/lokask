@@ -126,6 +126,13 @@ export async function uploadConsultantMedia(file: File, type: "cover" | "gallery
     });
 }
 
+export async function deleteConsultantMedia(imageUrl: string) {
+    return fetchJson<any>("/consultant/media", {
+        method: "DELETE",
+        body: JSON.stringify({ image_url: imageUrl }),
+    });
+}
+
 export async function updateConsultantProfile(data: Partial<UpdateProfileRequest>){
     return fetchJson<any>("/updateprofile", {
         method: "PATCH",
