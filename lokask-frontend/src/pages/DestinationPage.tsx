@@ -2,8 +2,9 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/api"; 
+import { getConsultants } from "@/lib/consultants"; 
 import { Consultant } from "@/types/consultant"; 
+import { PaginatedConsultants } from "@/lib/consultants";
 
 const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> = {
   thailand: {
@@ -20,12 +21,14 @@ const DestinationPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const destination = slug ? DESTINATION_METADATA[slug.toLowerCase()] : null;
 
-  const { data: displayConsultants = [], isLoading } = useQuery({
-    queryKey: ["consultants", slug],
-    queryFn: () => getConsultants({ city: destination?.name }),
-    enabled: !!destination, 
-  });
+  const { data: paginationResults, isLoading } = useQuery({
+    queryKey: ["consultants", "hanoi-mvp", slug ],
+    queryFn: () => getConsultants({ city: "Hanoi" }),
+    enabled: !!destination
+  })
 
+  const displayConsultants: Consultant[] = paginationResults?.data || []
+  
   if (!destination) {
     return (
       <div className="py-16">
