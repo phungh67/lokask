@@ -1,129 +1,90 @@
-# 📚 Project Lokask Infrastructure Documentation
 
-## 🚀 Overview
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive overview and technical specification for the Lokask Microservices Stack. This infrastructure stack is designed for building a modern, resilient, and scalable web application, incorporating specialized services for persistence, caching, and object storage.
+# 🏗️ Lokask API/Service Stack Infrastructure Definition
 
-The system is composed of five interconnected services:
-1. **PostgreSQL/PostGIS:** Primary relational database for structured, geospatial data.
-2. **Minio:** S3-compatible object storage for handling unstructured assets (e.g., images, documents).
-3. **Redis:** In-memory data store used for high-speed caching and session management.
-4. **Lokask Backend (API):** The core application logic layer (Go service).
-5. **Lokask Frontend (Web UI):** The client-side presentation layer.
+This document serves as the architectural blueprint and operational guide for the Lokask services stack, defined by the `docker-compose.yml` configuration. It outlines the relationships, dependencies, and technical implementation details for the core components: Database, Object Storage, Caching Layer, Backend API, and Frontend UI.
 
-### Architecture Diagram (Conceptual Flow)
+---
 
-```mermaid
-graph LR
-    subgraph Client Layer
-        FE[Frontend (Port 80)]
-    end
+## 🧭 Overview
 
-    subgraph Application Layer
-        BE[Backend API (Port 8080)]
-    end
+The Lokask application utilizes a modern, decoupled, and containerized microservices architecture. This setup uses Docker Compose to orchestrate five key services:
 
-    subgraph Infrastructure Layer
-        DB[PostGIS Database]
-        MIN[MinIO Object Storage]
-        RED[Redis Cache]
-    end
+1.  **PostgreSQL/PostGIS (`db`):** Primary persistence layer for application and geospatial data.
+2.  **MinIO (`minio`):** Highly available, S3-compatible object storage for assets (images, documents).
+3.  **Redis (`redis`):** In-memory data structure store used for caching and session management.
+4.  **Backend API (`backend`):** The core business logic layer (written in Go), responsible for interacting with all other services.
+5.  **Frontend UI (`frontend`):** The client-side interface, responsible for user interaction and rendering.
 
-    FE --> BE
-    BE --> DB
-    BE --> MIN
-    BE --> RED
+The entire stack is designed to be highly resilient, utilizing `healthchecks` and `depends_on: service_healthy` to ensure services start only after their prerequisites are operational.
 
-    DB --> PG((PostgreSQL/PostGIS))
-    MIN --> S3((S3 Endpoint))
-    RED --> MEM((In-Memory Cache))
+## 🔬 Detailed Component Breakdown
+
+### 💾 1. Spatial Database: PostgreSQL + PostGIS (`db`)
+
+*   **Role:** Primary data persistence. PostGIS extension enables advanced geospatial queries, critical for location-based services.
+*   **Persistence:** Data is persisted using a named volume (`postgres_data`).
+*   **Connectivity:** Accessible internally via the service name `db` on port `5432`.
+*   **Health Check:** Uses `pg_isready` to ensure the database is accepting connections.
+*   **Volume Initialization:** The volume mount (`./infra/db/init`) is intended to auto-execute schema setup scripts on first startup.
+
+### ☁️ 2. Object Storage: MinIO (`minio`)
+
+*   **Role:** Acts as the secure, durable storage for binary assets (e.g., user profile pictures, uploaded maps, etc.), simulating Amazon S3 behavior.
+*   **Connectivity:**
+    *   API Endpoint: `minio:9000` (Used by the `backend` service).
+    *   Console Port: `minio:9001` (Used for manual management and debugging).
+*   **Configuration:** Requires API CORS rules (`MINIO_API_CORS_ALLOW_ORIGIN: "*"`) to facilitate communication from external frontends.
+*   **Health Check:** Verifies connectivity to the main API port (`9000`) using `curl`.
+
+### ⚡ 3. Caching Layer: Redis (`redis`)
+
+*   **Role:** Provides fast, in-memory key-value storage. Used primarily for caching expensive database queries, rate limiting, and managing session tokens.
+*   **Connectivity:** Accessible internally via the service name `redis` on port `6379`.
+*   **Persistence:** Data is persisted using a named volume (`redis_data`).
+*   **Health Check:** Uses the standard `redis-cli ping` command.
+
+### ⚙️ 4. Backend API: Go Service (`backend`)
+
+*   **Role:** The primary application logic gateway. It orchestrates requests by connecting to the database, retrieving assets from MinIO, and using Redis for caching.
+*   **Build Context:** Points to `./backend`, implying the Go source code resides in this directory.
+*   **Dependency Management:** This service explicitly depends on both `db` and `redis`, waiting for both to be healthy before starting.
+*   **Environment Variables:** Contains extensive environment variable mappings, defining how the service interacts with all external services (e.g., `DB_HOST: db`, `MINIO_ENDPOINT: minio:9000`).
+*   **Cross-Reference (Coding Logic):**
+    *   The authentication flow (`auth.go`) depends on correctly verifying user identity. This typically involves checking the session token stored in **Redis** (using `REDIS_ADDR`).
+    *   User profile retrieval logic often relies on profile data managed by the `/middlerware/me` endpoints.
+
+### 🖥️ 5. Frontend UI: Web Client (`frontend`)
+
+*   **Role:** The client-side presentation layer. It makes requests to the `backend` API.
+*   **Build Context:** Defined relative to the current location (`../lokask-frontend`), which makes the build process sensitive to file structure changes.
+*   **Dependency:** Depends on the `backend` being running.
+*   **Access:** Exposed directly on the host machine's port `80`.
+
+## 📝 Notes & Best Practices
+
+*   **Development Environment:** The use of dedicated services (PostGIS, MinIO, Redis) allows for simulating a cloud production environment locally, minimizing discrepancies between development and production.
+*   **Service Discovery:** The networking relies entirely on Docker Compose service names (e.g., `db`, `minio`). These names are the canonical hostnames used within the container network.
+*   **Initial Run:** When starting the stack, always use `docker compose up --build` to ensure the `backend` and `frontend` services are compiled with the latest code.
+*   **Configuration Flow:** Credentials for all services must be managed via a separate `.env` file (not shown, but implied by `${VARIABLE}` usage) to keep the stack definition clean and secure.
+
+## ⚠️ Warnings & Tech Debt Items
+
+### ⚠️ Tech Debt / Unfinished Tasks (Priority: High)
+
+1.  **Database Initialization Script:**
+    *   **Issue:** The entry for `volumes` in the `db` service contains the comment `# TODO: create start-up script`.
+    *   **Action:** A dedicated initialization script (e.g., a `.sql` or `.sh` file) must be placed in `./infra/db/init` to handle complex setup, indexing, and initial data loading, ensuring the database is fully ready before the `backend` connects.
+2.  **Security: Secrets Management:**
+    *   **Issue:** Critical credentials (`${DB_PASSWORD}`, `${MINIO_PASSWORD}`) are being loaded from the environment or a local `.env` file.
+    *   **Action:** For any transition to staging or production, this pattern must be replaced with a dedicated secrets management solution (e.g., HashiCorp Vault, AWS Secrets Manager, or Kubernetes Secrets).
+3.  **Security: MinIO Console Exposure:**
+    *   **Issue:** Port `9001` (MinIO Console) is mapped directly to the host machine.
+    *   **Action:** This port should be restricted or accessed only via a dedicated, authenticated internal debugging tunnel, as exposing the management console is a significant security risk.
+
+### 🚨 Architectural Warnings (Priority: Medium)
+
+*   **Build Context Brittle:** The `frontend` build context (`../lokask-frontend`) is highly relative. If the `docker-compose.yml` file is moved or structured differently, this path will break. Consider using absolute paths or relative paths based on the location of the repository root.
+*   **Error Handling on Dependencies:** While `depends_on: service_healthy` is excellent for deployment, it does *not* guarantee application-level readiness. The `backend` service must implement robust retry logic with exponential backoff when connecting to dependent services (DB, MinIO) to handle transient network hiccups.
 ```
-
----
-
-## 🔍 Detailed Service Components
-
-The stack utilizes Docker Compose for orchestration, defining persistence volumes and networking rules to ensure service independence and reliability.
-
-### 💾 1. PostgreSQL with PostGIS (`db`)
-*   **Role:** System of record for structured data. The inclusion of PostGIS ensures native support for complex geospatial queries, critical for location-aware services.
-*   **Configuration:** Uses persistent volume (`postgres_data`) to ensure data survives container restarts.
-*   **Networking:** Exposes port `5432` and is accessible internally by the `backend` service.
-*   **Healthcheck:** Implements a robust health check using `pg_isready` to guarantee the service is accepting connections before other dependent services attempt connection.
-
-### ☁️ 2. Object Storage (MinIO - `minio`)
-*   **Role:** Provides S3 API compatibility for storing large binary files (e.g., user uploaded images, map tiles). This abstracts the storage mechanism away from the primary database.
-*   **Configuration:** Uses persistent volume (`minio_data`). The API port (`9000`) is exposed for internal application use, while the Console port (`9001`) is exposed for developer login.
-*   **Healthcheck:** Verifies service availability by calling a dedicated health endpoint (`/minio/health/live`).
-*   **Security Note:** Access keys (`MINIO_USER`, `MINIO_PASSWORD`) must be securely managed via environment variables.
-
-### ⚡ 3. Redis Cache (`redis`)
-*   **Role:** Provides ultra-low latency key-value storage. Used primarily by the backend for caching expensive query results, managing rate limits, and storing temporary session data.
-*   **Configuration:** Uses persistent volume (`redis_data`).
-*   **Healthcheck:** Basic `redis-cli ping` check ensures the cache service is responsive.
-
-### ⚙️ 4. Lokask Backend API (`backend`)
-*   **Role:** The business logic core. It acts as the intermediary, receiving requests from the frontend, performing validation, calling the appropriate infrastructure service (DB, Cache, Storage), and returning structured JSON responses.
-*   **Dependencies:** Explicitly configured with `depends_on` to wait until `db` and `redis` report healthy status, minimizing startup race conditions.
-*   **Networking:**
-    *   Exposes port `8080` (mapping to the host's `8080`).
-    *   Crucially, it uses **service names** (`db`, `minio`, `redis`) as network hostnames for reliable internal communication.
-*   **Environment Variables:** Requires connection credentials for all three major infrastructure services (DB, MinIO, Redis) as well as external services (SMTP credentials for emails).
-
-### 🖥️ 5. Lokask Frontend (`frontend`)
-*   **Role:** The User Interface layer, responsible for rendering the client experience and consuming the API endpoints exposed by the backend.
-*   **Configuration:** Built from a separate context (`../lokask-frontend`).
-*   **Networking:** Exposed on the host's standard HTTP port `80`.
-
----
-
-## 🛠️ Deployment and Operation Details
-
-### 🟢 Operational Procedure
-
-To bring the entire stack online, the deployment must adhere to the following steps:
-
-1. **Prerequisites:** Ensure all required environment variables are set (see **Notes**).
-2. **Run Command:** Execute the Docker Compose command:
-    ```bash
-    docker compose up --build
-    ```
-3. **Startup Sequence:** The system will automatically handle dependencies:
-    *   Redis and Minio start first (minimal dependencies).
-    *   PostGIS starts, waits for connection validation.
-    *   The Backend starts, waits for DB and Redis healthchecks.
-    *   The Frontend starts, assuming the Backend is operational.
-
-### 🔴 Environment Variable Dependencies
-
-The stability of the system relies entirely on defining the following credentials in the environment or a `.env` file:
-
-| Variable Name | Service Dependent | Description | Example/Usage |
-| :--- | :--- | :--- | :--- |
-| `${DB_USER}` | `db`, `backend` | PostgreSQL Username | `lokask_user` |
-| `${DB_PASSWORD}` | `db`, `backend` | PostgreSQL Password | *Must be strong* |
-| `${DB_NAME}` | `db`, `backend` | Primary Database Name | `lokask_db` |
-| `${MINIO_USER}` | `minio`, `backend` | MinIO Access Key | `minioadmin` |
-| `${MINIO_PASSWORD}` | `minio`, `backend` | MinIO Secret Key | `minioadmin` |
-| `${MAIL_SERVER}` | `backend` | SMTP Email Server Host | `smtp.sendgrid.net` |
-| `${MINIO_ENDPOINT}` | `backend` | MinIO Internal Hostname | `minio:9000` |
-
----
-
-## ⚠️ Warnings and Considerations
-
-*   **[WARNING] Database Initialization Script Missing:** The PostgreSQL service includes a volume mount (`./infra/db/init:/docker-entrypoint-initdb.d`), but the initialization script is noted as unfinished (`TODO: create start-up script`). **ACTION REQUIRED:** A dedicated SQL script must be created and placed in this path to define schema structure and populate initial data integrity constraints.
-*   **[WARNING] Service Dependency Flow:** The `backend` relies on the `db` and `redis` services being actively healthy. If these services fail or are restarted improperly, the backend will fail to initialize correctly.
-*   **[WARNING] Localhost Access:** The `backend` environment variable `MINIO_PUBLIC_URL: "http://localhost"` is hardcoded for local development. This must be updated to the actual deployment URL (e.g., `https://api.lokask.com`) before production deployment to prevent incorrect URL generation for asset links.
-
-## 📝 Notes
-
-*   **Networking Scope:** All connectivity *within* the stack (e.g., `backend` to `db`) must use the Docker service names (`db`, `minio`, `redis`), not `localhost`.
-*   **Port Conflict Potential:** Due to the exposure of multiple ports (80, 8080, 9000, 9001), developers must ensure that these ports are available on the host machine and are not running other applications.
-*   **Container Strategy:** Using `restart: on-failure` is ideal for preventing single-point failure restarts, but monitoring the underlying cause of failure is crucial for proactive maintenance.
-
-## ✨ To Be Completed (Future Scope)
-
-*   **Automated Database Migration:** Implement a tool (e.g., Flyway or Alembic) within the containerized workflow to manage database schema versioning instead of relying on manual initialization scripts.
-*   **Centralized Configuration Management:** Migrate all environment variables from direct use in Docker Compose to a dedicated configuration management tool (e.g., HashiCorp Vault) for enhanced security and auditability.
-*   **Scaling Strategy:** Define and implement scaling strategies for high-load services, particularly adding read replicas for the PostgreSQL database.

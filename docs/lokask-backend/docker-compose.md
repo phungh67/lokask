@@ -1,79 +1,111 @@
-# 📂 Lokask Repository Infrastructure Documentation
+[⬅ Return to Main Compendium](../../README.md)
 
-**System:** Lokask Microservices Stack
-**Date:** 2024-05-28
-**Author:** Documentation Engineering Team
-**Knowledge Base:** System Design, Infrastructure, Cloud Components, Security
+# 🏗️ Service Stack Infrastructure Configuration (`docker-compose.yml`)
 
-## 🚀 Overview
-
-This document details the infrastructure composition for the Lokask application suite. The system utilizes a containerized, microservices architecture deployed using Docker Compose principles. It consists of four core services: a spatial PostgreSQL database, a Redis cache, a backend API layer, and a frontend web client.
-
-The infrastructure is designed for high availability and leverages persistent volumes for stateful services (`db`, `redis`). Inter-service communication is managed via a dedicated internal network (`travel_net`), allowing service discovery by container names.
+This document serves as the architectural guide for the core service deployment stack, defining the infrastructure components, their interdependencies, and operational parameters using Docker Compose. This setup manages the full life cycle from persistent storage to the presentation layer.
 
 ---
 
-## ⚙️ Detail Analysis (Service Breakdown)
+## 🖼️ System Diagram
 
-### 1. 💾 Database Service (PostgreSQL + PostGIS)
-*   **Service Name:** `db`
+The application follows a standard layered microservice pattern.
+
+**Fig 1: Service Interaction Flow**
+*(A visual representation showing the data flow)*
+
+```mermaid
+graph TD
+    A[Client Browser] -->|HTTPS (443)| B(Frontend/Web UI);
+    B -->|Internal HTTP (8080)| C(Backend API);
+    C -->|Read/Write Data| D[PostgreSQL + PostGIS];
+    C -->|Cache Operations| E[Redis Cache];
+    D & E -->|Infrastructure Services| F(AWS Services);
+
+    subgraph Networking
+        B -- travel_net --> C;
+        C -- travel_net --> D;
+        C -- travel_net --> E;
+    end
+```
+
+---
+
+## 📑 Overview
+
+The application stack is designed to be highly available and scalable, utilizing Docker Compose for orchestration. It comprises four main components:
+
+1.  **`db`**: A robust PostgreSQL instance with PostGIS extensions for advanced spatial database capabilities.
+2.  **`redis`**: An in-memory data store utilized for caching sessions, tokens, and rate-limiting data, drastically reducing database load.
+3.  **`backend`**: The core RESTful API service responsible for business logic, authentication, and interaction with AWS resources (S3).
+4.  **`frontend`**: The client-side web interface, configured to handle SSL/TLS termination.
+
+## ✨ Detail: Component Breakdown
+
+### 💾 1. Spatial Database (`db`)
 *   **Image:** `postgis/postgis:16-3.4-alpine`
-*   **Purpose:** Core persistent data storage. The inclusion of PostGIS indicates that the application relies heavily on geographical or spatial data types (e.g., location tracking, boundary storage).
-*   **Connectivity:** Accessible internally via the service name `db` on port 5432.
-*   **Persistence:** Data is persisted using the `postgres_data` volume.
-*   **Initialization:** Custom initialization scripts located at `./infra/db/init` are executed on container startup, ensuring schema migrations and initial data seeding.
-*   **Health Check:** Robust health check is implemented using `pg_isready`, ensuring dependent services do not attempt to connect until the database is fully operational.
+*   **Role:** Primary source of truth for all persistent application data, optimized for geospatial queries (PostGIS).
+*   **Configuration Highlights:**
+    *   Uses persistent volume (`postgres_data`) ensuring data survives container restarts.
+    *   Implements a `healthcheck` to ensure the database is reachable and accepting connections before dependent services start.
+    *   Initial data population occurs via volumes mounted in `./infra/db/init`.
+*   **Connections:** The `backend` service connects using the service name `db` and port `5432`.
 
-### 2. ⚡ Caching Service (Redis)
-*   **Service Name:** `redis`
+### ⚡ 2. Caching Service (`redis`)
 *   **Image:** `redis:alpine`
-*   **Purpose:** Provides a fast, in-memory data store for caching frequently accessed data, managing sessions, and rate limiting.
-*   **Connectivity:** Accessible internally via the service name `redis` on port 6379.
-*   **Persistence:** State is maintained using the `redis_data` volume.
-*   **Health Check:** A standard `redis-cli ping` is used to verify service availability.
+*   **Role:** High-speed caching layer. Essential for performance optimization by offloading frequent, read-heavy queries from the primary database.
+*   **Configuration Highlights:**
+    *   Uses persistent volume (`redis_data`).
+    *   A robust `healthcheck` confirms Redis availability (`redis-cli ping`).
+*   **Connections:** The `backend` service connects using the service name `redis` and port `6379`.
 
-### 3. 💻 Backend Service (API Gateway/Business Logic)
-*   **Service Name:** `backend`
+### ⚙️ 3. Backend API (`backend`)
 *   **Image:** `huyhoangph99/lokask-repository:backend-latest`
-*   **Purpose:** Hosts the primary business logic and API endpoints. This service mediates between the frontend, database, and external services (e.g., AWS S3, Mail API).
-*   **Dependencies:** This service explicitly requires both the `db` and `redis` services to be in a healthy state before starting, enforcing proper startup order.
-*   **Cloud Integration:** Uses environment variables for AWS configuration (`AWS_DEFAULT_REGION`, `AWS_S3_AVATAR_BUCKET`, etc.), noting the architectural best practice of handling keys via **EC2 Instance Profile** rather than directly in configuration.
-*   **Environment Variables:** Highly dependent on external configuration via multiple environment variables (DB credentials, Mail settings, AWS settings).
+*   **Role:** Handles all business logic, request routing, and external integrations (Email, S3).
+*   **Dependencies:** Critically depends on both `db` and `redis` being reported as `service_healthy` before startup.
+*   **Environment Variables:** Receives detailed configuration for database credentials, email services, and AWS configuration.
+    *   ***Security Note:*** AWS credentials are correctly assumed to be handled by the EC2 Instance Profile, which is a strong security practice.
+*   **Cross-Referencing:** The logic governing endpoints and data interaction within this service must adhere to the established structures in the following modules:
+    *   Authentication/Middleware: [`../middlerware/auth.go`](../middlerware/auth.go)
+    *   Business Logic: [`../services/user_service.go`](../services/user_service.go)
 
-### 4. 🌐 Frontend Service (Client Presentation Layer)
-*   **Service Name:** `frontend`
+### 🌐 4. Frontend Web UI (`frontend`)
 *   **Image:** `huyhoangph99/lokask-repository:frontend-latest`
-*   **Purpose:** Serves the user interface (UI) to the end-user.
-*   **Connectivity:** Exposes ports 80 (HTTP) and 443 (HTTPS) to the external network.
-*   **Dependencies:** Depends on the `backend` service being active to fetch required data.
-*   **Certificate Management:** The service mounts the local directory `/home/lokask-service/ssl-cert` to `/etc/letsencrypt:ro`, indicating it expects pre-fetched or externally managed SSL certificates for HTTPS operation.
+*   **Role:** The user-facing presentation layer.
+*   **Configuration Highlights:**
+    *   Exposes standard web ports (`80` and `443`).
+    *   Volume mount at `/etc/letsencrypt` indicates that SSL/TLS certificates are externally managed and injected, ensuring secure communication.
+*   **Dependencies:** Depends on the `backend` service to initialize and communicate with the API endpoints.
 
 ---
 
-## 📝 Documentation Notes
+## 💡 Note: Architectural Best Practices & Considerations
 
-### ℹ️ Configuration Management
-1.  **Environment Variables:** The entire stack relies on a comprehensive `.env` file (or equivalent secret management system) to populate all necessary variables (`DB_USER`, `DB_PASSWORD`, `MAIL_API_KEY`, etc.).
-2.  **Security Best Practice (AWS):** The backend configuration correctly notes that AWS credentials should ideally be managed by an EC2 Instance Profile role rather than being hardcoded or passing them entirely through environment variables.
-3.  **Service Discovery:** All communication between internal services (e.g., `backend` connecting to `db`) utilizes container service names (`db`, `redis`) over IP addresses, which is the correct practice for container orchestration environments.
-
-### 🕰️ Dependency Flow and Startup Sequence
-1.  **Order:** Services generally start: `db` $\rightarrow$ `redis` $\rightarrow$ `backend` $\rightarrow$ `frontend`.
-2.  **Health Checks:** The use of `depends_on: service_healthy` (instead of just `depends_on`) is crucial, as it ensures the API layer waits for a verifiable operational state of its dependencies.
+*   **Network Isolation:** The services are explicitly placed on the `travel_net` network, ensuring that inter-service communication is isolated and names-resolved via service names (e.g., `db`, `redis`) rather than fragile IP addresses.
+*   **Health Checks:** The use of explicit `healthcheck` blocks is excellent practice, enforcing strict startup dependency management. The dependent services (`backend`) will wait until the prerequisites are fully operational.
+*   **Cloud Integration:** The configuration correctly abstracts AWS credentials away from environment variables (relying on Instance Profiles), adhering to the principle of least privilege and improving security posture.
+*   **Port Mapping:** Exposing `443` and `80` on the `frontend` service indicates proper load balancer/reverse proxy integration, handling TLS termination before traffic reaches the container.
 
 ---
 
-## ⚠️ Warnings and Future Improvements
+## ⚠️ Warning: Potential Technical Debt & Improvements
 
-### 🛑 Security Warnings
-1.  **Credential Exposure:** While utilizing ENV variables is standard, storing sensitive variables (like passwords and API keys) directly in the codebase or even a local `.env` file represents a significant risk. **Recommendation:** Implement a dedicated secrets management tool (e.g., HashiCorp Vault, AWS Secrets Manager) to inject these values at runtime.
-2.  **Networking:** The `frontend` exposing ports 80 and 443 suggests it is the entry point. For production, an external, dedicated reverse proxy (like Nginx or Traefik) should manage these ports and handle TLS termination, keeping the `frontend` container itself behind the proxy layer.
+The following points are flagged for immediate review by the infrastructure or security team:
 
-### 📉 Scalability and Resilience Concerns
-1.  **Horizontal Scaling (Stateful Services):** The current setup does not specify a mechanism for scaling the database (`db`) or the cache (`redis`) beyond a single instance. For true production scalability, consider implementing a robust database clustering solution (e.g., Patroni for PostgreSQL) and a Redis Cluster architecture.
-2.  **SSL Certificate Management:** The certificate mount point is a passive volume mount. The system lacks an automated mechanism (like Certbot/Let's Encrypt container integration) to renew these certificates, which will lead to service downtime when certificates expire.
-3.  **Resource Limits:** No CPU or memory limits are defined for the containers. In a shared infrastructure environment, this could lead to resource exhaustion and instability (noisy neighbor problem). **Recommendation:** Implement resource limits and quality of service (QoS) classes.
+### 🔒 1. Secrets Management (Highest Priority)
+*   **Issue:** Database credentials (`DB_USER`, `DB_PASSWORD`, etc.) are defined using simple environment variables (`${VAR}`). While acceptable in simple development environments, this is a significant security risk in production.
+*   **Recommendation:** Migrate secrets storage to a dedicated solution such as **AWS Secrets Manager** or **HashiCorp Vault**, and utilize Kubernetes Secrets or similar mechanism for injection at runtime, rather than relying on `.env` files.
 
-### 🛠️ Development Notes
-*   **Logging:** Add standardized centralized logging (e.g., using the ELK stack or cloud-native logging services) to capture logs from all containers for unified monitoring and debugging.
-*   **Graceful Shutdown:** Consider implementing readiness probes in addition to health checks to allow the container graceful time to finish active requests before shutting down.
+### 🏷️ 2. Image Tag Stability
+*   **Issue:** Services use the `:latest` tag (e.g., `backend-latest`).
+*   **Recommendation:** Never rely on `:latest` in production infrastructure. Use specific, semantic version tags (e.g., `v1.2.3`) to ensure predictable deployments and reliable rollbacks.
+
+### 🧱 3. Volume Ownership
+*   **Issue:** The management and cleanup process for persistent volumes (`postgres_data`, `redis_data`) is not detailed.
+*   **Recommendation:** Implement documented procedures for volume archival, backup restoration, and explicit removal to prevent orphaned data or resource leakage.
+
+### 🧩 4. Code Structure Linking
+*   **Issue:** The document mentions required links for code flow (e.g., `auth.go`), but these dependencies are not explicitly mapped back into the `docker-compose` definition.
+*   **Action Item:** When refactoring the service definition, consider adding an `environment` variable or configuration key that explicitly lists the module paths it interacts with, improving deployability traceability.
+
+---
+***Disclaimer:*** *This documentation is based solely on the provided infrastructure configuration file and assumes the functional existence and stability of the linked code modules.*

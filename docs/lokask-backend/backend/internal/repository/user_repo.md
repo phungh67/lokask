@@ -1,79 +1,83 @@
-# 📚 `repository` Package README
 
-This document provides a comprehensive guide and technical specification for the `repository` package, which serves as the Data Access Layer (DAL) for managing user entities within the system.
+[⬅ Return to Main Compendium](../../README.md)
 
-## 🎯 Overview
+# 💾 User Repository Layer (`repository/user.go`)
 
-The `repository` package encapsulates all database interactions related to user management. It utilizes `sqlx` to abstract SQL operations, providing structured methods for creating, retrieving, and updating `User` records. This pattern isolates the business logic from the database details, adhering to the Repository Pattern for improved maintainability and testability.
+This module encapsulates all database interactions related to the `User` entity. It abstracts the underlying database logic (using `sqlx`) away from the business logic layer, adhering to the Repository pattern.
 
-**Knowledge Base Focus:** System Design, Infrastructure (SQL interaction), Cloud Components, Security Engineering (Handling password hashes).
+## 🔍 Overview
 
-### 📂 Directory Structure
+The `UserRepository` provides methods to perform standard CRUD operations (Create, Read, Update) for user data. It handles complex transactions (like user creation) and retrieval based on common identifiers (email or UUID).
 
+### Components and Concepts
+
+*   **`User` Struct:** Defines the schema model for a user, mapping database columns to Go types.
+*   **`UserRepository`:** The main structure that holds a connection pool (`*sqlx.DB`) and provides database interface methods.
+*   **Database Transactions:** Critical methods utilize database transactions (`*sqlx.Tx`) to ensure atomic operations, especially during user creation.
+
+## ✨ Detail
+
+### 📁 `User` Model Structure
+
+The `User` struct represents the data entity retrieved from the `users` table.
+
+| Field | Type | DB Tag | Description | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `ID` | `string` | `id` | Unique identifier (UUID) of the user. | Primary Key. |
+| `Email` | `string` | `email` | User's unique email address. | Indexed for fast lookup. |
+| `PasswordHash` | `string` | `password_hash` | Hashed version of the user's password. | Should be handled securely. |
+| `FullName` | `string` | `full_name` | User's full displayed name. | |
+| `AvatarURL` | `sql.NullString` | `avatar_url` | Optional URL for the user's profile avatar. | Uses `sql.NullString` to handle potential NULL values from the database. |
+| `AvatarURLJSON` | `string` | - | Internal representation of `AvatarURL` for JSON serialization. | Helper field for serialization/deserialization. |
+
+### 🚀 `UserRepository` Methods
+
+#### 1. `NewUserRepository(db *sqlx.DB)`
+*   **Purpose:** Constructor to initialize the repository with a database connection.
+*   **Usage:** Must be called once during application startup.
+
+#### 2. `CreateUserTx(tx *sqlx.Tx, user *User)`
+*   **Purpose:** Executes the user creation logic within an existing database transaction (`tx`).
+*   **Mechanism:** Uses `RETURNING id` in the SQL query to retrieve the newly generated user ID immediately after insertion.
+*   **Signature:** Requires the transaction object and a pointer to the user struct (`*User`) to set the generated ID.
+
+#### 3. `GetByEmail(email string)`
+*   **Purpose:** Retrieves a user record using their unique email address.
+*   **Mechanism:** Queries the database using the `email` column.
+*   **Return:** Returns a pointer to the `User` object or an error.
+
+#### 4. `GetByID(userID string)`
+*   **Purpose:** Retrieves a user record using their primary key ID.
+*   **Mechanism:** Queries the database using the `id` column.
+*   **Return:** Returns a pointer to the `User` object or an error.
+
+#### 5. `UpdateAvatar(userID uuid.UUID, avatarURL string)`
+*   **Purpose:** Updates only the avatar URL and the `updated_at` timestamp for a specific user.
+*   **Mechanism:** Uses `ExecContext` to execute an UPDATE query, ensuring a timeout context is applied for resilience.
+*   **Dependency:** Requires the `uuid` package for type safety when handling IDs.
+
+## 💡 Note (Design & Implementation Details)
+
+1.  **Context Handling:** The `UpdateAvatar` method correctly uses `context.WithTimeout` and `defer cancel()` to manage context lifecycles, which is best practice for networked database operations.
+2.  **Null Handling:** The use of `sql.NullString` for `AvatarURL` and subsequent assignment to `AvatarURLJSON` demonstrates robust handling of nullable database fields during ORM/repository usage.
+3.  **Atomic Operations:** The reliance on `*sqlx.Tx` for `CreateUserTx` is crucial. This ensures that if any part of the user creation fails, the entire operation rolls back, maintaining data integrity.
+
+## ⚠️ Warning (Security, Tech Debt, and Improvements)
+
+1.  **Security - Password Handling (CRITICAL):**
+    *   The `User` struct includes `PasswordHash`, but the implementation relies entirely on the calling layer (the service/handler) to correctly hash the password *before* passing the object to `CreateUserTx`.
+    *   **Action Required:** Ensure that the password hashing mechanism (e.g., bcrypt) is mandatory and robustly implemented *outside* of this repository layer.
+2.  **Tech Debt - UUID Usage:**
+    *   The `GetByID` method uses `string` for `userID`, while `UpdateAvatar` uses `uuid.UUID`. Consistency should be enforced. It is better practice to use `uuid.UUID` as the canonical type for IDs across the entire repository package.
+3.  **Completeness - Full User Update:**
+    *   Currently, there is no explicit method to update *all* user details (e.g., changing `FullName` or `Email` after creation). This functionality needs to be added, likely requiring separate validation and update logic.
+4.  **Dependency Linkage (Mental Flow):**
+    *   The business logic/service layer that calls `CreateUserTx` will first handle password hashing, which must execute successfully **before** calling this repository method.
+
+## 🔗 Related Files and Flows
+
+*   **[See User Definition](user.go#User)**: Definition of the data model structure.
+*   **[Database Connection Setup](config/db.go)**: This repository expects a properly initialized `*sqlx.DB` connection.
+*   **[Middleware/Auth Flow](middleware/auth.go)**: Authentication middleware will interact with `GetByEmail` to validate user credentials before allowing access.
+*   **[Service Layer Call](service/user_service.go)**: The service layer should be responsible for coordinating the `transaction` start, calling `CreateUserTx`, and committing the transaction.
 ```
-repository/
-├── user.go         # Defines the User struct and repository logic
-└── repository.go   # (Assumed main file containing the package structure)
-```
-
-## 🔬 Detail
-
-### 1. Data Model (`User` Struct)
-
-The `User` struct represents the user data structure, mapping database fields using `db:` tags.
-
-| Field | Type | Description | Notes |
-| :--- | :--- | :--- | :--- |
-| `ID` | `string` | Unique identifier for the user. | Primary Key. |
-| `Email` | `string` | User's unique email address. | Used for authentication/lookup. |
-| `PasswordHash` | `string` | Hashed password. | *Never* exposed via JSON (`json:"-"`). |
-| `FullName` | `string` | User's full name. | Display name. |
-| `AvatarURL` | `sql.NullString` | Stores the avatar URL from the DB. | Uses `sql.NullString` to handle potential `NULL` values. |
-| `AvatarURLJSON` | `string` | JSON-formatted version of the avatar URL. | Used for clean JSON serialization/API response. |
-
-### 2. Repository Implementation (`UserRepository`)
-
-The `UserRepository` struct holds the database connection pool (`*sqlx.DB`) and provides CRUD operations.
-
-#### **Key Methods:**
-
-*   **`NewUserRepository(db *sqlx.DB)`:** Initializes the repository instance with an active database connection.
-*   **`CreateUserTx(tx *sqlx.Tx, user *User)`:**
-    *   **Purpose:** Safely creates a new user record within an existing database transaction (`*sqlx.Tx`).
-    *   **Security:** Requires the caller to manage the transaction scope.
-    *   **Mechanism:** Uses `RETURNING id` to fetch the newly generated primary key immediately.
-*   **`GetByEmail(email string)`:**
-    *   **Purpose:** Retrieves a user record based on a unique email address.
-    *   **Mechanism:** Executes a `SELECT` query filtered by email. Handles the conversion of the nullable `avatar_url` into the `AvatarURLJSON` field for API use.
-*   **`GetByID(userID string)`:**
-    *   **Purpose:** Retrieves a user record based on the user's unique ID.
-    *   **Mechanism:** Executes a `SELECT` query filtered by ID. Also handles the conversion of the nullable avatar URL.
-*   **`UpdateAvatar(userID uuid.UUID, avatarURL string)`:**
-    *   **Purpose:** Updates only the user's avatar URL and the `updated_at` timestamp.
-    *   **Robustness:** Implements `context.WithTimeout` for guaranteed resource cleanup and prevents indefinite blocking on network operations.
-
-### 💡 Architecture Flowchart
-
-```mermaid
-graph TD
-    A[Service Layer] -->|1. Call CreateUserTx| B(UserRepository);
-    B -->|2. Uses Transaction (tx)| C[Database: users table];
-    A -->|3. Call GetByEmail/GetByID| B;
-    B -->|4. Reads Data| C;
-    A -->|5. Call UpdateAvatar| B;
-    B -->|6. Executes UPDATE (with context)| C;
-```
-
-## 📝 Notes
-
-1.  **Transaction Management:** The `CreateUserTx` method expects the caller (e.g., a service layer function) to manage the transaction lifecycle (`BEGIN`, `COMMIT`/`ROLLBACK`). Passing `*sqlx.Tx` ensures atomicity for multi-step operations.
-2.  **Null Handling:** The use of `sql.NullString` for `AvatarURL` is critical. It allows the repository to correctly distinguish between a field that is `NULL` in the database and a field that is simply an empty string (`""`).
-3.  **Context Usage:** `UpdateAvatar` properly utilizes `context.Context` with a timeout. This is best practice for infrastructure components and prevents resource leaks in distributed systems.
-4.  **Hashing:** The `PasswordHash` field uses `json:"-"` tag, ensuring that raw password hashes are never leaked into JSON responses, enhancing security.
-
-## ⚠️ Warnings & Action Items (To Be Completed)
-
-1.  **Error Handling Consistency:** While individual methods return `error`, it is recommended that a standardized error wrapper or custom error type be used across the package to allow calling services to differentiate between "Not Found" errors and "Database Connection" errors (e.g., `repository.ErrNotFound`).
-2.  **Database Schema Dependencies:** The repository assumes the existence of the `updated_at` column on the `users` table for the `UpdateAvatar` method to function correctly. This dependency must be documented in the DB migration scripts.
-3.  **Input Validation:** The repository methods currently assume that the input data (`email`, `userID`, `avatarURL`) is valid and non-nil. Service layer validation (e.g., email format checking, UUID validation) must occur *before* calling repository methods to prevent unnecessary database lookups or invalid queries.
-4.  **Concurrency Handling:** If concurrent modification of user records is a concern (e.g., two processes trying to update the avatar simultaneously), the database might require additional locking mechanisms (e.g., `SELECT FOR UPDATE`) which should be considered for high-concurrency updates.

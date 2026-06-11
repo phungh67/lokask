@@ -1,89 +1,89 @@
-# Project Documentation: Lokask Web Server Configuration (Nginx)
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive technical overview and structural documentation for the provided Nginx server block configuration, which manages traffic routing, security, and application services for `lokask.se`.
+# 🌐 Edge Web Server Configuration (Nginx Proxy)
+
+**File:** `nginx.conf` (or equivalent site configuration)
+**Component:** Infrastructure / Edge Services / Reverse Proxy
+**Knowledge Base:** System Design, Infrastructure, Security Engineering
 
 ---
 
-## 📄 Overview
+## 📂 Overview
 
-This configuration establishes a robust, high-availability web server using Nginx. Its primary function is to secure all incoming traffic by enforcing an HTTPS redirect (HTTP $\to$ HTTPS) and then serving content securely over TLS/SSL. It efficiently routes traffic for static assets, a RESTful API endpoint, and a dedicated WebSocket endpoint to specified backends, while optimizing performance using caching headers.
+This configuration file defines the primary, secure entry point (edge layer) for the application, running on Nginx. Its core function is to implement a secure reverse proxy setup that ensures all incoming HTTP traffic is immediately redirected to HTTPS. It routes three distinct types of traffic:
 
-**Key Components:**
-*   **Security:** Mandatory HTTP to HTTPS redirect (301).
-*   **Ingress:** Handles traffic on ports 80 (HTTP) and 443 (HTTPS).
-*   **Functionality:** Serves SPA content, proxies API requests, and manages long-lived WebSocket connections.
+1.  **Static Content:** Serves the Single Page Application (SPA) files (HTML, CSS, JS) with aggressive caching.
+2.  **REST API:** Proxies structured JSON API calls to an internal backend microservice.
+3.  **WebSockets:** Handles persistent, bidirectional connections required for real-time features (e.g., live chat, video), ensuring proper WebSocket protocol negotiation.
 
-## ⚙️ Detailed Analysis
+The configuration ensures high availability, implements SSL termination, and manages specialized header forwarding crucial for proper logging and client IP tracking.
 
-The configuration is divided into two distinct server blocks, each serving specific traffic handling roles.
+## ⚙️ Detail and Implementation Analysis
 
-### 1. HTTP to HTTPS Redirect Block
+### 🛡️ Security & Redirect (HTTP $\to$ HTTPS)
 
-This block ensures all unsecured traffic is immediately redirected to the secure HTTPS equivalent.
+The first `server` block is critical for security and SEO best practices.
 
-| Directive | Value | Purpose | Security Impact |
+*   **Logic:** Listens on port 80.
+*   **Action:** Uses `return 301` to permanently redirect all requests from `http://lokask.se` or `http://www.lokask.se` to their secure `https://` counterparts.
+*   **Security Impact:** Guarantees that no traffic hits the main application stack over unencrypted HTTP, mitigating Man-in-the-Middle (MITM) attacks.
+
+### 🔗 Primary Secure Service (HTTPS Block)
+
+The second, main `server` block handles all secure traffic on port 443.
+
+*   **SSL Termination:** Configured using `/etc/letsencrypt/live/lokask.se/fullchain.pem` and the corresponding key. This offloads SSL cryptographic computation from the backend services to Nginx, improving performance.
+*   **Client Body Limit:** `client_max_body_size 20M;` sets a maximum acceptable payload size, preventing basic denial-of-service attacks via large file uploads.
+
+#### 🧱 Location Handling
+
+| Location | Purpose | Backend Target | Key Details |
 | :--- | :--- | :--- | :--- |
-| `listen 80` | | Listens for standard HTTP traffic. | Low (Transient). |
-| `server_name` | `lokask.se`, `www.lokask.se` | Targets the primary domain names. | N/A |
-| `return 301` | `https://$host$request_uri` | Issues a permanent redirect (301) to the HTTPS version of the requested URI. | **Crucial Security Layer.** Prevents man-in-the-middle attacks by forcing encryption. |
+| `/` | **Frontend Root** | `/usr/share/nginx/html` | Standard SPA serving. `try_files $uri $uri/ /index.html;` ensures that deep links (e.g., `/profile/123`) are routed back to `index.html` for the client-side router (React/Vue) to handle. |
+| `/api/` | **REST API Proxy** | `http://backend:8080` | General HTTP/HTTPS traffic proxy. **Crucial Headers:** Sets `X-Forwarded-*` headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) to ensure the backend application stack receives accurate client IP, original hostname, and scheme information, regardless of how many proxies sit in front of it. |
+| `/ws/` | **WebSocket Proxy** | `http://backend:8080` | Handles real-time connections. Requires specific headers and longer timeouts (`3600s`) to maintain persistent, long-running connections (vital for video/chat). |
+| `~* \.(?:ico|css|js|...)` | **Static Assets** | `/usr/share/nginx/html` | Uses a regex location block to catch common asset extensions. Implements aggressive caching (`expires 6M`) and bypasses access logging for efficiency. |
 
-### 2. Primary Secure HTTPS Block
+## 📌 Engineering Notes (Best Practices)
 
-This block is the active application entry point, configured for HTTPS listening and advanced routing.
+*   **Cache Control:** The implementation of `expires 6M` for static assets is excellent for performance, as it tells the client browser to cache these resources for six months, drastically reducing load on the edge server and backend.
+*   **Robustness:** The setup is highly robust, correctly handling the differences between standard HTTP proxies (`/api/`) and stateful protocols like WebSockets (`/ws/`).
+*   **Clarity:** Explicitly defining the service names (`backend:8080`) makes the configuration highly readable and testable within a containerized environment (e.g., Docker Compose/Kubernetes).
 
-#### **A. SSL/TLS Setup (Cloud/Security)**
-*   **Listening:** `listen 443 ssl` - Only accepts encrypted connections.
-*   **Certificates:** Uses Let's Encrypt certificates (`fullchain.pem`, `privkey.pem`).
-*   **Configuration:** Sets `client_max_body_size 20M` to accommodate large file uploads or payloads.
+## ⚠️ Warning and Tech Debt
 
-#### **B. Content Routing (Infrastructure/System Design)**
+*   **Health Checks:** The configuration lacks explicit health check endpoints for the backend service. If the `backend:8080` service is down, Nginx will simply fail silently or return a generic 502 error.
+    *   **Recommendation:** Implement an additional `location /health/` block and use Nginx upstream directives with failover/readiness checks.
+*   **Rate Limiting:** There are no rate-limiting mechanisms defined. In a high-traffic public system, the API endpoints (`/api/`) are vulnerable to brute force or basic DDoS attacks.
+    *   **Recommendation:** Integrate `limit_req_zone` directives in the `/api/` block.
+*   **Secret Management:** While the SSL cert paths are defined, in a truly cloud-native setup (e.g., AWS ALB, Cloudflare), these sensitive certificates should ideally be retrieved via a Secret Manager service, rather than being statically pointed to file paths.
 
-| Location Block | Purpose | Target Backend/Root | Key Functionality |
-| :--- | :--- | :--- | :--- |
-| **`/`** | **Frontend Root:** Serves the main Single Page Application (SPA) content. | `/usr/share/nginx/html` | `try_files` directive handles routing within the SPA, ensuring that all requests (e.g., `/about`, `/contact`) fall back to `index.html` for client-side routing. |
-| **`/api/`** | **Backend API Gateway:** Proxies structured API requests. | `http://backend:8080` | Standard reverse proxy setup. Passes critical headers (`X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) to ensure the backend application is aware of the original client IP and protocol. |
-| **`/ws/`** | **WebSocket Handler:** Manages stateful, persistent connections (e.g., video calls). | `http://backend:8080` | Requires specific headers (`Upgrade`, `Connection`) and timeouts (`proxy_read_timeout 3600s`) to keep the connection alive for extended periods, crucial for WebRTC applications. |
-| **`~* \.(...)$`** | **Static Asset Cache:** Improves delivery speed for media and built files. | `/usr/share/nginx/html` | Uses regex matching to capture common asset extensions. Implements aggressive caching (`expires 6M`) and prevents logging for high-volume assets (`access_log off`). |
+## 🧩 Internal Linkages (Coding Flow Mapping)
 
----
+This proxy layer directs all traffic to the core business logic. It is essential to map the request flow to the respective service layers:
 
-## 📝 Notes for Operations & Maintenance
+*   **REST API Logic:** Incoming `/api/` requests are processed by the core business logic in the backend.
+    *   *Related Backend Code:* `../backend/controllers/user_controller.go`
+    *   *Related Authentication Logic:* `../middlerware/auth_middleware.go`
+*   **WebSocket Logic:** Real-time connection upgrades are managed by the dedicated WebSocket handling service.
+    *   *Related Backend Code:* `../backend/websocket/hub.go`
 
-### 💡 Backend Discovery
-The configuration assumes the application backend service is running and discoverable via the DNS name `backend` on port `8080`. If the deployment architecture changes (e.g., moving to a specific load balancer IP or AWS ELB name), the `proxy_pass` directives must be updated.
+## 📐 Suggested Implementation Figured
 
-### 💡 Frontend Architecture
-The use of `try_files $uri $uri/ /index.html;` confirms this is a Single Page Application (SPA) architecture (e.g., React Router, Vue Router). Any change to the frontend build process (e.g., adding a server-side rendered route) might require modification here.
+### 💡 Data Flow Diagram (Conceptual)
 
-### 💡 Caching Strategy
-The aggressive caching on static assets (`expires 6M`) is excellent for performance but means that any necessary changes to those files must be handled by implementing versioning (e.g., appending content hashes to file names, such as `app.js?v=2.1`).
-
-## ⚠️ Warnings & Pending Items (To Do List)
-
-### 🔴 Security Vulnerability/Enhancement: SSL Hardening
-*   **Missing HSTS:** The configuration lacks HTTP Strict Transport Security (HSTS) headers. While the redirect handles the initial hop, adding HSTS headers forces client browsers to *only* connect via HTTPS, significantly improving resilience against protocol downgrade attacks.
-    *   **Action:** Add `add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;` to the primary HTTPS block.
-*   **Security Headers:** Consider adding robust security headers (e.g., `Content-Security-Policy`, `X-Frame-Options: SAMEORIGIN`) to mitigate common XSS and clickjacking attacks.
-
-### 🟡 System Design/Code Improvement: Environment Variables
-*   Hardcoding certificates paths (`/etc/letsencrypt/...`) is inflexible. It is best practice to manage these paths, and potentially the entire server block, via environment variables or a configuration management system (Ansible/Terraform).
-
-### 🟡 Feature Limitation: Global HTTP/2 Support
-*   The configuration does not explicitly enable HTTP/2 or HTTP/3 (QUIC). While Nginx can support these protocols, adding explicit directives ensures optimal performance and modern compatibility, especially for the SPA and static asset delivery.
-
----
-
-## 🖥️ Structural Flow Diagram (Conceptual)
-
-*(Self-correction: As an AI, I cannot generate a physical diagram, but I will describe the structure for perfect documentation purposes.)*
-
-**Conceptual Figure: Request Flow Diagram**
-
-**[Client Browser]** $\rightarrow$ **[Request (HTTP)]** $\rightarrow$ **[Nginx (Port 80)]** $\rightarrow$ **[301 Redirect]** $\rightarrow$ **[Client Browser]**
-
-**[Client Browser]** $\rightarrow$ **[Request (HTTPS)]** $\rightarrow$ **[Nginx (Port 443)]** $\rightarrow$ **[TLS Termination]** $\rightarrow$ **[Route Decision Point]**
-
-*   **If `/api/`:** $\rightarrow$ **[Reverse Proxy]** $\rightarrow$ **[Backend Service: 8080]**
-*   **If `/ws/`:** $\rightarrow$ **[WebSocket Upgrade]** $\rightarrow$ **[Backend Service: 8080]**
-*   **If `/*`:** $\rightarrow$ **[Serve Static HTML]** $\rightarrow$ **[Client Browser SPA Logic]**
-*   **If Asset (`.js`, `.css`):** $\rightarrow$ **[Serve Cached Asset]** $\rightarrow$ **[Client Browser]**
+```mermaid
+graph LR
+    A[Client Browser] -->|HTTP (80)| B(Nginx Edge Server);
+    B -->|301 Redirect| C[Client Browser];
+    C -->|HTTPS (443)| B;
+    B -->|Static Assets| D{File System: /usr/share/nginx/html};
+    B -->|REST API /api/*| E[Backend Service: 8080];
+    B -->|WebSocket /ws/*| E;
+    E --> F[Database / External Services];
+```
+***
+*Documentation Engineered by: [Your Name/Team Name]*
+*Date: [Current Date]*
+```

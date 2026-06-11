@@ -1,108 +1,70 @@
-# 📁 API Client Core Module (`apiClient.ts`)
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-## 🌟 Overview
+# 🔌 API Client Utility Module (`api-client.ts`)
 
-This module serves as the centralized and robust API communication layer for the front-end application. Its primary purpose is to standardize all network requests, abstracting away repetitive logic such as token handling, constructing base URLs, and advanced error catching.
+**Module Purpose:** This module serves as the single source of truth for all frontend communication with the backend API. It abstracts the complexities of HTTP requests, handles authentication headers, and standardizes both success and failure responses, ensuring robust and predictable client-side data fetching.
 
-By using this module, development teams can ensure consistent authentication headers, reliable JSON parsing, and uniform error handling across the entire codebase, regardless of the specific API endpoint or data format being exchanged.
+**Knowledge Domain Focus:** Client Infrastructure, System Integration, Security Best Practices (Authentication).
 
-**Knowledge Domain:** System Design, Infrastructure, Cloud Components, Security Engineering
+---
 
-## 📐 Technical Details
+## 🏗️ Overview
 
-### 🧩 Components
+The `api-client.ts` module encapsulates the global API base URL (`BASE_URL`) and provides two key utilities: a custom error class (`ApiError`) and the core fetching function (`fetchJson`).
 
-#### 1. `BASE_URL` (Constant)
+Its primary responsibility is to standardize the request lifecycle: intercepting tokens, constructing necessary headers (including handling `multipart/form-data` correctly), executing the network call, and meticulously parsing the response to throw predictable, actionable errors upon failure.
 
-*   **Type:** `string`
-*   **Value:** `/api/v1`
-*   **Description:** Defines the root endpoint for all API calls. This allows the API version or base domain to be changed in a single location.
+**Key Consumers:** All components requiring server interaction (e.g., `AuthService.ts`, `UserProfileService.ts`, etc.).
 
-#### 2. `ApiError` (Custom Class)
+---
 
-*   **Inherits from:** `Error`
-*   **Properties:**
-    *   `status` (`number`): The HTTP status code received from the server (e.g., 401, 404).
-    *   `message` (`string`): A descriptive message about the failure.
-*   **Purpose:** Provides a predictable and structured way to throw API-related exceptions, allowing calling functions to catch specific API failures rather than generic network errors.
+## 🧠 Detail Analysis
 
-#### 3. `fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>` (Core Function)
+### 1. Core Constants and Error Handling
 
-This asynchronous, generic function is responsible for executing the API call.
+*   **`BASE_URL`**: Defines the root endpoint for the API (`/api/v1`). This centralized constant allows for future backend migrations or versioning changes (e.g., v2) without modifying dozens of calling functions.
+*   **`ApiError`**: This custom class extends the native `Error` object. By including the HTTP `status` code, it allows consuming components to handle specific API failures (e.g., unauthorized access, validation failures) programmatically, rather than relying solely on generic error messages.
 
-**Parameters:**
+### 2. The `fetchJson<T>` Function (The Core Logic)
 
-| Parameter | Type | Description | Required |
-| :--- | :--- | :--- | :--- |
-| `endpoint` | `string` | The specific API path (e.g., `users/profile`). | Yes |
-| `options` | `RequestInit` | Standard fetch options (e.g., `method`, `body`, `headers`). | No |
+This function is a powerful abstraction layer over the native `fetch` API.
 
-**Core Logic Flow:**
+**A. Authentication Flow (Security):**
+1. It first attempts to retrieve the JWT token from `localStorage`.
+2. If a token exists, it dynamically adds the `Authorization` header in the format `Bearer [token]`.
 
-1.  **Token Retrieval:** Attempts to read the authentication token from `localStorage`.
-2.  **Content-Type Handling:** Detects if the request body is an instance of `FormData` (indicating a file upload).
-    *   If `FormData`, the `Content-Type` header is omitted or handled by the browser to allow multiple content types.
-    *   Otherwise, `Content-Type: application/json` is explicitly set.
-3.  **Header Construction:** Combines user-provided headers (`options.headers`) with the necessary `Authorization` header.
-    *   If a token exists, the header `Authorization: Bearer [token]` is added.
-4.  **Execution:** Performs the actual `fetch` request to `${BASE_URL}${endpoint}`.
-5.  **Success Handling:** If `res.ok` (status 200-299), the response body is parsed as JSON and returned.
-6.  **Error Handling:**
-    *   If `!res.ok`, the function attempts to parse the error response body as JSON.
-    *   If JSON parsing fails, a standard `ApiError` is thrown using the status code and `res.statusText`.
+**B. Content Type Handling (Resilience):**
+1. It checks if the provided options body is an instance of `FormData`.
+2. **Crucially**, if it detects `FormData` (which is used for file uploads), it intentionally omits setting the `Content-Type: application/json` header, preventing the client from incorrectly overriding the boundary-based MIME type required by the backend for file transfers.
+3. For all other requests, it enforces `Content-Type: application/json`.
 
-### 📝 Usage Example (Conceptual)
+**C. Execution and Error Parsing:**
+1. It constructs the final URL: `${BASE_URL}${endpoint}`.
+2. It executes the `fetch` call using the assembled options and headers.
+3. **Error Path Handling:** If `res.ok` is `false` (meaning the HTTP status code is 4xx or 5xx):
+    *   It attempts to parse the response body as JSON.
+    *   If parsing fails (e.g., a server error that returns plain text), it falls back to creating a generic `ApiError` using the `res.statusText`.
 
-```typescript
-import { fetchJson, ApiError } from './apiClient';
+**💡 Related Components/Flows:**
+*   This utility must be imported and used wherever network logic is required.
+*   When performing actions requiring authentication, the consuming service must ensure the API call is routed through this client. (e.g., `src/services/user/profileService.ts` $\rightarrow$ calls `fetchJson`).
 
-// Example 1: Simple GET request
-async function getUserProfile(userId: string) {
-    try {
-        const user = await fetchJson<User>(`users/${userId}`);
-        return user;
-    } catch (e) {
-        if (e instanceof ApiError) {
-            console.error(`API Error (${e.status}): ${e.message}`);
-        } else {
-            console.error("Network failure:", e);
-        }
-    }
-}
+---
 
-// Example 2: File Upload (Requires FormData)
-async function uploadMedia(file: File) {
-    const formData = new FormData();
-    formData.append("mediaFile", file);
-    
-    try {
-        const result = await fetchJson<UploadResult>("media/upload", {
-            method: 'POST',
-            body: formData
-        });
-        return result;
-    } catch (e) {
-        // Handle upload error
-    }
-}
+## ⚠️ Security & Architectural Warnings (Highest Priority)
+
+1.  **`localStorage` Dependency (Critical Security Concern):** Storing JWT tokens in `localStorage` makes the application vulnerable to Cross-Site Scripting (XSS) attacks. If any part of the application is compromised by an attacker-controlled script, they can read the token and use it until it expires.
+    *   **Recommendation:** Review feasibility of migrating token storage to secure, HttpOnly cookies. If this is not immediately possible, implement rigorous Content Security Policy (CSP) headers across the entire application.
+2.  **Type Casting (`any`):** The line `(headers as any)["Authorization"] = ...` uses a type assertion (`as any`) to force the inclusion of the Authorization header. This is a code smell and bypasses TypeScript's type safety.
+    *   **Recommendation:** Update the `HeadersInit` interface definition or use a more explicit header assignment mechanism to improve type safety.
+3.  **Error Handling Blind Spot:** The current error handling assumes that if `res.ok` is false, the body *might* contain JSON error details. If the backend returns a 500 status but sends non-JSON text (e.g., a stack trace), the `await res.json().catch(() => null)` block handles it, but consuming components should be aware that the structure of `errorData` is not guaranteed.
+
+---
+
+## 🚧 Notes & Tech Debt (Future Improvements)
+
+1.  **HTTP Interceptor Pattern:** Instead of passing authentication logic directly into `fetchJson`, consider refactoring this into a dedicated Request Interceptor (e.g., using an Axios instance, or a middleware pattern). This would clean up the primary function body and make the authentication injection a configurable hook rather than hardcoded logic.
+2.  **Context/State Management:** The reliance on global `localStorage` is problematic for testing and scalability. For larger applications, passing the token (or the entire request context) through a dependency injection system or a centralized state management store (like Redux/Zustand) would be architecturally superior.
+3.  **Retry Logic:** The module currently offers no built-in resilience. Implementing a retry mechanism (e.g., retrying upon specific 503 Service Unavailable status codes) would dramatically improve the reliability of the client service.
 ```
-
-## ⚙️ Development Notes
-
-*   **Consistency:** This module enforces a single point of truth for API access, significantly reducing boilerplate code and improving maintainability.
-*   **Generics:** The use of generics (`<T>`) ensures compile-time type checking for the expected response structure, improving developer safety.
-*   **FormData Detection:** The logic specifically checking for `FormData` is critical for supporting file uploads without breaking the standard JSON content-type convention.
-
-## ⚠️ Warnings and Technical Debt
-
-**Security Risk (Critical): Local Storage Token Storage**
-Using `localStorage` to store authentication tokens is highly vulnerable to Cross-Site Scripting (XSS) attacks. If any part of the front-end application is compromised by XSS, the attacker can easily read the token and hijack the user session.
-**Recommendation:** Migrate token handling to secure, HttpOnly cookies, or utilize a short-lived token approach combined with a secure refresh token mechanism.
-
-**Type Safety Concern: Header Casting**
-The header assignment `(headers as any)["Authorization"] = ...` forces a type cast (`as any`). While functional, this sacrifices type safety.
-**Recommendation:** Refactor the header construction logic to use a more strictly typed mechanism if TypeScript definitions allow, or ensure the type assertion is clearly documented and justified.
-
-**API Error Parsing Robustness:**
-The error handling relies on `await res.json().catch(() => null)` which is robust, but if the API returns a non-JSON payload (e.g., plain text or HTML error pages) on failure, the error capture mechanism might fail gracefully but silently lose useful context.
-**Recommendation:** Consider adding a fallback to read the error body as plain text *before* attempting JSON parsing to capture debugging information.

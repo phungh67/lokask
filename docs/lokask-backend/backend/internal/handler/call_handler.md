@@ -1,90 +1,118 @@
-# 🛠️ Real-Time Video Conferencing Handler Implementation
+[⬅ Return to Main Compendium](../../README.md)
 
-This documentation describes the core logic for managing virtual meeting rooms and handling real-time WebSocket connections for video calling within the system.
+# 📞 Real-Time Video Call Handling Service
 
-## 📋 Overview
+This module (`handler`) implements the core logic for managing real-time, multi-user video conference rooms using WebSockets. It handles user joining, room synchronization, message broadcasting, and graceful disconnection cleanup.
 
-This package provides a specialized handler (`VideoCallHandler`) designed to manage multiple simultaneous video call sessions (rooms). It uses a centralized hub (`VideoHub`) to organize sessions, where each session is represented by a `VideoRoom`. The system relies on WebSockets for persistent, bidirectional, real-time communication. When a user connects, they are identified by their `user_id` (expected from JWT claims) and placed into a specific `VideoRoom` determined by a `booking_id`. The handler manages user joining, message broadcasting, and proper cleanup when a user disconnects.
+---
 
-**Key Architectural Components:**
+## 📂 Module Structure & Navigation
 
-*   **`VideoHub`:** Acts as the central registry, holding all active `VideoRoom` instances, keyed by `booking_id`.
-*   **`VideoRoom`:** Represents a single meeting session, managing the map of connected clients (`userID` to `*websocket.Conn`).
-*   **Concurrency Control:** Both `VideoHub` and `VideoRoom` utilize `sync.RWMutex` to ensure thread-safe access and modification of shared maps.
+*   [Overview](#overview)
+*   [Detailed Implementation](#detailed-implementation)
+    *   [Components](#components)
+    *   [VideoCallHandler Flow](#videocallhandler-flow)
+*   [⚠️ Development Notes & Technical Debt](#⚠️-development-notes--technical-debt)
+*   [🛠️ Deployment & Usage](#deployment--usage)
 
-## 🚀 Detail
+---
 
-### Core Structures
+## 💡 Overview
 
-| Structure | Description | Purpose |
-| :--- | :--- | :--- |
-| **`VideoRoom`** | Holds the active participants for one specific call. | Tracks all connected users (`Clients`) in a single session. |
-| **`VideoHub`** | The global container for all meeting rooms. | Ensures that multiple concurrent sessions can operate safely and are accessible by `booking_id`. |
+The `VideoCallHandler` serves as the primary WebSocket entry point for video call participation. It utilizes a central `VideoHub` to manage multiple independent video rooms, where each room corresponds to a unique `bookingID`.
 
-### `VideoCallHandler(c *websocket.Conn)` Flow
+The service ensures that connection state is managed concurrently using Go's synchronization primitives (`sync.RWMutex`). Upon successful connection, the user is registered in the corresponding room, and the handler enters a message consumption loop, broadcasting every received message to all other active participants in that room.
 
-1.  **Authentication & Initialization:**
-    *   The handler first extracts the `user_id` from the connection's local context (implying upstream middleware, likely JWT validation).
-    *   It retrieves the `booking_id` from the WebSocket query parameters.
-    *   **Validation:** If `booking_id` is missing, the connection is immediately logged and terminated, preventing unassigned participation.
-2.  **Room Management (Concurrency Safe):**
-    *   The code acquires a write lock on `CallHub.mu`.
-    *   It checks if a `VideoRoom` exists for the given `booking_id`. If not, a new `VideoRoom` is instantiated and added to `CallHub.Rooms`.
-    *   The lock is released.
-3.  **Joining the Room:**
-    *   The user's connection (`c`) is added to the room's `Clients` map.
-    *   Logging confirms successful joining and reports the current room occupancy.
-4.  **Message Handling (The Loop):**
-    *   The handler enters an infinite loop (`for {}`) to listen for incoming messages (`c.ReadMessage()`).
-    *   **Reception:** When a message is received, the handler acquires a read/write lock on `room.mu`.
-    *   **Broadcasting:** It iterates through *all* connections in the room. For every other user (`otherUserID != userID`), the received message (`msg`) is written/broadcasted using `otherConn.WriteMessage()`.
-    *   **Disconnection:** The loop gracefully breaks if `c.ReadMessage()` returns an error, indicating that the connection was interrupted (e.g., client closed, network loss).
+**Related Components:**
+*   Authentication Middleware (`../middleware/jwt`): Required to validate `user_id` context.
+*   Booking Service (`../service/booking`): Used to confirm the existence and validity of the `booking_id`.
+
+---
+
+## ⚙️ Detailed Implementation
+
+### Components
+
+#### `VideoRoom`
+Represents a single video conference room (tied to one `bookingID`).
+
+| Field | Type | Description | Purpose |
+| :--- | :--- | :--- | :--- |
+| `Clients` | `map[string]*websocket.Conn` | Map storing active connections. Key is the User ID. | Tracks who is currently in the room. |
+| `mu` | `sync.RWMutex` | Read/Write Mutex. | Ensures safe concurrent access to `Clients`. |
+
+#### `VideoHub`
+The central registry for all active video rooms.
+
+| Field | Type | Description | Purpose |
+| :--- | :--- | :--- | :--- |
+| `Rooms` | `map[string]*VideoRoom` | Map where the key is the `bookingID`. | Allows quick retrieval of the correct room based on the booking. |
+| `mu` | `sync.RWMutex` | Read/Write Mutex. | Ensures safe concurrent access to the entire `Rooms` map. |
+
+### 🖥️ `VideoCallHandler` Flow
+
+This function manages the entire lifecycle of a user in a video room.
+
+1.  **Context Extraction & Validation:**
+    *   Retrieves the `userID` from the WebSocket connection's locals (requires preceding middleware).
+    *   Extracts the `bookingID` from the WebSocket query parameters.
+    *   **Fails early** if `bookingID` is missing, logging an error and closing the connection.
+2.  **Room Initialization & Acquisition:**
+    *   Acquires a lock on the global `CallHub`.
+    *   Checks if a `VideoRoom` exists for the given `bookingID`. If not, it initializes one.
+    *   Releases the global lock.
+3.  **Client Registration:**
+    *   Acquires a lock on the specific `VideoRoom`.
+    *   Registers the incoming `userID` and connection (`c`) into the room's `Clients` map.
+    *   Logs the join event and the current room capacity.
+4.  **Message Loop (`for {}`):**
+    *   The handler enters an infinite loop, blocking until a message is received or an error occurs (disconnection).
+    *   **Message Handling:** Upon receiving a message (`msg`), it acquires the room lock. It iterates through all other connections in the room and broadcasts the message to each participant, *except* the sender.
 5.  **Cleanup:**
-    *   Upon breaking the message loop (disconnection), the handler acquires a write lock on `room.mu` and deletes the user's entry from the `room.Clients` map, ensuring resource cleanup.
+    *   When the loop breaks (due to error/disconnection), the handler acquires the room lock and explicitly removes the user's entry from the `Clients` map, ensuring the room state is accurate.
 
-## 💡 Knowledge Base Assessment
+### 🖼️ Conceptual Flow Diagram: User Join & Message Broadcast
 
-*   **System Design:** Excellent implementation of the Hub-and-Spoke pattern for real-time communication. The use of mutexes indicates strong consideration for multi-threaded access, which is crucial for scalability.
-*   **Infrastructure:** Relies heavily on the WebSockets protocol, making it appropriate for persistent, low-latency connections required for real-time media/chat.
-*   **Cloud Components:** This logic is highly suitable for deployment in services like AWS IoT, Google Cloud Pub/Sub, or containerized microservices running on EKS/GKE, provided the load balancer/gateway supports WebSocket passthrough.
-*   **Security Engineer:** The explicit reliance on `c.Locals("user_id")` strongly suggests a preceding middleware layer is responsible for JWT validation and identity extraction, which is a secure practice.
+*(Since I cannot generate a figure, I will describe the required flow visualization)*
 
-## ⚠️ Warning
+**Diagram Title: Video Call Lifecycle**
 
-The current implementation assumes that the `user_id` is reliably passed into the WebSocket connection via `c.Locals("user_id")`.
+1.  **Start:** `User Connects (WebSocket)` $\rightarrow$
+2.  **Middleware:** Checks JWT $\rightarrow$ Gets `user_id` $\rightarrow$
+3.  **Input:** Reads `booking_id` $\rightarrow$
+4.  **Hub Interaction (Locking):** Check `CallHub.Rooms[bookingID]` $\rightarrow$ (If Null) Create Room $\rightarrow$
+5.  **Room Interaction (Locking):** Add User ID to `Room.Clients` $\rightarrow$
+6.  **[LOOP]** `c.ReadMessage()` (Wait for Message) $\rightarrow$
+7.  **[BROADCAST]** Acquire `Room.mu` $\rightarrow$ Iterate `Clients` $\rightarrow$ Write to `otherConn` $\rightarrow$ Release `Room.mu` $\rightarrow$
+8.  **End:** `Error/Disconnect` $\rightarrow$ Acquire `Room.mu` $\rightarrow$ `delete(Clients, userID)` $\rightarrow$ **Exit.**
 
-**Potential Vulnerability/Improvement:**
-If this code were to be exposed without a robust upstream gateway/middleware (e.g., an API Gateway or specialized WebSocket proxy) that validates and injects the JWT claims, the `userID` could potentially be tampered with or logged as an empty string, leading to incorrect session management or spoofing.
+---
 
-## ❓ Note
+## ⚠️ Development Notes & Technical Debt
 
-**Resource Management:** The current cleanup mechanism only removes the user from the room's client map. If the overall `VideoRoom` becomes completely empty, the `VideoHub` currently retains a reference to the `VideoRoom` object in its `Rooms` map forever.
+### Most Important Concerns (Priority ⚡)
 
-**Recommendation:** Consider adding a mechanism (e.g., a counter or a check upon cleanup) to the `VideoRoom` structure or within the `VideoCallHandler` to detect when `len(room.Clients)` falls to zero. If the room is empty, the handler should optionally clean up the entry from the global `CallHub.Rooms` map to prevent memory leaks and stale room objects.
+*   **Authentication Gap:** The code assumes `c.Locals("user_id")` is populated. *It is critically important that the preceding middleware correctly sets this context.* If this middleware fails, the application cannot reliably identify the user, leading to security holes or incorrect logging.
+*   **Error Handling in Broadcast:** The current broadcast loop (`for otherUserID, otherConn := range room.Clients`) does not handle write errors on the receiving end. If one client connection fails to write (e.g., network partition), the loop will continue, potentially failing silently or crashing the handler thread if the error is not caught. **Recommendation: Implement `defer` or local error checks within the broadcast loop.**
+*   **Resource Leakage:** While cleanup happens on disconnection, if the server process terminates unexpectedly, the `VideoHub` map of rooms will leak state until process restart. This is inherent to global state but should be noted for scaled environments.
 
-## 🖼️ Generated Figure Concept: Data Flow Diagram
+### Technical Debt (Refactoring Suggestions)
 
-*(Since actual figure generation is not possible, a descriptive conceptual figure is provided.)*
+1.  **Connection/Disconnection Channel:** Instead of relying solely on `c.ReadMessage()` error to detect disconnection, it is highly recommended to establish a separate mechanism (e.g., a dedicated `sync.WaitGroup` or a dedicated "disconnect" channel) to manage the room state change gracefully, especially when implementing heartbeat checks.
+2.  **Type Assertions:** The use of direct type assertion (`userID := c.Locals("user_id").(string)`) is brittle. It should be wrapped in an explicit type assertion check and fallback mechanism to prevent runtime panics if the middleware fails or the context is modified.
+3.  **Broadcast Function:** The broadcast logic is duplicated and buried within the handler. Extracting a private method, such as `room.Broadcast(senderID, message, messageType)`, will significantly clean up the `VideoCallHandler` method and improve testability.
 
-**Conceptual Flow: User Joining/Messaging**
+---
 
-```mermaid
-graph TD
-    A[Client Initiates WS Connect] --> B(Gateway/Middleware: JWT Validation);
-    B --> C{VideoCallHandler Start};
-    C --> D[Extract user_id, booking_id];
-    D --> E{Check VideoHub for Room by booking_id};
-    E -- Room Exists --> F[Acquire Room Lock];
-    E -- Room New --> G[Create New VideoRoom];
-    G --> F;
-    F --> H[Add User to Room Clients];
-    H --> I[User Connected/Room Info Logged];
-    I --> J{Listening Loop (ReadMessage)};
-    J -- Message Received --> K[Acquire Room Lock];
-    K --> L{Broadcast Message to ALL Other Users};
-    L --> M[Release Room Lock];
-    M --> J;
-    J -- WS Error/Close --> N[User Leaves: Cleanup];
-    N --> O[Delete User Entry from Room Clients];
-    O --> P(End Session);
-```
+## 🛠️ Deployment & Usage
+
+The handler requires the following dependencies and environmental setup:
+
+1.  **Dependencies:**
+    *   `gofiber/contrib/websocket` (Provided by the framework).
+    *   A working JWT middleware that populates `c.Locals("user_id")`.
+2.  **Execution Context:**
+    *   This handler must be the final consumer of the WebSocket connection, running *after* authentication middleware has executed.
+3.  **Testing:**
+    *   Unit tests should focus on concurrent access to `VideoHub` and `VideoRoom` to verify mutex integrity under simulated simultaneous joins and departures.
+    *   Integration tests must simulate network interruptions to confirm proper cleanup.

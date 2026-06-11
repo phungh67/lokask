@@ -1,88 +1,98 @@
-# `helper/media_url_builder.go` Documentation
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-## 📄 Overview
+# 🛠️ Media URL Construction Utility (`package/helper/helper.go`)
 
-This package provides utility functions primarily designed to construct the correct public URL for media assets. Instead of storing full, potentially complex URLs in the database, the system stores a simple object key. The `BuildMediaURL` function intelligently constructs the fully qualified media URL based on the current deployment environment (`dev` or `prod`) and the configured storage backend (AWS S3 or MinIO).
-
-The function abstracts away the complexities of endpoint construction, making the calling code cleaner and more portable across different deployment environments.
-
----
-
-## ⚙️ Detail Analysis
-
-### 🚀 Function: `BuildMediaURL(key string) (string, error)`
-
-This function takes a media object key (a string) and returns the corresponding public URL.
-
-#### **Inputs:**
-
-*   `key` (`string`): The raw object key of the media asset (e.g., `user/profile/image.jpg`).
-
-#### **Outputs:**
-
-*   `string`: The fully constructed public URL.
-*   `error`: An error if required environment variables for the production environment are missing.
-
-#### **Execution Logic & Deployment Modes:**
-
-The function first checks if the `key` already looks like a full URL (starts with `http` or is empty). If so, it is returned as is. Otherwise, it reads the `DEPLOYMENT_MODE` environment variable to determine the URL construction logic:
-
-1.  **`prod` (Production Mode - AWS S3):**
-    *   Requires `AWS_S3_MEDIA_BUCKET` and `AWS_DEFAULT_REGION`.
-    *   Constructs the URL using the standard AWS S3 format: `https://[BUCKET].s3.[REGION].amazonaws.com/[KEY]`
-    *   **Error Handling:** Returns an error if `AWS_S3_MEDIA_BUCKET` is not set.
-2.  **`dev` (Development Mode - MinIO):**
-    *   If `DEPLOYMENT_MODE` is unset, it defaults to `dev`.
-    *   Uses MinIO/Local storage configuration.
-    *   Default `MINIO_PUBLIC_URL`: `http://localhost:9000`
-    *   Default `MININO_MEDIA_BUCKET`: `lokask-media`
-    *   Constructs the URL using the format: `[MINIO_PUBLIC_URL]/[MININO_MEDIA_BUCKET]/[KEY]`
-3.  **Error Handling:** Returns a standard error if required variables (like the S3 bucket name) are missing in production.
-
-#### **Internal Dependencies (Environment Variables):**
-
-| Variable Name | Purpose | Required For | Default Value (if applicable) |
-| :--- | :--- | :--- | :--- |
-| `DEPLOYMENT_MODE` | Determines the deployment environment. | All | `dev` |
-| `AWS_S3_MEDIA_BUCKET` | The name of the S3 bucket in production. | `prod` | None (Must be set) |
-| `AWS_DEFAULT_REGION` | The AWS region for S3 endpoints. | `prod` | `eu-north-1` |
-| `MINIO_PUBLIC_URL` | The base URL for MinIO assets (dev). | `dev` | `http://localhost:9000` |
-| `MININO_MEDIA_BUCKET` | The media bucket name used in dev/MinIO. | `dev` | `lokask-media` |
+This document provides a comprehensive guide to the `helper` package, specifically detailing the implementation of `BuildMediaURL`. This component is critical infrastructure for ensuring that application services can consistently generate publicly accessible, full URLs for stored media objects, abstracting away the underlying storage mechanism (S3 or MinIO).
 
 ---
 
-## 💡 Notes for Implementers
+## 🏗️ Overview
 
-*   **Database Schema:** This pattern enforces that the database only stores the minimal necessary piece of data (the object `key`), reducing data redundancy and simplifying schema management.
-*   **Abstraction Layer:** This package acts as a crucial abstraction layer. If the infrastructure backend ever changes (e.g., moving from MinIO to Google Cloud Storage), only this single file needs modification, minimizing impact on application logic.
-*   **URL Format Consistency:** Developers must ensure that all assets uploaded and referenced follow the standard key structure (e.g., `[user_id]/[asset_type]/[filename]`).
+The `helper` package manages the transformation of a raw media object key (a relative path or filename) into a complete, functional URL. The core function, `BuildMediaURL`, intelligently determines the correct URL construction logic based on the current runtime environment, reading the `DEPLOYMENT_MODE` environment variable.
 
----
+**Key Function:** `BuildMediaURL(key string) (string, error)`
 
-## ⚠️ Warnings and Future Work (Incomplete)
+**Goal:** Decouple the business logic from infrastructure concerns (i.e., the calling service only passes a key, and the helper handles the complexity of AWS vs. local storage).
 
-*   **Region Variable Overwrite:** Currently, if `AWS_DEFAULT_REGION` is set, it is used. If the system needs to support multiple regions for a single deployment, the current logic might fail and require passing a region parameter to the function signature.
-*   **Config Management Integration:** The current reliance on reading multiple environment variables is brittle. Future improvements should consider centralizing configuration reads via a dedicated `Config` struct or using a dedicated configuration management service (e.g., Vault) to improve reliability and testability.
-*   **Error Clarity in MinIO:** While the MinIO logic has defined defaults, it would be beneficial to explicitly check for and report failures if the application *requires* custom MinIO environment variables, rather than relying solely on the hardcoded defaults.
+## ⚙️ Detail and Technical Deep Dive
 
----
+### 1. Core Logic Flow
 
-### 🖼️ Generated Figure: Media URL Flowchart
+The `BuildMediaURL` function follows a strict, environment-aware sequence:
 
-*(Conceptual flow diagram demonstrating the logic)*
+1.  **Pre-Check:** It first checks if the input `key` is empty or already contains a protocol prefix (`http`). If either is true, the key is returned as is, avoiding unnecessary processing.
+2.  **Environment Mode Detection:** It reads `DEPLOYMENT_MODE`. If unset, it defaults to `"dev"`.
+3.  **Production Path (`mode == "prod"`):**
+    *   **Dependency Check:** Requires `AWS_S3_MEDIA_BUCKET` and relies on `AWS_DEFAULT_REGION` (defaulting to `eu-north-1`).
+    *   **Construction:** Uses the canonical AWS S3 endpoint format: `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
+    *   *Error Handling:* Returns an explicit error if the required S3 bucket environment variable is missing.
+4.  **Development/MinIO Path (All other modes):**
+    *   **Dependency:** Relies on MinIO/local storage configuration (`MINIO_PUBLIC_URL` and `MININO_MEDIA_BUCKET`).
+    *   **Defaults:** Defaults the public URL to `http://localhost:9000` and the bucket to `lokask-media`.
+    *   **Construction:** Concatenates the components: `{base_url}/{bucket}/{key}`.
+
+### 2. Infrastructure Diagram (Conceptual Flow)
 
 ```mermaid
 graph TD
-    A[Input Key] --> B{Is Key a Full URL?};
-    B -- Yes --> Z[Return Key];
-    B -- No --> C{Read DEPLOYMENT_MODE};
-    C --> D{Mode = 'prod'?};
-    D -- Yes --> E{Check S3 Config};
-    E -- Fail (Bucket Missing) --> F[Error];
-    E -- Success --> G[Construct AWS S3 URL];
-    D -- No (dev/default) --> H{Check MinIO Config};
-    H -- Success --> I[Construct MinIO URL];
-    G --> J(Return Final URL);
-    I --> J;
-    F --> J;
+    A[Input Key: "media/photo.jpg"] --> B{Check Key Validity};
+    B -- Invalid/Full URL --> C[Return Key Directly];
+    B -- Valid Key --> D{Read DEPLOYMENT_MODE};
+    D --> E{Mode == "prod"?};
+
+    E -- Yes --> F[S3 Logic];
+    F --> G{Check AWS_S3_MEDIA_BUCKET};
+    G -- Success --> H[Build AWS URL];
+    H --> K(Output URL);
+
+    E -- No (dev/local) --> I[MinIO Logic];
+    I --> J{Use MinIO/Local Config};
+    J -- Success --> L[Build MinIO URL];
+    L --> K(Output URL);
+```
+
+### 3. Knowledge Base Analysis
+
+| Area | Component Focus | Implementation Notes |
+| :--- | :--- | :--- |
+| **System Design** | Media Service Layer | This component enforces the abstraction layer between the application service and the storage endpoint. The pattern dictates that no internal service should construct a URL string; they must call `BuildMediaURL` first. |
+| **Infrastructure** | Cloud Integration | Direct coupling to environment variables (`AWS_S3_MEDIA_BUCKET`, `MINIO_PUBLIC_URL`). This is a standard pattern for configuration management but requires careful deployment management. |
+| **Cloud Components** | AWS S3 / MinIO | Handles the structural differences between Amazon Web Services (specific URL format) and general-purpose object storage (MinIO). |
+| **Security** | Exposure | This component *builds* the public URL. It assumes that the underlying storage bucket/container is correctly configured for public read access, but it does not handle authentication itself. |
+
+---
+
+## 📝 Note to Implementers
+
+*   **Environment Dependency:** All services calling this helper **must** ensure that `DEPLOYMENT_MODE` is correctly set in the running container/VM. Failure to set this variable will lead to the use of the default development/MinIO path, which is not appropriate in production.
+*   **Immutability of Keys:** The system design requires that the `key` passed into this function is always the object's path/name as stored in the bucket/container. Modifying the key before calling this function is forbidden.
+*   **Usage Linkage:** When refactoring or calling this logic, always ensure the calling method (e.g., in `api/user_handler.go` or `storage/upload.go`) uses this package instead of hardcoding any URL logic.
+
+## ⚠️ Warning & Technical Debt (Tech Debt)
+
+### 1. Hardcoded Defaults (High Priority)
+
+The function hardcodes defaults for MinIO (`http://localhost:9000` and `lokask-media`) and for the AWS region (`eu-north-1`).
+
+*   **Recommendation:** These defaults should be moved out of the function body and into a dedicated configuration object or loaded from a configuration file (e.g., using Viper or a dedicated config service) to improve testability and maintainability.
+
+### 2. Environment Variable Reliance (Medium Priority)
+
+The tight coupling to global environment variables makes unit testing cumbersome, as the entire global context must be mocked to test different deployment modes.
+
+*   **Recommendation:** Consider refactoring `BuildMediaURL` to accept configuration parameters (e.g., `BuildMediaURL(key, deploymentMode, s3Config, minioConfig)`). This separates the *logic* from the *configuration source*, making it pure and highly testable.
+
+### 3. Lack of Key Sanitization (Low Priority)
+
+The function assumes the `key` passed in is perfectly safe. While the structure of the inputs is controlled by the database, in a complex microservice environment, input keys could theoretically contain problematic characters.
+
+*   **Recommendation:** If keys are user-supplied or passed through multiple services, consider adding a sanitization step to ensure the key only contains characters suitable for file paths and URLs.
+
+***
+
+**Related Files/Flow:**
+
+*   **Usage Example:** See `pkg/services/media_service.go` for how this function should be called when an object is retrieved from the database.
+*   **Configuration:** Review `pkg/config/config.go` to ensure `DEPLOYMENT_MODE` is loaded correctly during service startup.
 ```

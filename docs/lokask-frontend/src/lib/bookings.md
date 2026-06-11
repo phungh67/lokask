@@ -1,74 +1,109 @@
-# 🗓️ Booking Service API Utilities
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive guide and reference for the utility functions used to interact with the Booking Service API. These functions encapsulate common REST API calls related to creating, viewing, updating, and deleting booking records, ensuring type safety and consistent network interaction logic.
+# 📅 Booking Service API Client
 
-## 📂 Overview
+This module encapsulates all service layer calls related to fetching, creating, and modifying bookings. It acts as the unified interface for interacting with the Booking API endpoints, abstracting the HTTP details (methods, URLs, request bodies) from the business logic consuming these services.
 
-The `booking` utility module acts as a centralized client layer for handling interactions with the primary `/bookings` resource endpoint. It abstracts away the low-level HTTP request details (like JSON serialization, method handling, and base URL structure), allowing consumer code to focus purely on the business logic (e.g., fetching a user's trips or updating a booking status).
+## 🚀 Overview
 
-The module supports multiple distinct use cases within the organization's ecosystem:
-1.  **Booking Creation:** Submitting a new booking request.
-2.  **User/Role-Based Retrieval:** Fetching booking lists for specific roles (e.g., Traveler, Consultant, Public view).
-3.  **Modification:** Patching the status or fully deleting a booking record.
+The `bookingService` module provides dedicated, type-safe functions for performing CRUD operations on booking records. It utilizes a shared `fetchJson` utility to handle the underlying network communication and JSON serialization, ensuring consistency across all API interactions.
 
-## 🔍 Detail
+**Related Flow:**
+*   **Client Logic Flow:** Defines how front-end components access booking data (e.g., `bookingService.createBooking(data)`).
+*   **API Definition:** Relies on backend handlers (e.g., `bookHandler` in `../controllers/bookHandler.ts`) which are matched by the endpoint patterns.
 
-The following table details each function, its purpose, required parameters, and the expected API interaction.
+---
 
-### Function Reference
+## ✨ Detail & Function Reference
 
-| Function Name | Description | Endpoint/Method | Parameters | Return Type |
-| :--- | :--- | :--- | :--- | :--- |
-| `createBooking` | Creates a new booking record via a POST request. | `POST /bookings` | `data: CreateBookingRequest` | `Promise<Booking>` |
-| `getMyTrips` | Retrieves all bookings associated with the currently logged-in user (Traveler view). | `GET /bookings/my-trips` | `userId: string` (Used for context, but API handles context) | `Promise<Booking[]>` |
-| `getConsultantBookings` | Retrieves all bookings scheduled for a specific consultant. | `GET /bookings/consultant/:id` | `consultantId: string` | `Promise<Booking[]>` |
-| `getPublicConsultantBookings` | Retrieves confirmed bookings for a consultant viewable by the public (unauthenticated). | `GET /public/:id` | `consultantId: string` | `Promise<Booking[]>` |
-| `updateBookingStatus` | Updates the status of a booking (e.g., `confirmed`, `cancelled`). | `PATCH /bookings/:id/status` | `id: string`, `status: "confirmed" \| "cancelled"` | `Promise<Booking>` |
-| `deleteBooking` | Permanently deletes a specified booking record. | `DELETE /bookings/:id` | `id: string` | `Promise<void>` |
+This section details each public function, its purpose, the underlying API call, and its expected input/output.
 
-### Code Structure Analysis
+### 1. `createBooking(data: CreateBookingRequest)`
 
-The implementation relies on a helper function, `fetchJson`, which standardizes the API communication:
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Used to create a new booking request (typically initiated by a user/traveller). |
+| **Endpoint** | `POST /bookings` |
+| **Method** | `POST` |
+| **Input** | `data` (`CreateBookingRequest`): Payload containing necessary booking details. |
+| **Output** | `Promise<Booking>`: The newly created booking object. |
+| **Usage Context** | Traveller Dashboard. |
 
-```typescript
-// Concept of the underlying fetch wrapper
-fetchJson<T>(url: string, options?: { method: string, body: string }): Promise<T>
+### 2. `getMyTrips(userId: string)`
+
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Retrieves all bookings associated with a specific user (the individual making the booking). |
+| **Endpoint** | `GET /bookings/my-trips` |
+| **Method** | `GET` |
+| **Input** | `userId` (`string`): The ID of the user whose trips are being fetched. |
+| **Output** | `Promise<Booking[]>`: An array of the user's bookings. |
+| **Matching Handler** | `protected.Get("/bookings/my-trips", bookHandler.GetUserTrips)` |
+
+### 3. `getConsultantBookings(consultantId: string)`
+
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Fetches all bookings scheduled for a specific consultant. |
+| **Endpoint** | `GET /bookings/consultant/:id` |
+| **Method** | `GET` |
+| **Input** | `consultantId` (`string`): The ID of the consultant whose schedule is being viewed. |
+| **Output** | `Promise<Booking[]>`: An array of bookings for the consultant. |
+| **Matching Handler** | `protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)` |
+
+### 4. `getPublicConsultantBookings(consultantId: string)`
+
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Publicly accessible view of a consultant's schedule, showing only officially confirmed bookings. |
+| **Endpoint** | `GET /public/:id` |
+| **Method** | `GET` |
+| **Input** | `consultantId` (`string`): The ID of the consultant. |
+| **Output** | `Promise<Booking[]>`: Array of public bookings. |
+| **Security Note** | **Does not require authentication.** |
+
+### 5. `updateBookingStatus(id: string, status: "confirmed" | "cancelled")`
+
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Updates the status of an existing booking (e.g., confirmed by the consultant, or cancelled). |
+| **Endpoint** | `PATCH /bookings/:id/status` |
+| **Method** | `PATCH` |
+| **Input** | `id` (`string`): The ID of the booking to update. `status`: The new status (`confirmed` or `cancelled`). |
+| **Output** | `Promise<Booking>`: The updated booking object. |
+| **Matching Handler** | `protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)` |
+
+### 6. `deleteBooking(id: string)`
+
+| Property | Value |
+| :--- | :--- |
+| **Purpose** | Permanently deletes a booking record. |
+| **Endpoint** | `DELETE /bookings/:id` |
+| **Method** | `DELETE` |
+| **Input** | `id` (`string`): The ID of the booking to be deleted. |
+| **Output** | `Promise<void>`: Successful deletion (assuming no return body). |
+| **Matching Handler** | `protected.Delete("/bookings/:id", bookHandler.DeleteBooking)` |
+
+---
+
+## 📝 Notes & Best Practices
+
+1.  **Error Handling:** All functions rely on the underlying `fetchJson` utility. It is critical that consuming components wrap calls to these functions in `try...catch` blocks to handle potential network failures, authentication errors, or invalid data submissions.
+2.  **Authorization Context:** The distinction between `getMyTrips` (requires authenticated user context) and `getPublicConsultantBookings` (public access) is crucial. Always ensure the calling context matches the required access level.
+3.  **Immutability:** When performing status updates (`updateBookingStatus`), the client should treat the input status as definitive and rely on the backend handler to validate if the transition is logically possible (e.g., cannot go from 'cancelled' back to 'confirmed').
+
+## ⚠️ Warnings & Tech Debt
+
+*   **Missing Error Handling Specificity:** While the service handles the API call, the error structure (HTTP status codes, specific error message format) from the backend API is assumed. If the backend error structure changes, this service layer needs updating to correctly interpret failures.
+*   **Dependency Coupling:** The module is tightly coupled to the implementation of `fetchJson`. If `fetchJson` changes its signature (e.g., error handling mechanism), every function in this file must be reviewed.
+*   **ID Type Safety:** All IDs (`id`, `consultantId`, `userId`) are passed as generic `string` types. While functionally correct, defining a dedicated `BookId` or `UserId` type alias would improve compile-time safety and documentation clarity.
+
+## 🔗 Related Files
+
+| File/Component | Link | Description |
+| :--- | :--- | :--- |
+| **Types** | `../../types/booking.ts` | Defines `Booking` and `CreateBookingRequest` structures. |
+| **Utility** | `./core` | Contains the foundational `fetchJson` utility function. |
+| **Backend Handlers** | `../controllers/bookHandler.ts` | The corresponding backend logic that consumes these API endpoints (e.g., `bookHandler.GetMySchedule`). |
 ```
-
-This abstraction ensures consistency in error handling, JSON parsing, and request execution across all endpoints.
-
-## 🖼️ System Flow Diagram (Conceptual Figure)
-
-The following diagram illustrates how the different roles interact with the central booking resource via the utility layer.
-
-```mermaid
-graph TD
-    A[Client/Consumer Code] -->|Calls Utility Function| B{Booking Utilities Module};
-    B -->|GET /bookings/my-trips| C(Traveler Dashboard);
-    B -->|GET /bookings/consultant/:id| D(Consultant Dashboard);
-    B -->|GET /public/:id| E(Public View/Marketing);
-    B -->|POST /bookings| F(Booking Creation Flow);
-    B -->|PATCH /bookings/:id/status| G(Status Update Logic);
-    B -->|DELETE /bookings/:id| H(Booking Deletion Flow);
-
-    subgraph Booking Service Backend
-        C -->|Retrieves User Data| I[Booking Resource];
-        D -->|Retrieves Schedule Data| I;
-        E -->|Retrieves Confirmed Data| I;
-        F -->|Creates Record| I;
-        G -->|Updates State| I;
-        H -->|Removes Record| I;
-    end
-```
-
-## ⚠️ Warning: Security and Authorization
-
-1.  **Unauthorized Access:** The `getPublicConsultantBookings` endpoint explicitly states it does *not* require authentication. Consumers must ensure that the data exposed via this public endpoint is restricted only to non-sensitive, confirmed booking information.
-2.  **Privilege Escalation:** The `deleteBooking` function uses a `DELETE` request, which is a highly destructive operation. Ensure that the calling scope has appropriate backend authorization checks (e.g., only administrators or the original creator can perform this action).
-3.  **Status Dependency:** When using `updateBookingStatus`, the client must validate that the requested `status` is valid for the given booking state. The backend must enforce a state machine transition logic to prevent illegal status changes.
-
-## 📝 Note: Development Considerations
-
-*   **Error Handling:** While the provided code uses `fetchJson`, consuming modules should implement robust `try...catch` blocks around all API calls to gracefully handle network failures or 4xx/5xx HTTP errors returned by the backend.
-*   **Client-Side State:** When handling fetching trips (`getMyTrips`), remember that the API returns an array of `Booking` objects. Consumers should manage the loading state and error state in the client component to provide a good user experience.
-*   **Idempotency:** The `updateBookingStatus` and `deleteBooking` calls should be treated as idempotent from a consumer perspective where possible, meaning running the call multiple times with the same input should not lead to unintended side effects (though the underlying system logic must support this).

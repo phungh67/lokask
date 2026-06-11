@@ -1,101 +1,94 @@
-# 📚 Authentication Service Handler Documentation
 
-**File:** `handler/auth_handler.go`
-**Component:** `AuthHandler`
-**Knowledge Domains:** System Design, Security, Infrastructure (Redis, Database), Backend API
+[⬅ Return to Main Compendium](../../README.md)
 
-## 🚀 Overview
+# 🛡️ Authentication Handler Module (auth.go)
 
-This handler implements the core authentication and user management logic for the application. It manages user registration (including conditional profile creation for "consultants"), user login, session handling, and retrieving the currently authenticated user's profile details.
+This module handles all core user authentication flows, including user registration, login, session management, and retrieving the current user's profile (`GetMe`). It manages both general user accounts and specialized consultant profiles, maintaining session state using Redis.
 
-The handler utilizes a combination of technologies:
-1. **Database (SQLX):** For persistence (User and Consultant data) and ensuring data integrity using transactions.
-2. **Hashing:** `bcrypt` is used for robust password storage.
-3. **Session Management (Redis):** Used to store and manage active user sessions, decoupling authentication state from the stateless nature of API calls.
-4. **Framework:** Built upon the [Fiber](https://github.com/gofiber/fiber/v2) web framework.
+---
 
-## ✨ Detail
+## 📊 Overview
 
-### 🏗️ Core Structure and Components
+The `AuthHandler` struct provides the API endpoints and business logic for user identity management within the application. It enforces secure practices like password hashing using bcrypt and manages session state via Redis integration for stateless API design, while also handling transactional database operations for data consistency during registration.
 
-The `AuthHandler` struct holds references to the necessary repositories (`UserRepo`, `ConsultantRepo`) and the database connection pool (`DB`) to perform CRUD operations.
+### Key Flows Handled:
+*   **Registration:** Creates a user record and optionally links it to a consultant profile.
+*   **Login:** Validates credentials, creates a session, and issues a client cookie.
+*   **Logout:** Invalidates the session token stored in Redis.
+*   **GetMe:** Retrieves the profile data for the currently authenticated user.
+
+## 🔬 Detail
+
+### 💾 Core Components
+
+| Component | Type | Purpose | Dependencies |
+| :--- | :--- | :--- | :--- |
+| `AuthHandler` | Struct | Manages repository dependencies (`UserRepo`, `ConsultantRepo`, `DB`). | `repository`, `sqlx`, `config` |
+| `RegisterRequest` | Struct | Defines required payload for new user creation (Email, Password, Role, City details). | N/A |
+| `LoginRequest` | Struct | Defines credentials needed for authentication (Email, Password). | N/A |
+
+### 🧪 Functionality Breakdown
 
 #### `Register(c *fiber.Ctx)`
-
-Handles the creation of new user accounts.
-
-1. **Input Validation:** Checks for required fields and performs initial role-based validation (e.g., if `Role == "consultant"`, `CityName` must be provided).
-2. **City Lookup:** If the user is a consultant, it queries the database to ensure the provided `CityName` corresponds to a valid `CityID`.
-3. **Transaction Management:** Initiates a database transaction (`tx`). All user and profile creations must succeed within this transaction to ensure atomicity.
-4. **Uniqueness Check:** Verifies if the email already exists.
-5. **Security:** Hashes the password using `bcrypt`. Calculates a deterministic `AvatarURL` seed based on the user's email.
-6. **Persistence:** Creates the core `User` record.
-7. **Conditional Profile Creation:** If the role is "consultant", it uses the newly created `user.ID` to create a corresponding `Consultant` record, all within the same transaction.
-8. **Commit/Rollback:** Commits the transaction only if all steps succeed; otherwise, it rolls back to prevent partial data writes.
-9. **Response:** Returns a 201 status upon success, providing the new `user_id`.
+This method handles new user sign-ups.
+1.  **Validation:** Performs initial input validation. If `Role == "consultant"`, it validates the provided `CityName` against the local `cities` table.
+2.  **Transaction Management:** Uses `db.Beginx()` to ensure atomicity. If any step fails (e.g., user creation or consultant profile creation), the transaction is rolled back (`defer tx.Rollback()`).
+3.  **Security:** Hashes the plain text password using `bcrypt.DefaultCost`.
+4.  **Profile Generation:** Calculates a default avatar URL using MD5 hash of the user's email.
+5.  **Database Persistence:**
+    *   Creates the primary `User` record.
+    *   If the role is "consultant", it creates the related `Consultant` record, linking it via `UserID`.
+6.  **Success:** Commits the transaction and returns a 201 status with the `user_id`.
 
 #### `Login(c *fiber.Ctx)`
-
-Authenticates the user and establishes a session.
-
-1. **Authentication:** Retrieves the user by email and validates the provided password against the stored `bcrypt` hash.
-2. **Role Determination:** Queries the database to determine if the user has an associated entry in the `consultants` table, thereby setting the `role`.
-3. **Session Creation:** Generates a unique UUID session token.
-4. **Infrastructure Interaction:** Sets the session token (`session:UUID`) in Redis with an expiration of 6 hours.
-5. **Cookie Issuance:** Sets a `session_id` cookie on the client (recommended security headers are used: `HttpOnly`, `SameSite: Lax`).
-6. **Response:** Returns a JSON payload containing the session token and the user's profile details (including calculated role and potentially `consultant_id`).
+This method validates user credentials and establishes a session.
+1.  **Authentication:** Retrieves the user by email and compares the submitted password using `bcrypt.CompareHashAndPassword`.
+2.  **Role Determination:** Checks if the user has a corresponding record in the `consultants` table to determine the user's role.
+3.  **Session Creation (Infra):** Generates a unique session token (`uuid.New().String()`). It stores this token mapping to the `user_id` in **Redis** (`config.RedisClient.Set`) with a 6-hour TTL.
+4.  **Client Cookie:** Sets an HTTP-only cookie (`session_id`) containing the session token, enhancing security against XSS attacks.
+5.  **Response:** Returns the user's profile data along with the session token.
 
 #### `Logout(c *fiber.Ctx)`
-
-Terminates the user session.
-
-1. **Token Extraction:** Retrieves the session token from the client's cookies.
-2. **Session Invalidation:** Deletes the corresponding key (`session:token`) from Redis, immediately revoking access.
-3. **Client Cleanup:** Clears the `session_id` cookie on the client side.
-4. **Response:** Returns a 200 status indicating successful logout.
+Cleans up the session.
+1.  **Token Retrieval:** Gets the token from the client cookie.
+2.  **Cache Invalidation:** Deletes the corresponding session key from **Redis** (`config.RedisClient.Del`).
+3.  **Cleanup:** Clears the `session_id` cookie from the client.
 
 #### `GetMe(c *fiber.Ctx)`
+Retrieves the currently logged-in user's profile.
+1.  **Authorization Check:** Expects the `user_id` to be present in the Fiber context locals (usually set by middleware).
+2.  **Profile Retrieval:** Fetches the `User` record using the provided ID.
+3.  **Role Determination:** Re-checks the `consultants` table to accurately set the `role` field for the response body.
+4.  **Output:** Returns a JSON map containing essential profile details.
 
-Retrieves the profile of the currently authenticated user.
-
-1. **Authorization Check:** Relies on `c.Locals("user_id")` being present (implying middleware has run and attached the user ID).
-2. **User Retrieval:** Fetches the user details by ID from the database.
-3. **Role Check:** Performs a secondary database query to check the `consultants` table, ensuring the `role` attribute is accurately set.
-4. **Response:** Returns a structured JSON payload containing the user's most up-to-date profile information.
-
----
-### 🖼️ Flowchart Representation (Conceptual)
+### 🖼️ Data Flow Visualization
 
 ```mermaid
-graph TD
-    A[Client Request] -->|POST /register| B{Validate Input & City Check};
-    B -->|Success| C(Start DB Transaction);
-    C --> D{Check Email Uniqueness};
-    D -->|Unique| E(Hash Password: bcrypt);
-    E --> F{Insert User Record};
-    F --> G{Insert Session/Profile Data};
-    G --> H{Commit Transaction};
-    H --> I[Success: User Created];
+sequenceDiagram
+    participant Client
+    participant API Gateway
+    participant Handler (Auth)
+    participant DB
 
-    subgraph Login/Session Management
-        J[Client sends credentials] --> K{Authenticate User};
-        K --> L{Generate Session Token};
-        L --> M[Token stored in Redis/DB];
-    end
+    Client->>API Gateway: Request Login/Profile (Credentials/Token)
+    API Gateway->>Handler (Auth): Route Request
+    Handler (Auth)->>DB: 1. Verify Credentials/Session
+    DB-->>Handler (Auth): Credentials/Token Valid
+    Handler (Auth)->>Handler (Auth): 2. Generate/Retrieve Session Token
+    Handler (Auth)-->>Client: Success (Session Token)
 
-    subgraph Fetch Profile
-        N[Client calls GET /profile] --> O{Read Token/Session};
-        O --> P{Fetch User Details via Token};
-        P --> Q[Return User JSON];
-    end
+    Client->>API Gateway: Request Profile (Token)
+    API Gateway->>Handler (Auth): Route Request
+    Handler (Auth)->>DB: 3. Fetch User Profile by Session Token
+    DB-->>Handler (Auth): User Data
+    Handler (Auth)-->>Client: Profile Data
 ```
 
+### Potential Improvements & Next Steps
+
+*   **JWT Implementation:** Currently, session management relies on middleware (implied) to pass context. Migrating session handling to Bearer Token/JWT authentication will improve statelessness and scalability.
+*   **Error Handling:** Implement standardized error responses (e.g., 401 Unauthorized, 404 Not Found) across all endpoints.
+*   **Rate Limiting:** Add rate limiting middleware to prevent brute-force attacks on login endpoints.
+
 ---
-
-### ⚠️ Potential Improvements & Next Steps
-
-*   **Error Handling:** Currently, the code relies heavily on HTTP/framework error handling. Explicitly wrapping database calls in `try...catch` blocks would improve resilience.
-*   **Password Hashing:** While `bcrypt` is mentioned, ensure the actual hashing implementation is robust and handles salt generation correctly.
-*   **Role-Based Access Control (RBAC):** Implement middleware checks on all endpoints to ensure the authenticated user has the necessary permissions before allowing access.
-*   **Rate Limiting:** Protect the login and registration endpoints from brute-force attacks by implementing rate limiting using Redis.
-*   **Token Refresh:** Implement a secure JWT/token refresh mechanism to ensure users don't have to log in repeatedly.
+*This documentation assumes the use of middleware to inject user context after successful authentication.*

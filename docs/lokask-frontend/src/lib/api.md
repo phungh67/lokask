@@ -1,87 +1,66 @@
-# API Client Library Documentation: Core Services
-
-This document provides a comprehensive overview and usage guide for the client-side API wrapper. This module centralizes all interactions with the backend services, handling authentication, error management, data transformation, and API endpoint construction for the entire platform (Consulting, Booking, Chat, User Management).
-
-***
-
-## 💡 Overview
-
-This file implements a robust TypeScript API client layer responsible for communicating with the backend API (`/api/v1`). It abstracts the complexities of HTTP requests, including authorization (JWT token handling), standardized error parsing, request serialization, and data mapping.
-
-The core domains managed by this client are:
-
-1.  **Authentication & User Profile:** Registration, Login, and retrieving the current user's profile (`getMe`, `register*`, `login`).
-2.  **Consultant Directory:** Fetching and filtering consultants (`getConsultants`, `getConsultantById`, `getNiches`).
-3.  **Booking & Scheduling:** Managing trip bookings (traveller side) and consulting schedules (consultant side) (`createBooking`, `getMyTrips`, `getConsultantBookings`).
-4.  **Communication (Chat):** Handling real-time messaging history and sending messages (`getInbox`, `getChatHistory`, `sendMessage`).
-5.  **Media & Profile:** Managing user avatar and professional media uploads (`uploadAvatar`, `uploadConsultantMedia`).
-
-## 📋 Detailed Functionality
-
-### ⚙️ Core Utilities & Error Handling
-
-**`BASE_URL`**: `/api/v1`
-**`fetchJson<T>(endpoint: string, ...)`**: The core function handling all API calls. It centralizes error handling and standardized data fetching.
-
-### 👤 User & Profile Management
-
-*   **`getAvatar`**: Handles the upload and retrieval of user profile pictures.
-*   **`getChatSession`**: Manages the retrieval of active chat conversations.
-
-### 🔬 Appointment & Booking Logic
-
-*   **`getConsultation`**: Fetches user consultation details.
-*   **`getBookingDetails`**: Retrieves specific booking information.
-*   **`getChatHistory`**: Fetches the history of chats between two users.
-
-### 💬 Messaging & Chat System
-
-*   **`sendMessage`**: Sends a new message in a chat thread.
-*   **`getChatMessages`**: Retrieves the paginated list of messages for a given chat ID.
-
-### 📈 Search & Listing Features
-
-*   **`searchConsultant`**: Searches for consultants based on criteria (e.g., specialty, availability).
-*   **`getConsultantProfile`**: Fetches the comprehensive profile of a single consultant.
-
-### 🚀 Advanced Business Logic & Workflow
-
-*   **`bookConsultation`**: Initiates a booking request.
-*   **`getBookingAvailability`**: Checks the schedule availability of a consultant.
-*   **`updateProfile`**: Allows the user to update their personal details.
+This document serves as a technical architectural review and documentation for the provided client-side API abstraction layer. The core responsibility of this module is to manage all external communication with the backend services, abstracting endpoint details from the consuming application logic.
 
 ---
 
-### **Detailed Feature Breakdown**
+# 🏗️ Architecture Review: API Client Service Layer
 
-#### 1. Chat Messaging (`ChatService`)
-| Function | Endpoint/Action | Description |
+**Module Role:** Single Source of Truth for all backend API interactions.
+**Dependencies:** Backend REST/GraphQL Endpoints.
+**Key Principle:** Enforcing consistent data contracts and error handling across all feature modules (Authentication, Scheduling, Communication).
+
+## 📘 1. Core Functionality & Abstraction Layer
+
+The module successfully centralizes API calls, which significantly improves maintainability. The reliance on wrapper functions (e.g., `getConsultantProfile`, `updateBookingStatus`) instead of raw `axios.get('...')` calls adheres strongly to the **Repository Pattern**.
+
+### 🟢 Strengths Identified:
+1.  **Centralization:** All network logic is in one place.
+2.  **Data Mapping:** Functions like `getConsultantProfile` implicitly handle the mapping between raw API JSON structure and the required application object model (e.g., transforming `consultant_id` to `id`).
+3.  **Authentication Handling:** The underlying `fetch` wrappers correctly handle token injection (assuming the token retrieval mechanism is robust).
+
+### ⚠️ Areas for Improvement (Architectural Debt):
+1.  **Global Error Handling:** While the functions handle operational errors (e.g., network failure), there is no centralized, standardized mapping for HTTP error codes (401, 403, 404, 500). This should be wrapped in a standardized error class (e.g., `AuthError`, `ResourceNotFoundError`).
+2.  **Type Safety:** If this service is written in TypeScript, explicit interfaces for *all* API responses and *all* request bodies are critical to prevent runtime data contract violations.
+3.  **Rate Limiting Logic:** The client service should wrap calls with a mechanism to catch and gracefully handle HTTP 429 responses, perhaps implementing an exponential backoff strategy before retrying the request.
+
+---
+
+## 📚 2. Feature Module Breakdown
+
+The API surface can be logically segmented into three primary feature domains.
+
+### A. 🛡️ Authentication & User Management
+*   **Endpoints:** Login, Logout, Token Refresh (`/auth/token`).
+*   **Review:** This section is fundamental. The success flow must be audited to ensure the returned token is immediately stored securely (e.g., HttpOnly Cookies or Secure Storage) and that the client logic correctly handles the **token expiry** using a dedicated refresh endpoint, preventing the need for full re-login.
+
+### B. 🗓️ Scheduling & Resource Management
+*   **Endpoints:** Booking/Availability checks (`/bookings`, `/availability`).
+*   **Review:** The dependency structure suggests multiple reads are required (e.g., to check availability, then to book). The architecture should implement **transactional guarantees** at the client level, or at least wrap the necessary sequence of API calls with robust client-side retry logic, as race conditions are common here.
+*   **Concern:** Does the service manage timezones consistently? All time-related requests *must* enforce UTC exchange to avoid subtle booking errors.
+
+### C. 💬 Communication & Profile Services
+*   **Endpoints:** Profile retrieval, Chat history (`/profiles`, `/messages`).
+*   **Review:** **Data Granularity:** When fetching a profile, the service must be explicit about *which* data fields are retrieved (e.g., `getConsultantProfile(userId, fields=['bio', 'specialties'])`). Fetching an entire user object unnecessarily increases payload size and weakens the service contract.
+
+---
+
+## 🚀 3. Implementation Recommendations (Code Quality & Performance)
+
+| Area | Recommendation | Rationale |
 | :--- | :--- | :--- |
-| `sendMessage(chatId, message)` | POST `/chats/{chatId}/messages` | Sends text messages within a specific chat room. |
-| `getChatMessages(chatId, page)` | GET `/chats/{chatId}/messages` | Retrieves message history, supporting pagination. |
-| `getChatSession(userId)` | GET `/chats/sessions` | Lists all chat sessions the user belongs to. |
+| **State Management** | Abstract Token Management into a dedicated `AuthStore` or Hook. | Decouples token retrieval from the execution of API calls, making testing simpler. |
+| **Payload Handling** | Use DTOs (Data Transfer Objects) for all input/output parameters. | Enforces strict data shapes and acts as immediate documentation for consuming services. |
+| **Idempotency** | Ensure booking/payment creation endpoints can tolerate multiple identical calls without consequence. | Use unique transaction IDs in the request body to prevent accidental double-booking upon retry. |
+| **Error Handling** | Implement a comprehensive `apiErrorHandler(error)` middleware. | Maps generic HTTP responses to custom, actionable domain errors (`new ConflictError('Slot already taken')`). |
+| **Caching** | Implement a local, short-lived cache layer for static data (e.g., lists of service specialties, region codes). | Reduces unnecessary API calls and improves perceived performance during session usage. |
 
-#### 2. Booking & Consultation (`BookingService`)
-| Function | Endpoint/Action | Description |
-| :--- | :--- | :--- |
-| `bookConsultation(consultantId, date, time)` | POST `/bookings/book` | Attempts to book a new consultation slot. |
-| `getBookingAvailability(consultantId, date)` | GET `/bookings/availability` | Checks available time slots for a specific day. |
-| `getBookingDetails(bookingId)` | GET `/bookings/{bookingId}` | Fetches all details associated with a confirmed booking. |
+---
 
-#### 3. Core Profile & Content (`UserService`)
-| Function | Endpoint/Action | Description |
-| :--- | :--- | :--- |
-| `updateProfile(data)` | PATCH `/user/profile` | Updates user-provided data (e.g., bio, phone). |
-| `getConsultantProfile(consultantId)` | GET `/consultants/{id}` | Fetches rich, public-facing profile data. |
-| `searchConsultant(query)` | GET `/consultants/search` | Executes a complex search query against the consultant database. |
+## 📋 Summary Checklist
 
-***
-
-## ⚠️ Error Handling & Best Practices
-
-1.  **Idempotency:** All write operations (POST/PATCH) should be designed to be idempotent where possible.
-2.  **Token Management:** Ensure authentication tokens are handled securely and refreshed proactively.
-3.  **Rate Limiting:** Implement client-side and server-side rate limiting, especially on the `searchConsultant` and `bookConsultation` endpoints.
-4.  **Retry Logic:** For network-related failures, implement exponential backoff retry logic.
-
-*(End of document)*
+| Component | Status | Action Required | Priority |
+| :--- | :--- | :--- | :--- |
+| **Token Refresh Logic** | Functional? | Validate automatic refresh on 401/403. | High |
+| **Global Error Handler** | Implemented? | Create standardized error class mapping (e.g., `AuthError`). | High |
+| **Timezone Handling** | Consistent? | Verify all inputs/outputs use UTC format. | High |
+| **Rate Limit Retry** | Implemented? | Add exponential backoff for 429 responses. | Medium |
+| **Payload Definition** | Rigorous? | Enforce DTOs/Interfaces across all functions. | Medium |

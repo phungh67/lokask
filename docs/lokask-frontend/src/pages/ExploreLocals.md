@@ -1,74 +1,66 @@
-# README: Explore Locals Page Component (`ExploreLocals.tsx`)
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
+
+# 🧭 `ExploreLocals` Page Component
 
 ## Overview
+The `ExploreLocals` component is the primary client-facing page responsible for allowing users to browse and search for local consultants. This page implements complex filtering logic, handles paginated data retrieval, and manages the UI state for showing/hiding filter sidebars. It acts as the main consumer of the consultation listing service.
 
-The `ExploreLocals` component is a core feature component responsible for displaying and allowing users to filter a directory of local consultants. It provides a sophisticated search and filtering experience, allowing users to discover profiles based on criteria such as location, niche, price range, and minimum rating.
+**Purpose:** To provide a discoverable, searchable, and filterable listing of local consultants.
+**Primary Function:** State management, data fetching (via TanStack Query), and UI orchestration for search results.
 
-The component integrates client-side state management (React Hooks) with server-side data fetching using TanStack Query (`@tanstack/react-query`) to ensure efficiency and optimal user experience (UX), particularly regarding loading states and filtering logic.
+---
 
-**Key Features:**
-*   **Dynamic Filtering:** Supports filters managed via a dedicated sidebar.
-*   **Pagination:** Implements robust pagination logic to handle large datasets efficiently.
-*   **State Synchronization:** Updates the displayed consultant list and page number whenever filters are changed.
-*   **Performance Handling:** Manages loading (`isLoading`) and fetching (`isFetching`) states to prevent data display errors and provide immediate feedback to the user.
+## 🛠️ Detail: Component Logic and Flow
 
-## Detail
+### 1. State Management & Initialization
+The component initializes three key pieces of state:
+*   **`searchParams`:** Reads initial filter state (e.g., `city`, `niche`) directly from the URL parameters using `useSearchParams`.
+*   **`showFilters`:** Boolean state to toggle the visibility of the filter sidebar on smaller screens or preference changes.
+*   **`sidebarFilters`:** A structured `FilterState` object derived from `searchParams`. This object holds all current filtering criteria (location, niches, price range, etc.).
+*   **`page`:** Controls the current page number for pagination, defaulting to `1`.
 
-### 📂 Architecture & Implementation
+### 2. Data Fetching (`useQuery` Hook)
+The core data retrieval logic is encapsulated in `useQuery`.
+*   **Query Key:** `["consultants", "explore", sidebarFilters, page]` ensures that the query re-runs only when the core search filters (`sidebarFilters`) or the current `page` number changes.
+*   **API Call:** Calls the external utility function `getConsultants` (located at `../lib/consultants`).
+*   **Parameters Passed:** The hook carefully maps the local state values (`sidebarFilters.location`, `sidebarFilters.niches`, `sidebarFilters.priceRange[1]`) to the backend parameters (e.g., `maxPrice`).
 
-**1. State Management:**
-*   **`useState`:** Manages `showFilters` (visibility of the sidebar) and `page` (current page number).
-*   **`useSearchParams`:** Reads initial filter parameters (`city`, `niche`, etc.) from the URL, ensuring deep linking capability.
-*   **`sidebarFilters` (State Object):** Holds the active filter state, derived from URL parameters initially and updated when the user interacts with the `ExploreSidebar`.
+### 3. Filter Handling & Side Effects
+*   **`handleClearFilters`:** Resets all local state filters to default values and resets the page to 1.
+*   **`onApply` (via Sidebar):** When a user interacts with the `ExploreSidebar`, the `onApply` callback updates both `sidebarFilters` and resets `page` to 1, ensuring a fresh search result on the new criteria.
+*   **`window.scrollTo`:** Improves UX by scrolling the user back to the top of the page after filters are applied.
 
-**2. Data Fetching (TanStack Query):**
-*   **`useQuery`:** Encapsulates the API call logic (`getConsultants`).
-*   **`queryKey`:** The dependency array (`["consultants", "explore", sidebarFilters, page]`) is critical. It ensures that the data is refetched only when the primary dependencies (filters or page) change, adhering to caching best practices.
-*   **`queryFn`:** Calls the `getConsultants` utility function, passing structured parameters: `page`, `limit` (12), `city`, `niches`, `languages`, `maxPrice`, and `minRating`.
-
-**3. UI Components:**
-*   **Layout:** Uses a responsive two-column layout on large screens (`lg:block`).
-*   **Filtering Area:** The `ExploreSidebar` component is sticky on large screens, improving discoverability.
-*   **Results Grid:** Displays consultants using `ConsultantCardCompact` in a responsive grid (`grid-cols-1 md:grid-cols-2 xl:grid-cols-3`).
-*   **Pagination:** Implements a custom pagination component logic to display adjacent pages (e.g., `[p-2] ... [p] ... [p+2]`) along with ellipsis, preventing excessive page links.
-
-### ⚙️ Data Flow Diagram
-
-```mermaid
-graph TD
-    A[User Interaction / Component Mount] --> B{Check URL Parameters};
-    B --> C[Initialize sidebarFilters State];
-    C --> D(useQuery: getConsultants);
-    D --> E{API Call: getConsultants(filters, page)};
-    E --> F[Backend API];
-    F --> G{Response: data, total_count};
-    G --> H[Update consultants state];
-    H --> I{Render UI};
-    I --> J[Display Consultant Grid];
-    I --> K[Display Pagination Controls];
-    J --> L{User Clicks Filter/Page};
-    L --> C;
-```
-
-## Note
-
-### ✨ Development Considerations
-
-1.  **Type Safety:** The structure of `sidebarFilters` (an object representing filters) is critical for both client-side state and the API contract. Maintaining strict typing between the state and the `getConsultants` function ensures robustness.
-2.  **Scroll Behavior:** The `onApply` callback in `ExploreSidebar` correctly implements `window.scrollTo({ top: 0, behavior: "smooth" })`. This is a critical UX detail that ensures the user always lands at the top of the page after applying new filters, preventing confusion.
-3.  **Pagination Logic:** The manual handling of page links (showing current, plus 2 previous, ellipsis, and total last page) is well-implemented. This enhances UX by managing visual clutter while keeping navigation intuitive.
-
-## Warning (Areas Left Unfinished / Technical Debt)
-
-### 🚨 Next Steps & Potential Improvements
-
-1.  **Price Range Handling in State:**
-    *   The code notes: `// Currently ignoring index 0 since backend usually just filters 'max_price'`.
-    *   **Action:** It is necessary to confirm if the `minPrice` filter state (`sidebarFilters.priceRange[0]`) is truly irrelevant for the backend API. If it is used, the `getConsultants` function signature and call must be updated to pass both `minPrice` and `maxPrice`.
-2.  **Loading State UX:**
-    *   Currently, when `isFetching` is true, the consultant grid opacity is reduced (`opacity-50`). While this prevents visual anomalies, consider displaying a persistent, minimal loading skeleton/placeholder *within* the grid structure rather than just applying an overlay, providing a better perceived performance boost.
-3.  **URL Synchronization (Filter Application):**
-    *   While the component reads filters from `useSearchParams`, it does not show the mechanism for *writing* filters back to the URL upon filter application. When `setSidebarFilters` is called inside `onApply`, the URL should ideally be updated using `setSearchParams` to keep the component state and the browser URL perfectly synchronized.
+### 4. Rendering & UI Components
+*   **Layout:** Utilizes a responsive `grid` layout (1 column on mobile, 2 on medium, 3 on large) for displaying results.
+*   **Result Display:** Maps over the fetched `consultants` array, rendering each item using the specialized `ConsultantCardCompact` component.
+*   **Pagination:** Implements custom pagination logic using the `Pagination` components. It calculates visible page numbers (showing the current page and pages -2 to +2) and manages navigation by updating the `page` state.
 
 ***
-*Generated by Documentation Engineering Team.*
+<details>
+<summary>🌐 Conceptual Data Flow Diagram</summary>
+<p>
+[Client URL Search Params] ➡️ (1. Initialize State & Fetch) ➡️ `useQuery` (Key: Filters + Page) ➡️ `getConsultants(filters, page)` ➡️ [API Backend Service] ➡️ (2. Response Data) ➡️ `isLoading` / `error` Check ➡️ (3. Render) ➡️ `ConsultantCardCompact` List + Paginated Controls.
+</p>
+</details>
+***
+
+## 📝 Notes (Best Practices & Improvements)
+
+1.  **Filter State Persistence:** The current implementation correctly initializes state from `searchParams`. For robustness, consider using a dedicated hook or utility to manage the serialization and deserialization of the complex filter object, rather than relying solely on prop drilling/state updates.
+2.  **Performance Optimization:** Since the data fetching relies on changing parameters, ensuring the `getConsultants` function utilizes appropriate caching mechanisms (like React Query or SWR) will prevent unnecessary re-fetches when other unrelated components on the page update.
+3.  **Accessibility (A11y):** The entire component structure should ensure proper focus management, especially within the interactive filter/pagination controls.
+
+## ⚠️ Potential Issues & Next Steps
+
+*   **Error Handling:** While component-level state exists, robust API call failure handling (e.g., showing a user-friendly "Could not load results. Please try again." message) should be implemented around the data fetching hook.
+*   **Input Validation:** When the user submits filter criteria (if additional inputs are added), server-side validation must confirm that the submitted parameters are valid types (e.g., ensuring a date field is a valid date).
+
+---
+**Dependencies Used:**
+*   `@react-query/react` (or similar data fetching library)
+*   `react-router-dom` (for reading URL parameters)
+
+**Related Components:**
+*   `SidebarFilterControls` (Component responsible for updating search parameters)
+*   `PaginationControls` (Component handling page number selection)
