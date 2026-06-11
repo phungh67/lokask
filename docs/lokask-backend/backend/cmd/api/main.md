@@ -1,79 +1,76 @@
-# 🚀 Application Gateway API (v1) Documentation
+# System Entry Point and Initialization Flow (`main.go`)
 
-## Overview
+[⬅ Return to Main Compendium](../../README.md)
 
-This document serves as the architectural guide and technical specification for the primary API Gateway service. This service is built using Go and the Fiber framework. Its core function is to orchestrate interactions between various internal services, manage business logic execution flow, handle authentication, and provide a unified endpoint for client consumption (e.g., Flutter Web client).
+This module serves as the primary entry point for the backend API, responsible for initializing all major services (Database, Storage, Cache, Email), configuring middleware, and establishing all API routes using the Fiber framework. It follows a clean separation of concerns by managing dependency injection across various handlers and repositories.
 
-The application is highly dependency-driven, initializing multiple external systems (Database, Storage, Caching, Email) before establishing API endpoints.
+## 🚀 Overview
 
----
+The application is a multi-module backend system providing services for consulting platforms, user profiles, content blogging, real-time messaging, and appointment booking.
 
-## 🏗️ System Architecture & Infrastructure Components
+**Core Responsibilities:**
+1.  Read and validate environment variables for configuration.
+2.  Establish connections to PostgreSQL, Minio/S3 (for file storage), Redis, and SMTP (for mail services).
+3.  Initialize all business logic handlers and inject necessary dependencies (Repositories, Storage Clients, etc.).
+4.  Set up the Fiber web server instance, applying global middleware (Logging, CORS).
+5.  Define and register all API endpoints, segmenting them into public, protected (authenticated), and WebSocket routes.
 
-### 💾 Data Persistence & State Management
+## 🏗️ Detail & Architecture
 
-| Component | Technology | Purpose | Connection Details |
-| :--- | :--- | :--- | :--- |
-| **Primary Database** | PostgreSQL (`sqlx`, `lib/pq`) | Stores structured data for users, consultations, bookings, and blog content. | Connects via environment variables (`DB_HOST`, `DB_USER`, etc.). |
-| **File Storage** | MinIO/AWS S3 | Handles persistent storage for user avatars, media, and images. | Dynamically switches between MinIO (Development) and S3 (Production) based on `DEPLOYMENT_MODE`. |
-| **Caching/Queue** | Redis | Used for caching, session management, and potential message queueing (implied). | Initialized via `rediscfg.ConnectRedis()`. |
-| **Email Service** | SMTP (Mailtrap/Generic) | Handles all outgoing communication, such as booking confirmations or chat notifications. | Configured via SMTP credentials (`MAIL_SERVER`, `MAIL_USERNAME`, etc.). |
+### 1. Initialization Flow
 
-### 🔐 Security & Middleware Flow
+The `main()` function executes a sequential initialization process:
 
-The API utilizes a layered approach to security:
+**a. Configuration & Connections:**
+*   **Database:** Connects to PostgreSQL using connection strings derived from environment variables (`DB_HOST`, `DB_USER`, etc.).
+*   **Storage:** Initializes the file storage service (`storage.FileStorage`). It detects the `DEPLOYMENT_MODE`:
+    *   `dev`: Connects to Minio.
+    *   `prod`: Connects to AWS S3.
+*   **Cache:** Connects to Redis (via `rediscfg.ConnectRedis()`).
+*   **Email:** Initializes the mailer service using SMTP credentials (from environment variables).
 
-1.  **CORS:** Implemented globally, allowing unrestricted origins (`*`) for frontend compatibility.
-2.  **Request Logging:** Standard request logging is applied globally.
-3.  **Authentication Gate:** The `protected` group ensures that all sensitive routes (chat, bookings, profile updates) require a valid, active authentication token (JWT). The `middleware.Protect()` function encapsulates this enforcement logic.
-4.  **Websocket Security:** The dedicated video call endpoint (`/ws/video`) also requires explicit protection via `middleware.Protect()`.
+**b. Dependency Injection (DI):**
+Repositories (e.g., `ConsultantRepository`, `UserRepository`) are instantiated first, taking the database connection (`*sqlx.DB`) as a dependency. Handlers (e.g., `ConsultantHandler`, `UserHandler`) are then instantiated, receiving the necessary repositories and global services (like `storageService`).
 
----
+**c. API Setup:**
+*   **Framework:** Uses `github.com/gofiber/fiber/v2` for robust routing.
+*   **Global Middleware:** Applies `logger` (for request logging) and `cors` (to allow cross-origin requests).
+*   **Route Grouping:** Routes are logically grouped:
+    *   `/api/v1/`: General API endpoints.
+    *   `/protected`: A middleware group secured by `middleware.Protect()`, ensuring authentication (JWT) is mandatory for most critical operations (e.g., messaging, booking, profile updates).
 
-## ⚙️ Initialization and Setup Detail
+### 2. Key Routes Handled
 
-The `main()` function follows a strict initialization order:
-
-### 1. Configuration Loading (ENV Variables)
-All critical connection details (DB credentials, S3/MinIO endpoint, Mail SMTP) are read from environment variables using `getEnv()`, providing clear fallbacks for local development.
-
-### 2. Service Initialization
-*   **Database:** Establishes the initial connection pool to PostgreSQL. Failure to connect halts the application (`log.Fatalf`).
-*   **Storage:** Uses conditional logic based on `DEPLOYMENT_MODE` to correctly initialize the file storage client (MinIO or S3).
-*   **Dependencies (DI):** Repositories (e.g., `ConsultantRepository`) are instantiated and receive the required `*sqlx.DB` handle. Handlers (e.g., `ConsultantHandler`) are instantiated and receive dependencies (Repositories, Storage service) to enforce the Dependency Injection pattern.
-
-### 3. Fiber App Setup
-*   The application (`app`) is configured with a custom `ErrorHandler` to catch and log internal server errors, returning a standardized 500 JSON response to the client.
-*   **Middleware Application Order (Top to Bottom):**
-    1.  `logger.New()`
-    2.  `cors.New()`
-    3.  Route-specific middleware (e.g., `middleware.Protect()` or `websocket.New()`)
-
----
-
-## 🎯 API Endpoints & Functionality Mapping
-
-| Endpoint Group | Method | Purpose | Protection Level | Key Components Involved |
+| Endpoint | Method | Description | Access Level | Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
-| `/api/` (General) | GET/POST | Core application business logic. | Varies (Unprotected/Auth Required) | Repositories, Handlers |
-| `/chat` | *N/A* | Handles real-time communication. | Middleware/Auth | WebSocket Handler |
-| `/users` | GET/POST | Profile and user management. | Middleware/Auth | User Repository |
-| `/resources` | GET/POST | Media/file uploads (Storage interaction). | Middleware/Auth | Storage Service |
-| `/api/v1/profile` | GET/PUT | User profile interaction. | Middleware/Auth | User Repository |
+| `/api/v1/auth/register` | POST | User registration. | Public | `userRepo` |
+| `/api/v1/auth/login` | POST | User login, generates tokens. | Public | `userRepo`, `consultantRepo` |
+| `/api/v1/auth/me` | GET | Retrieves the authenticated user's profile. | Protected | `authHandler` |
+| `/api/v1/conversations` | POST/GET | Managing chat sessions and retrieving inboxes. | Protected | `chatHandler` |
+| `/api/v1/bookings` | POST/GET/DELETE/PATCH | Creating, viewing, updating, and canceling bookings/trips. | Protected | `bookHandler` |
+| `/api/v1/blogs` | GET/POST | Listing and creating blog posts. | Mixed | `blogHandler` |
+| `/api/v1/consultants` | GET | Listing consultants or fetching specific profiles. | Public | `consultantHandler` |
+| `/ws/video` | WS | Real-time video call handling. | Protected | `VideoCallHandler` |
 
-### Core Dependencies Injection:
+## 📝 Notes
 
-The architecture relies heavily on the injection of configured services:
+*   **Testing Flow:** The structure is highly modular. To test a specific feature (e.g., booking), one only needs to verify the related handler (`bookHandler`) and its repository (`bookRepo`) without needing to run the entire application.
+*   **Error Handling:** A custom `ErrorHandler` is implemented on the Fiber app to catch internal server errors, ensuring a consistent JSON response structure (`{"error": "message"}`).
+*   **Proxy Handler:** A `proxyImageHandler` helper function was defined, demonstrating how to handle external resource fetching (like images) before this logic was commented out of the main routing.
 
-*   **Database Connection:** Used by all repository layers.
-*   **Storage Client:** Used by the resource handling layer.
-*   **Auth Token Validator:** Implicitly used before accessing protected endpoints.
+## 🚨 Warning & Technical Debt
 
-## ⚠️ Critical Observations & Recommendations
+1.  **Hardcoded JWT Key:** The commented-out section for protected routes suggests a hardcoded `SigningKey: []byte("super_secret_jwt_key")`. **ACTION REQUIRED:** This key must be moved to and retrieved from a secure environment variable (e.g., `JWT_SECRET_KEY`).
+2.  **CORS Configuration:** The `cors` configuration is set to `AllowOrigins: "*"` which is generally acceptable for local development but **should be restricted** in production to only the necessary front-end domain(s).
+3.  **Dead/Commented Code:** Several handlers and routes (e.g., `proxyHandler`, `// avatar upload`, `// protected group definition`) are commented out. These sections must be either fully implemented or permanently removed to prevent confusion.
+4.  **JWT Middleware Dependency:** The entire `/protected` route group relies heavily on `middleware.Protect()`. The stability and functionality of the entire API depend on the robustness of this external middleware implementation (Auth Flow).
+5.  **`getEnv` Helper:** While functional, this helper function is basic. Consider using a dedicated configuration library (like `viper` or `cleanenv`) to validate and structure all environment variables upon startup, providing clearer startup failure messages.
 
-1.  **Inconsistent Error Handling:** While the structure is robust, ensure centralized error handling (e.g., using a middleware wrapper) to catch and format errors consistently across all routes.
-2.  **API Key Management:** Review how authorization tokens are validated. If this service handles sensitive data, consider moving away from basic token passing toward robust OAuth 2.0 or JWT management.
-3.  **Code Duplication:** The initialization of the API routes and middleware application should be factored out into dedicated router files to improve readability and maintainability.
+## 🧩 Related Files & Flow Links
+
+*   **[Internal/Middleware Logic]** Details of authentication and authorization flow (JWT token generation/validation): `../internal/middleware/protect.go` (Implied dependency for middleware protection).
+*   **[Database/Models]** Data structures and models used across all services.
+*   **[Services]** Logic handling business rules (e.g., `UserService`, `BookingService`).
 
 ---
-*(End of Document)*
+*This structure suggests a clean separation of concerns, with network handling in the controllers (implied by route mapping) and core logic residing in the services/repositories.*

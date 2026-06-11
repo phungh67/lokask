@@ -1,100 +1,95 @@
-# 📁 `domain` Package Documentation: Booking Management
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive technical specification and design review for the core domain models governing booking transactions.
+# 🗓️ Booking Domain Models (`domain/booking.go`)
 
-## 🚀 Overview
+This module defines the core data structures (domain models) used throughout the application for handling booking entries and requests. It separates the internal representation of data (the database model) from the external API payloads.
 
-This package defines the fundamental data structures (`structs`) used within the application's domain layer for managing scheduled bookings. It separates the persistence model (`BookingEntry`) from the external input contract (`CreateBookingRequest`).
+## 🔬 Overview
 
-The module's primary function is to establish canonical data definitions for scheduling consultations, managing service details, and ensuring data integrity regarding timing and transactional status.
+This file encapsulates the primary business entities: `BookingEntry` (the authoritative record stored in the database) and `CreateBookingRequest` (the payload received when a user initiates a new booking). Adherence to these models ensures data consistency across services, database interactions, and API boundaries.
 
-### 📊 Architectural Placement
+### Code Snippet Reference
 
-| Component | Role | Knowledge Domain |
+```go
+package domain
+
+import "time"
+
+type BookingEntry struct {
+	// ... fields
+}
+
+type CreateBookingRequest struct {
+	// ... fields
+}
+```
+
+---
+
+## 🧩 Detailed Analysis
+
+### 1. `BookingEntry` (Domain/Database Model)
+
+This struct represents a single, comprehensive record of a booking within the system. It includes management metadata and all core booking details.
+
+| Field | Type | Purpose | Constraints/Tags |
+| :--- | :--- | :--- | :--- |
+| `ID` | `string` | Unique identifier for the booking. | `db:"id"`, `json:"id"` |
+| `ConsultantID` | `string` | ID of the consultant/provider booked. | `db:"consultant_id"`, `json:"consultant_id"` |
+| `UserID` | `string` | ID of the user making the booking. | `db:"user_id"`, `json:"user_id"` |
+| `StartTime` | `time.Time` | Scheduled start time of the service. | `db:"start_time"`, `json:"start_time"` |
+| `EndTime` | `time.Time` | Scheduled end time of the service. | `db:"end_time"`, `json:"end_time"` |
+| `ServiceType` | `string` | The nature of the service (e.g., 'video_call', 'in_person'). | `db:"service_type"`, `json:"service_type"` |
+| `Status` | `string` | Current lifecycle status of the booking. | `db:"status"`, **Must be** `pending`, `confirmed`, `cancelled`. |
+| `TotalPrice` | `float64` | The total monetary cost of the booking. | `db:"total_price"`, `json:"total_price"` |
+| `UserNotes` | `string` | Any specific notes provided by the user. | `db:"user_notes"`, `json:"user_notes"` |
+| `CreatedAt` | `time.Time` | Timestamp when the record was created. | `db:"created_at"`, `json:"created_at"` |
+| `UpdatedAt` | `time.Time` | Timestamp of the last record modification. | `db:"updated_at"`, `json:"updated_at"` |
+
+### 2. `CreateBookingRequest` (API Input Model)
+
+This struct defines the expected payload when a client submits a request to create a new booking. It is designed to be consumed by the API layer (e.g., `handler/booking.go`).
+
+| Field | Type | Purpose | Conversion Notes |
+| :--- | :--- | :--- | :--- |
+| `ConsultantID` | `string` | ID of the desired consultant. | Direct mapping. |
+| `StartTime` | `string` | Start time provided by the frontend. | **Crucial:** Received as an ISO formatted string (`json:"start_time"`), must be parsed into `time.Time` internally. |
+| `ServiceType` | `string` | Type of service. | Direct mapping. |
+| `UserNotes` | `string` | Notes for the booking. | Direct mapping. |
+| `TotalPrice` | `float64` | Calculated total price. | Direct mapping. |
+
+---
+
+## 📝 Notes and Best Practices
+
+1. **Time Handling:** The input model (`CreateBookingRequest`) receives `StartTime` as a string. **All business logic layers must immediately parse this string into a `time.Time` object and validate it for proper time zones.** Relying on string passing across service boundaries is highly discouraged.
+2. **Status Flow:** The `Status` field dictates the booking's lifecycle. A dedicated state machine service or layer should enforce transitions (e.g., `pending` -> `confirmed` -> `completed` or `cancelled`).
+3. **Data Source:** When performing write operations (Create/Update), the internal service layer should be responsible for automatically populating `CreatedAt`, `UpdatedAt`, and potentially deriving the `EndTime` from the input `StartTime` and `ServiceType`.
+
+---
+
+## ⚠️ Warnings & Technical Debt
+
+*   **Timezone Management (CRITICAL):** The current definition lacks explicit time zone handling. When parsing `StartTime` from a string (e.g., "2024-10-25T10:00:00Z"), ensure that the time parsed into `time.Time` is treated as UTC or explicitly localized to the relevant time zone (local time of the consultant/user). **Failure to handle this correctly will lead to booking conflicts and scheduling failures.**
+*   **Input Validation:** The `CreateBookingRequest` currently lacks validation rules (e.g., required fields, valid date ranges, total price > 0). A dedicated validation middleware or validation service call should be mandatory before processing the request.
+*   **Field Redundancy/Derivation:** The `EndTime` field is often derivable from `StartTime` and `ServiceType` (duration). Consider whether the API should require `EndTime` or if the service should calculate it automatically, reducing input risk.
+
+---
+
+## 🔗 Related Components & Logic Flow
+
+| Component | Link | Description |
 | :--- | :--- | :--- |
-| `BookingEntry` | Persistence Model (Database Representation) | System Design, Data Integrity |
-| `CreateBookingRequest` | Data Transfer Object (DTO) / API Input Contract | API Design |
-| `domain` Package | Business Logic Boundary | Service Layer |
+| **API Handling** | [../handler/booking_handler.go](./../handler/booking_handler.go) | Handles the incoming HTTP requests and marshals JSON into `CreateBookingRequest`. |
+| **Business Logic** | [../service/booking_service.go](./../service/booking_service.go) | Contains the core logic for checking availability, calculating pricing, and managing status transitions. **This service must consume the `domain.BookingEntry` for persistence.** |
+| **Database Layer** | [../repository/booking_repository.go](./../repository/booking_repository.go) | Handles all database interactions (CRUD operations) using `BookingEntry` as the primary object. |
+| **Validation Middleware**| [../middleware/validator.go](./../middleware/validator.go) | Should intercept requests before they reach the service layer to validate fields of `CreateBookingRequest`. |
 
----
+### Figure: Booking Lifecycle Flow (Conceptual)
 
-## ✨ Detail Analysis
+*(Conceptual Diagram: The diagram should illustrate the flow: Request -> Handler -> Validator -> Service -> Repository -> Database. The critical data flow points are marked.)*
 
-### 1. `BookingEntry` (Persistence Model)
-
-This struct represents a full, persisted booking record in the database. It contains comprehensive metadata necessary for workflow management and auditing.
-
-#### 🌐 Field Breakdown
-
-| Field | Type | Purpose | Constraints / Notes |
-| :--- | :--- | :--- | :--- |
-| `ID` | `string` | Unique identifier for the booking. | Primary Key. |
-| `ConsultantID` | `string` | ID of the service provider. | Foreign Key reference to `Consultant` service. |
-| `UserID` | `string` | ID of the client/user making the booking. | Foreign Key reference to `User` service. |
-| `StartTime` / `EndTime` | `time.Time` | The scheduled start and end times. | **Critical:** Must satisfy `EndTime` $\ge$ `StartTime`. |
-| `ServiceType` | `string` | Categorization of the service (e.g., 'video\_call', 'in\_person'). | Dictated by service catalog. |
-| `Status` | `string` | Current state of the booking lifecycle. | Controlled workflow (e.g., `pending` $\to$ `confirmed` $\to$ `cancelled`). |
-| `TotalPrice` | `float64` | Total cost associated with the booking. | Should align with billing logic. |
-| `UserNotes` | `string` | Notes provided by the user. | Optional user input. |
-| `CreatedAt` | `time.Time` | Timestamp of initial record creation. | Audit Trail. |
-| `UpdatedAt` | `time.Time` | Timestamp of last record modification. | Audit Trail. |
-
-### 2. `CreateBookingRequest` (API Input Contract)
-
-This struct defines the expected payload schema when a client initiates a booking request via an external API endpoint. It acts as a streamlined Data Transfer Object (DTO).
-
-#### 📤 Field Breakdown
-
-| Field | Type | Source | Function |
-| :--- | :--- | :--- | :--- |
-| `ConsultantID` | `string` | Client/Front-end | Required ID for the service provider. |
-| `StartTime` | `string` | Client/Front-end | **Critical:** Time must be received as an ISO-formatted string and requires backend parsing. |
-| `ServiceType` | `string` | Client/Front-end | The type of service requested. |
-| `UserNotes` | `string` | Client/Front-end | Optional notes. |
-| `TotalPrice` | `float64` | Client/Front-end | The price estimate used for booking creation. |
-
----
-
-## 📝 Documentation Notes and Best Practices
-
-1. **Time Handling Standardization (Critical):** The mismatch between `time.Time` (internal model) and `string` (external request) is common but problematic. The service layer must implement robust date parsing (e.g., using `time.Parse` with a predefined layout) and handle parsing errors gracefully (returning a 400 Bad Request).
-2. **Transaction Scope:** The creation of a booking is a multi-step, transactional process:
-    *   *Validation* (Time, Conflicts, Availability).
-    *   *Payment* (Authorization/Charge).
-    *   *Persistence* (Creating the `BookingEntry`).
-    *   The domain logic must ensure that steps are atomic.
-3. **Concurrency Control:** The `Status` field is a primary concern for concurrency. When multiple requests might update a booking (e.g., one confirming, another cancelling), optimistic locking (using a version column or a database transaction lock) should be considered for `BookingEntry`.
-
----
-
-## ⚠️ Security and Infrastructure Warnings (Action Items)
-
-### 🔒 Security Concerns
-
-1. **Authorization Check:** The current structs do not enforce *who* can make the API call. **ACTION REQUIRED:** Before any write operation (POST/PUT), the service layer **must** perform role-based and ownership validation checks (e.g., Is the `UserID` submitting the request the owner of the booking, or does the service account have global write permission?).
-2. **Price Tampering:** The `TotalPrice` field is user-controllable via `CreateBookingRequest`. **WARNING:** The backend *must not* trust the `TotalPrice` submitted by the client. The final `TotalPrice` in `BookingEntry` should be calculated and overwritten by a trusted, server-side pricing microservice call to prevent fraud.
-3. **Input Validation:** All string fields (IDs, ServiceType) must be validated against known enumerations or regex patterns to prevent injection attacks or invalid data being stored.
-
-### ☁️ Infrastructure & System Design
-
-1. **Time Zone Management:** Since time is handled by `time.Time`, the documentation must explicitly specify the required time zone (e.g., UTC, or the timezone of the primary API gateway). Storing all times in UTC is the industry standard best practice to avoid daylight savings and time zone ambiguity.
-2. **System Boundary:** The domain model suggests a deep coupling between User, Consultant, and Booking. If the system grows, consider separating core entities into highly cohesive services (e.g., `UserService`, `SchedulingService`) that interact via asynchronous message queues (e.g., Kafka) rather than direct database reads, improving resilience.
-
----
-
-## 🎨 Figure Representation (Conceptual Flow)
-
-### Conceptual Data Flow Diagram: Creating a Booking
-
-```mermaid
-graph TD
-    A[Client/Frontend API Call] --> B(CreateBookingRequest DTO);
-    B -->|1. Input Validation| C{Booking Service Layer};
-    C --> D{Availability & Conflict Check};
-    D -- Conflict Found --> E[Return 409 Conflict];
-    D -- Available --> F{Price & Authorization Check};
-    F --> G[Payment Gateway / Billing Service];
-    G -- Auth Success --> H[BookingRepository];
-    H --> I(BookingEntry Persistence Model);
-    I -->|2. Confirmation/Transaction ID| J[Return 201 Success];
+**[Conceptual Figure: Booking Flow Diagram]**
+*Self-Generated Figure Note: A flow chart should be inserted here illustrating the request flow. The input (JSON) should map to `CreateBookingRequest` and subsequently be validated and transformed into the internal `BookingEntry` object before persisting to the database.*
 ```

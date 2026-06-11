@@ -1,104 +1,128 @@
-# 📄 Domain Models Definition: Consulting Platform
+# 📚 Domain Models Specification
 
-This document provides a comprehensive overview of the data models (`domain` package) used across the consulting platform. These models define the core entities such as consultant profiles, user reviews, and session management, forming the backbone of the system's data persistence and API contract.
+This document serves as the authoritative source for the core data structures (`domain` package) utilized throughout the system. It defines the contracts for all primary entities, ensuring consistency between the API layer, the business logic, and the underlying database schema.
 
----
+***
 
-## 💡 Overview
+[⬅ Return to Main Compendium](../../README.md)
 
-The `domain` package encapsulates all primary data structures required for the core functionality of the consulting platform. The models are designed to handle complex relationships between users, service providers (Consultants), and transactional data (Sessions/Reviews). Key architectural considerations include:
+## 🎯 Overview
 
-1.  **Pagination:** Structures are built around explicit pagination wrappers (`PaginatedConsultants`, `PaginatedReviews`) to ensure efficient API interactions and prevent large data payload transfers.
-2.  **Data Typing:** Use of `uuid.UUID` for primary identifiers enforces globally unique and highly distributed primary key management.
-3.  **Storage:** The inclusion of `db` struct tags indicates direct mapping to a SQL database (likely PostgreSQL, given the `pq.StringArray` usage), requiring careful consideration during ORM layer implementation.
+The `domain` package encapsulates the complete data schema for the platform. It defines models for key actors (Consultants), interactions (Sessions, Reviews), and classification systems (Niches, Badges). These structs act as the single source of truth for data transfer objects (DTOs) and database object mapping.
 
-### 🖼️ Conceptual Data Flow Diagram
+**Goal:** To enforce a consistent, stable data contract that isolates the business logic from infrastructure changes (e.g., changing a column name means changing the `db` tag, but the application logic remains sound).
 
-The primary relationships are structured as follows:
-
-```mermaid
-erDiagram
-    ConsultantProfile ||--o{ Review : writes
-    ConsultantProfile }|--|| User : managed_by
-    ConsultantSession ||--|| ConsultantProfile : relates_to
-    Review ||--|{ PaginatedReviews : paginates
-    ConsultantProfile ||--|{ PaginatedConsultants : paginates
-    Badge ||--|{ ConsultantProfile : attached_to
-```
+**Dependencies:** This package heavily relies on Go standard library features, `uuid` for primary keys, and `pq` (PostgreSQL) specific types for handling array columns.
 
 ---
 
-## 🛠️ Detail: Model Specifications
-
-The following sections detail each struct, its purpose, and its key fields.
+## 💾 Detailed Model Specification
 
 ### 👤 `ConsultantProfile` (Core Entity)
 
-This is the comprehensive profile for a service consultant. It aggregates identity, professional credentials, and status information.
+This is the most comprehensive and critical model, representing a consultant's public and internal profile data.
 
-| Field | Type | Purpose | Description | Notes |
+| Field | Type | Database Column | Description | Usage Context |
 | :--- | :--- | :--- | :--- | :--- |
-| `ID` | `uuid.UUID` | Primary Key | Unique identifier for the profile. | Maps to `id`. |
-| `UserID` | `uuid.UUID` | Foreign Key | Links the profile to the system user account. | Maps to `user_id`. |
-| `Name` | `string` | Basic Info | The consultant's full name. | Maps to `full_name`. |
-| `DisplayName` | `string` | Presentation | Optimized name for display purposes. | Maps to `display_name`. |
-| `AvatarURL`, `CoverURL` | `string` | Media Assets | URLs for profile images and cover banners. | |
-| `GalleryImages` | `pq.StringArray` | Media Assets | List of image URLs for a gallery view. | Requires handling of array types in PostgreSQL. |
-| `Bio`, `Quote` | `string` | Content | Professional biography and a catchy quote. | |
-| `Rating` | `float64` | Metric | Average rating received from clients. | Maps to `rating_avg`. |
-| `HelpedCount` | `int` | Metric | Count of services or clients helped. | Maps to `helped_count`. |
-| `IsHighlyTrusted` | `bool` | Verification | Flag indicating platform verification status. | Maps to `is_verified`. |
-| `HourlyRate` | `float64` | Billing | The standard hourly consultation rate. | |
-| `City`, `Country` | `string` | Location | Geolocation data for the consultant. | |
-| `Tags`, `Tags` | `[]string` | Skills/Niches | Categorization of expertise (e.g., "AI", "DevOps"). | Note the redundancy of `Tag` and `Tags` fields. |
-| `Languages` | `pq.StringArray` | Skillset | List of languages spoken/supported. | |
-| `JoinedAt` | `time.Time` | Timestamp | When the consultant joined the platform. | |
-| `Badges`, `Reviews` | `[]Badge`, `[]Review` | Aggregated Data | Embedded lists of achievements and past reviews. | *Note: Embedding these relationships might cause data duplication issues.* |
+| `ID` | `uuid.UUID` | `id` | Primary unique identifier for the profile. | Database Key |
+| `UserID` | `uuid.UUID` | `user_id` | Foreign key linking to the core user account. | Identity Management |
+| `Name` | `string` | `full_name` | Full legal name. | Display |
+| `DisplayName` | `string` | `display_name` | User-chosen name for public display. | Display |
+| `AvatarURL`, `CoverURL` | `string` | `avatar_url`, `cover_url` | Cloud storage URLs for media assets. | Presentation |
+| `GalleryImages` | `pq.StringArray` | `gallery_images` | Array of URLs for supplementary images. | Media Display |
+| `Bio`, `Quote` | `string` | `bio`, `quote` | Textual content used for marketing/description. | Content |
+| `Rating` | `float64` | `rating_avg` | Calculated average rating (e.g., 4.7). | Metrics |
+| `HelpedCount` | `int` | `helped_count` | Total number of sessions/clients served. | Metrics |
+| `IsHighlyTrusted` | `bool` | `is_verified` | Flag indicating verification status. | Trust Indicator |
+| `HourlyRate` | `float64` | `hourly_rate` | Cost per unit of time. | Billing/Pricing |
+| `City`, `Country` | `string` | `city_name`, `country_code` | Location details. | Filtering/Search |
+| `Tags`, `Tags` | `[]string` | `-` | Array of searchable skill tags (client-side optimized). | Search/Filtering |
+| `Languages` | `pq.StringArray` | `languages` | List of languages spoken (DB array type). | Communication |
+| `Badges`, `Reviews` | `[]Badge`, `[]Review` | *N/A (Embedded)* | Embedded relationship lists for display. | Presentation |
 
-### 🗓️ `ConsultantSession` (Transaction/Billing)
+**Related Components:**
+*   `[Consultant API Handlers](../../api/v1/consultant_handler.go)`: Logic that interacts with this profile data.
+*   `[Consultant Repository Layer](../../repository/consultant_repo.go)`: Database interaction logic for profile updates.
 
-Defines a scheduled or completed consulting session. Critical for billing and resource allocation.
+### 📅 `PaginatedConsultants` / `PaginatedReviews`
 
-| Field | Type | Purpose | Description | Implications |
-| :--- | :--- | :--- | :--- | :--- |
-| `ID` | `uuid.UUID` | Primary Key | Unique session identifier. | |
-| `ConversationID` | `uuid.UUID` | Foreign Key | Links to the primary communication thread. | |
-| `PackageType` | `string` | Billing | Defines the type of package purchased (e.g., "1hr", "Premium"). | Used for billing logic. |
-| `DurationHours` | `int` | Scope | The total duration booked in hours. | |
-| `Status` | `string` | State Machine | Current state (e.g., "Pending", "Completed", "Canceled"). | Requires robust state management. |
-| `PaidAt`, `StartedAt`, `ExpiresAt` | `time.Time` | Timestamps | Critical timing points for billing and session validity. | |
+These utility structs enforce standardized pagination responses, preventing the need for consumers to interpret raw dataset containers.
 
-### ⭐ `Review` (Feedback)
+*   **Purpose:** Standardized API contract for list endpoints.
+*   **Fields:** `Data` (`[]ConsultantProfile` or `[]Review`), `TotalCount` (total records available), `Page` (requested page number), `Limit` (items per page).
 
-Model representing a client review for a consultant.
+### 💼 `ConsultantSession` (Billing & Tracking)
 
-| Field | Type | Purpose | Description | Considerations |
-| :--- | :--- | :--- | :--- | :--- |
-| `ID` | `uuid.UUID` | Primary Key | Unique review identifier. | |
-| `ReviewerName`, `ReviewerAvatar` | `string` | Source Info | Details about the user who left the review. | |
-| `Rating` | `int` | Metric | Numerical rating (e.g., 1 to 5). | |
-| `Comment` | `string` | Content | The detailed written feedback. | |
-| `VerifiedStay` | `bool` | Integrity | Confirms the reviewer actually used the service. | Critical for trust ranking. |
-| `CreatedAt` | `time.Time` | Timestamp | When the review was submitted. | |
+This model tracks the lifecycle and billing details of a consultation session.
 
-### 🏷️ Supporting Models
+*   **Key Fields:** `ConversationID` (links to the chat system), `PackageType`, `DurationHours`.
+*   **Critical Timestamps:** `StartedAt`, `ExpiresAt` (defining the active window), `PaidAt` (when payment was confirmed).
+*   **Security Implication:** This model is crucial for financial auditing.
 
-*   **`Niche`**: Defines a categorized skill or field (e.g., "Cloud Security", "Go Programming"). Used for filtering and discovery.
-*   **`Badge`**: Represents a quantitative or qualitative indicator of trust (e.g., "5+ Years Experience", "Verified B2B Status").
+**Related Components:**
+*   `[Payment Gateway Integrations](../../integrations/payment_service.go)`: Handles the `PaidAt` status update.
+
+### 💬 `Review` (Feedback Mechanism)
+
+Represents a single review submitted by a client.
+
+*   **Fields:** `Rating` (integer score), `Comment` (detailed feedback).
+*   **Validation Point:** The system must validate that the `ReviewerName`/`ReviewerAvatar` are sourced from an authenticated client ID to prevent spoofing.
+
+### 🏷️ `Niche` / `Badge` (Classification & Trust)
+
+These models handle categorization and trust signaling.
+
+*   **`Niche`:** A simple, clean model for tagging consultants (e.g., "UX Design", "AI Ethics").
+*   **`Badge`:** A powerful, flexible model. It defines a trust indicator (`Title`, `Description`) linked to a specific logic rule (`ID`, e.g., "tenure_gold").
 
 ---
 
-## 📝 Note: Architectural & Development Best Practices
+## 📊 Conceptual Data Flow Diagram
 
-1.  **Data Normalization:** The current model embeds `[]Review` and `[]Badge` directly into `ConsultantProfile`. In a large-scale application, this structure is highly inefficient for database reads and write operations, violating normalization principles. **Recommendation:** These relationships should be handled via dedicated `ConsultantReviews` and `ConsultantBadges` junction tables, fetched dynamically, or via dedicated GraphQL fields.
-2.  **API Consistency:** The use of `PaginatedConsultants` and `PaginatedReviews` correctly structures pagination parameters (`Data`, `TotalCount`, `Page`, `Limit`). This pattern should be adopted for all list-based API endpoints.
-3.  **Time Zone Handling:** All `time.Time` fields (`JoinedAt`, `StartedAt`, etc.) must be stored and handled consistently using UTC time zones across the entire infrastructure to prevent temporal data corruption.
+The system exhibits a star schema pattern around the `ConsultantProfile` entity.
 
-## ⚠️ Warning: Known Technical Limitations & Areas to Address
+```mermaid
+erDiagram
+    CONSULTANT_PROFILE ||--o{ REVIEW : has
+    CONSULTANT_PROFILE ||--o{ CONSULTANT_SESSION : involves
+    CONSULTANT_PROFILE ||--o{ BADGE : earns
+    CONSULTANT_PROFILE }|--|| USER : belongs_to
+    CONSULTANT_PROFILE }o--o{ NICHE : is_tagged_by
+```
 
-1.  **Redundancy in Tags:** The `ConsultantProfile` contains both `Tag string` and `Tags []string`. This is redundant and confusing. Standardize on using `Tags []string` (or, ideally, a linked ID list to a `Niche` table) and remove the single `Tag` field.
-2.  **Database Array Handling:** The use of `pq.StringArray` implies reliance on PostgreSQL array types. If the infrastructure needs to be migrated to a different database system (e.g., MySQL or a NoSQL store), the data structure for `GalleryImages` and `Languages` will require significant rework (e.g., implementing JSONB arrays or separate linking tables).
-3.  **Data Mutation Complexity:** When a consultant updates their profile, ensure that the `Rating`, `HelpedCount`, and calculated `Badges` are *recalculated* or updated via a dedicated, transactional service endpoint, rather than simply relying on the client to send updated aggregate values.
+**Diagram Interpretation:**
+1.  **Core Focus:** `ConsultantProfile` is the central entity.
+2.  **Relationships:** Reviews, Sessions, Badges, and Niches are all ancillary data that augment the core profile.
+3.  **Flow:** When a profile is fetched, the service layer must perform joins or batch lookups to compile the full, aggregated data object.
 
 ---
-***Disclaimer:*** *This document is based on the provided Go domain model. Changes to the underlying business requirements may necessitate updates to these models and corresponding database migrations.*
+
+## 💡 Documentation Notes (Best Practices & Design Choices)
+
+1.  **Serialization Strategy:** The separation of `json` tags and `db` tags is excellent practice. This assumes the use of an ORM/database mapping library (like `sqlx` or similar) which correctly maps struct fields to database columns while allowing Go struct fields (like `DisplayName`) to be optimized for API consumption.
+2.  **Pagination Implementation:** The use of dedicated `Paginated*` structs is highly recommended. The API handlers responsible for listing consultants (`consultant_handler.go`) must enforce the `Page` and `Limit` parameters and ensure the `TotalCount` calculation is accurate (e.g., using `COUNT(*)` in the backend query).
+3.  **`pq.StringArray` Usage:** Using PostgreSQL native arrays via `pq.StringArray` is efficient for storage but requires careful handling in Go, especially when validating input lengths or ensuring uniqueness before insertion.
+
+---
+
+## ⚠️ Warnings & Tech Debt (Future Scope)
+
+### 1. Input Validation (Critical)
+*   **Status:** Unimplemented.
+*   **Issue:** None of the structs currently enforce validation rules (e.g., `Name` cannot be empty, `HourlyRate` must be $>0$, `Email` format).
+*   **Recommendation:** Implement a validation interface (e.g., `validator.Validate() error`) on all data models. This should run in the service layer *before* data hits the repository layer.
+
+### 2. Timezone Handling (High Priority)
+*   **Issue:** All time fields (`JoinedAt`, `StartedAt`, `PaidAt`, `CreatedAt`) use `time.Time`. It is critical to confirm whether these times are stored in UTC (recommended) or local time.
+*   **Recommendation:** Document and enforce that all timestamps are stored in **UTC** in the database and all APIs accept and return time representations standardized to UTC (`time.RFC3339`).
+
+### 3. Read/Write Segregation (System Design)
+*   **Issue:** The `ConsultantProfile` struct is used for both reading (API GET) and writing (API PUT/PATCH).
+*   **Recommendation:** Consider creating specialized DTOs:
+    *   `ConsultantReadDTO`: Minimal fields for list views.
+    *   `ConsultantWriteDTO`: Only fields permitted for updates (e.g., exclude `ID`, `JoinedAt`, `Rating`).
+
+### 4. Error Handling for Complex Fields
+*   **Issue:** The `Tags` field uses `db:"-"` but is present in the struct. This means the business logic must handle the synchronization between the `Tags` slice (in memory) and the underlying database structure.
+*   **Action:** Ensure the service layer abstracts this complexity, preventing the service implementation from needing to worry about manual mapping between the Go struct and the DB structure.

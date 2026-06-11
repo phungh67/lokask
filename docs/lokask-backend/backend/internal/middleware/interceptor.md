@@ -1,86 +1,131 @@
-# 🛡️ WebSocket Authentication Middleware (`WebSocketInterceptor`)
+# 🌐 WebSocket WebSocketInterceptor Middleware
 
-**File:** `middleware/websocket_interceptor.go`
-**Knowledge Base Focus:** Security Engineering, Infrastructure, System Design
-**Version:** 1.0
+This middleware intercepts incoming HTTP requests specifically designed to handle WebSockets. It ensures that the connection attempts are legitimate upgrades and that necessary authorization parameters (like the JWT token and user context) are present before allowing the request to proceed to the main WebSocket handler logic.
 
-***
+[⬅ Return to Main Compendium](../../README.md)
 
-## 💡 Overview
+---
 
-This middleware component, `WebSocketInterceptor()`, is designed to enforce necessary authentication and context setting specifically for incoming WebSocket upgrade requests within the application using the `gofiber` framework.
+## ✨ Overview
 
-Its primary function is to act as a gatekeeper, ensuring that:
-1. The incoming request is intended to upgrade to a WebSocket connection.
-2. The request includes a required authorization token in the query parameters.
-3. The necessary `user_id` context is available (usually injected by a preceding authentication middleware).
+The `WebSocketInterceptor` is a crucial layer of defense (middleware) responsible for gating WebSocket connections. Its primary function is twofold: first, to verify that the client is attempting a WebSocket protocol upgrade, and second, to validate that authentication artifacts (specifically, a JWT token and a pre-fetched `user_id`) are present within the request context and query parameters.
 
-If any of these requirements fail, the connection is immediately rejected, preventing unauthorized access to the WebSocket endpoint.
+This interceptor acts as an early exit point. If the request is not a WebSocket upgrade, or if the required credentials are missing, the connection is immediately rejected with an appropriate HTTP status code, preventing unauthorized access or protocol misuse.
 
-## ⚙️ Detailed Implementation Analysis
+### Code Snippet
 
-The function returns a `fiber.Handler` which intercepts the request lifecycle.
+```go
+package middleware
 
-### Execution Flow Diagram (Conceptual)
+import (
+	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
+)
+
+func WebSocketInterceptor() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+
+			// take the JWT token
+			tokenString := c.Query("token")
+			if tokenString == "" {
+				return c.Status(fiber.StatusUnauthorized).SendString("Missing token")
+			}
+
+			userID := c.Locals("user_id").(string)
+
+			c.Locals("user_id", userID)
+
+			return c.Next()
+		}
+
+		return fiber.ErrUpgradeRequired
+	}
+}
+```
+
+---
+
+## 🔬 Detail Analysis
+
+### 1. Protocol Check (`if websocket.IsWebSocketUpgrade(c)`)
+The middleware first determines the nature of the incoming request. `gofiber/contrib/websocket` provides a utility function to check if the client is requesting an HTTP upgrade to the WebSocket protocol.
+*   **Success:** If true, the logic proceeds to authentication steps.
+*   **Failure:** If false, the function immediately returns `fiber.ErrUpgradeRequired`, signaling that the client must use a WebSocket handshake.
+
+### 2. Token Validation (Query Parameter Check)
+The code retrieves the token from the URL query parameters (`c.Query("token")`).
+*   If `tokenString` is empty, the middleware fails fast, returning `401 Unauthorized` and instructing the client that the token is missing.
+*   *Note: While the token is read, no actual validation (expiration, signature check) occurs in this middleware; this implies validation happens elsewhere or is skipped for simplicity.*
+
+### 3. Context Retrieval and Redundancy
+1.  **Retrieve User ID:** The `user_id` is retrieved from the request context locals (`c.Locals("user_id").(string)`). This strongly suggests that a preceding middleware (like a general authentication middleware or token parser) has successfully processed the request and populated the `user_id`.
+2.  **Set User ID:** The middleware then explicitly sets `c.Locals("user_id", userID)`. While functionally correct, this step is redundant if the value was successfully retrieved from `c.Locals()`, but it serves as a safeguard or a clear declaration of the expected context state for the downstream handler.
+
+### 4. Flow Continuation
+If all checks pass (WebSocket, Token present, User ID present), `c.Next()` is called, allowing the request to proceed to the main WebSocket connection handler.
+
+---
+
+## 📘 Technical Context & Dependencies
+
+*   **Dependencies:** This middleware relies heavily on two preceding mechanisms:
+    1.  **Initial Authentication Middleware:** A middleware must run *before* this one to successfully execute `c.Locals("user_id")`. This service is responsible for validating the initial token and populating the context. *(See: `../middleware/auth.go`)*
+    2.  **Client Implementation:** The client must correctly pass the JWT token via the URL query parameter (`?token=...`) during the WebSocket connection handshake.
+
+*   **Error Handling Flow:**
+    *   Unauthorized (Missing Token): $\rightarrow$ Returns `401`.
+    *   Protocol Mismatch: $\rightarrow$ Returns `426 Upgrade Required` (`fiber.ErrUpgradeRequired`).
+
+---
+
+## ⚠️ Warnings and Tech Debt (Action Items)
+
+### 🚩 1. Security Concern: Token Transmission via Query Params
+**High Priority:** Passing JWT tokens in query parameters (`?token=...`) is insecure because the token may be logged in server access logs, proxy caches, or browser history.
+**Recommendation:** The token should ideally be passed via a more secure method during the initial handshake, such as a custom HTTP header (e.g., `X-Auth-Token`).
+
+### 🚩 2. Missing Token Validation Logic
+The middleware checks for the *existence* of the token, but it **does not validate its integrity, expiration, or signature**.
+**Recommendation:** If this middleware is the designated point for authentication checks, it should call an external token service or library to perform full JWT validation *before* proceeding to `c.Next()`.
+
+### 🚩 3. Context Redundancy
+The lines retrieving and then resetting `user_id` are redundant:
+```go
+userID := c.Locals("user_id").(string) // Read
+c.Locals("user_id", userID)             // Write (using the same value)
+```
+While harmless, this suggests the context handling flow could be simplified, or the comment should explicitly state *why* this value is being re-asserted.
+
+---
+
+## 💡 Notes and Design Decisions
+
+*   **Scope:** This middleware is narrowly scoped only to WebSockets. It will explicitly reject non-WebSocket traffic, making its usage precise but requiring careful placement within the routing chain.
+*   **Efficiency:** The structure utilizes `if/else` checks for protocol type, ensuring that resource-intensive authentication logic is only executed if `websocket.IsWebSocketUpgrade(c)` returns true.
+*   **Coupling:** This middleware demonstrates tight coupling with the preceding authentication middleware, as its core functionality (`user_id` retrieval) is entirely dependent on the successful execution of another component in the chain.
+
+### Related Logic Flow Diagram
+
+(Conceptual Figure: This diagram illustrates the required execution order.)
 
 ```mermaid
 graph TD
-    A[Incoming Request] --> B{Is WebSocket Upgrade?};
-    B -- No --> C[Return fiber.ErrUpgradeRequired (426)];
-    B -- Yes --> D{Token Present in Query?};
-    D -- No --> E[Return 401 Unauthorized (Missing Token)];
-    D -- Yes --> F{User ID Available in Locals?};
-    F -- No --> G[Potential Panic/Error (User ID Missing)];
-    F -- Yes --> H[Set/Verify User ID in Locals];
-    H --> I[Proceed to Next Handler (c.Next())];
+    A[Client Request] -->|Initial HTTP Handshake| B{WebSocketInterceptor};
+    B -->|Is WebSocket Upgrade?| B_check{Yes};
+    B -->|Is WebSocket Upgrade?| B_fail{No};
+    B_fail --> C[Return 426 Error];
+    B_check --> D{Token Present?};
+    D -->|No| E[Return 401 Error];
+    D -->|Yes| F{User ID in Locals?};
+    F -->|No| E;
+    F -->|Yes| G[Set/Confirm User ID Context];
+    G --> H[Call c.Next()];
+    H --> I[WebSocket Handler Logic];
 ```
 
-### Function Signature
+---
+**Related Files:**
 
-```go
-func WebSocketInterceptor() fiber.Handler { ... }
-```
-
-### Step-by-Step Logic Breakdown
-
-1. **Protocol Check:**
-   - `websocket.IsWebSocketUpgrade(c)`: Verifies if the request headers signal an intention to upgrade to the WebSocket protocol. If not, the request is dropped with `fiber.ErrUpgradeRequired`.
-
-2. **Authentication Check (Token):**
-   - `tokenString := c.Query("token")`: Attempts to retrieve the token from the URL query parameters (e.g., `ws?token=xyz`).
-   - **Failure Path:** If `tokenString` is empty, the handler returns an explicit `401 Unauthorized` response, indicating missing credentials.
-
-3. **Context Dependency (User ID):**
-   - `userID := c.Locals("user_id").(string)`: This line assumes that a **preceding** middleware has successfully extracted and placed the authenticated `user_id` into the request context locals.
-   - `c.Locals("user_id", userID)`: The retrieved `userID` is explicitly re-set into the context. While potentially redundant if the retrieval was successful, this action guarantees that the variable remains available for subsequent handlers, mitigating potential scope issues.
-
-4. **Success:**
-   - `return c.Next()`: If all checks pass, the request is allowed to proceed down the middleware chain to the final WebSocket handler.
-
-## ⚠️ Security & System Considerations (Security Engineer Review)
-
-### Security Flaws / Missing Logic (Critical)
-
-The current implementation performs a **token presence check** but *does not validate the token*.
-
-1. **Token Validation Gap:** The middleware merely checks if the `token` query parameter exists (`tokenString != ""`). It does *not* send this token to an authentication service (e.g., an Auth server or JWT library) to ensure it is valid, unexpired, or belongs to an active user.
-2. **Authentication Dependency:** This middleware critically relies on the preceding logic to correctly populate `c.Locals("user_id")`. If the user ID is missing, a runtime panic will occur when attempting the type assertion `.(string)`.
-
-### Infrastructure Recommendations
-
-1. **Upstream Middleware Chain:** This middleware must be placed **after** any primary authentication middleware (e.g., a `JWTValidationMiddleware`) but **before** the final WebSocket handling logic.
-2. **Context Naming:** Standardize the key used for the user ID across all middleware (e.g., always use `context:user_id` instead of `user_id` to prevent conflicts).
-
-## 📝 Usage Notes & Best Practices
-
-*   **Placement is Key:** Due to its dependency on `c.Locals("user_id")`, ensure the full middleware stack sequence is: `[Primary Authentication Middleware] -> [WebSocketInterceptor] -> [WebSocket Handler]`.
-*   **Error Handling:** The explicit `SendString("Missing token")` is non-standard. For professional corporate APIs, the error message should be replaced with a standardized, non-descriptive message like "Authentication Failed" to avoid leaking implementation details to potential attackers.
-
-## 🔔 Warnings / To-Do Items (To Be Completed)
-
-| Item | Priority | Description | Owner |
-| :--- | :--- | :--- | :--- |
-| **Token Validation** | 🔴 Critical | The middleware must be updated to consume the `tokenString` and perform actual validation (e.g., JWT parsing, database lookup) to verify the token's integrity and expiration status. | Security Team |
-| **Error Message Abstraction** | 🟡 High | Replace the literal error message "Missing token" with a generic, security-by-design response body to prevent information leakage. | Dev Team |
-| **Null/Type Safety** | 🟡 Medium | Implement robust nil/type checks around `c.Locals("user_id")` to gracefully handle scenarios where the upstream middleware fails to populate the context. | Dev Team |
-| **Logging** | 🔵 Low | Add structured logging (e.g., using `slog` or a dedicated logging library) whenever an authorization failure (401) occurs, noting the IP and failure reason. | Infrastructure Team |
+*   **Authentication Flow (Prerequisite):** `../middleware/auth.go` (Responsible for setting `c.Locals("user_id")`)
+*   **Core WebSocket Handlers:** `../../handlers/websocket_handler.go` (The function that executes after this middleware passes)

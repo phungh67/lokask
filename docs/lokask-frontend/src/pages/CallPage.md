@@ -1,63 +1,96 @@
-# 📞 Call Page Component Documentation
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-## Overview
+# 📞 Call Page Component (`CallPage`)
 
-The `CallPage` component serves as the entry point for initiating a scheduled communication session (either video or voice) within the application. It is responsible for extracting necessary parameters from the URL, specifically the `roomId` (a unique identifier for the booking) and the `serviceType` (indicating whether the call is video or voice). It validates these parameters and, upon successful validation, renders the dedicated `CallRoom` component, passing all required context and handling the window closure mechanism.
+This document outlines the structure, functionality, and integration points for the `CallPage` React component. This component serves as the entry point for users accessing a call session, utilizing parameters passed through the URL to determine session context (e.g., meeting ID, call type).
 
-This component is crucial for the initial loading sequence and state management of the real-time communication system.
+## 🔍 Overview
 
-## Detail
+The `CallPage` component is responsible for intercepting incoming call requests via React Router DOM. It extracts two critical parameters from the URL: the `roomId` (identifying the specific meeting or booking) and the `serviceType` (determining if the call is a video or voice session). If these parameters are missing, it renders an informative error screen. Otherwise, it passes the extracted context down to the primary `CallRoom` component for rendering the actual communication interface.
 
-### Component Details
+### Code Snippet
 
-*   **Component Name:** `CallPage`
-*   **Framework:** React (Next.js/React Router Context)
-*   **Dependencies:**
-    *   `react-router-dom` (`useParams`, `useSearchParams`): Used for accessing dynamic URL parameters.
-    *   `@/components/CallRoom`: The primary view component that handles the actual call logic and UI.
+```jsx
+import { useParams, useSearchParams } from "react-router-dom";
+import CallRoom from "@/components/CallRoom";
 
-### State & Input Handling
+const CallPage = () => {
+  const { roomId } = useParams();
+  const [searchParams] = useSearchParams();
+  const serviceType = searchParams.get("type") as "video_call" | "voice_call";
 
-1.  **Parameter Extraction:**
-    *   `roomId`: Retrieved from the URL parameters (`useParams()`). This acts as the primary key for the session.
-    *   `serviceType`: Retrieved from the URL search parameters (`useSearchParams()`). It must be one of two literal types: `"video_call"` or `"voice_call"`.
+  if (!roomId || !serviceType) {
+    return (
+      <div className="p-8 text-white bg-slate-950 h-screen">
+        Invalid Call Link
+      </div >
+    );
+  }
 
-2.  **Validation Logic:**
-    *   The component immediately checks if both `roomId` and `serviceType` are present.
-    *   If either parameter is missing, the component renders a dedicated "Invalid Call Link" UI screen, preventing the attempt to load the `CallRoom` component.
+  return (
+    <CallRoom
+      bookingId={roomId}
+      serviceType={serviceType}
+      onClose={() => window.close()}
+    />
+  );
+};
 
-3.  **Rendering:**
-    *   If validation succeeds, the `CallRoom` component is rendered.
-    *   Props passed to `CallRoom`:
-        *   `bookingId`: The validated `roomId`.
-        *   `serviceType`: The validated `serviceType`.
-        *   `onClose`: A handler function that executes `window.close()`, ensuring the calling window is dismissed upon completion or exit.
-
-### System Flow Diagram
-
-```mermaid
-graph TD
-    A[User navigates to Call URL] --> B{CallPage Component Loads};
-    B --> C[Extract roomId & serviceType from URL];
-    C --> D{Validation: roomId & serviceType present?};
-    D -- No --> E[Display 'Invalid Call Link' UI];
-    D -- Yes --> F[Render CallRoom Component];
-    F --> G[CallRoom receives bookingId, serviceType, onClose];
-    G --> H[Communication Session Initiated];
+export default CallPage;
 ```
 
-## Note
+***
 
-### Architectural Considerations
+## 📄 Details
 
-1.  **Client-Side Routing Dependency:** The component relies heavily on the client-side routing provided by `react-router-dom`. Any changes to how `roomId` or `serviceType` are passed in the URL structure will require modifications here.
-2.  **Error Handling:** The current error handling is limited to checking for missing parameters. For production robustness, consider implementing more granular error handling, such as catching network failures or unauthorized booking access *within* the `CallRoom` component itself, rather than solely in this wrapper.
-3.  **Type Safety:** The usage of `as "video_call" | "voice_call"` provides strong type hinting, which is good practice but assumes the search parameters are trusted by the upstream system.
+### 1. Component Logic Flow
 
-## Warning
+1.  **Parameter Retrieval:** Uses `useParams()` to capture `roomId` from the URL path and `useSearchParams()` to capture `serviceType` from the query string (`?type=...`).
+2.  **Validation:** Implements mandatory checks (`!roomId || !serviceType`). If validation fails, it renders a hardcoded "Invalid Call Link" error message, preventing the rendering of the core call logic.
+3.  **Call Room Initialization:** If valid, it passes the following props to `CallRoom`:
+    *   `bookingId`: The unique identifier for the session (used for API calls and state management within `CallRoom`).
+    *   `serviceType`: Defines the modality (`"video_call"` or `"voice_call"`), which dictates the features and setup of the `CallRoom`.
+    *   `onClose`: A handler that uses `window.close()`, indicating that the call session is designed to run in a self-contained or popup window environment.
 
-### Critical Development Points
+### 2. Dependency Structure
 
-1.  **Security (Authorization):** This component handles the *initiation* of a call but **does not** handle authorization. A calling service/API must validate that the user associated with the currently active session token is authorized to access the `roomId` and execute the requested `serviceType`. Relying solely on the existence of the `roomId` is insufficient for secure operation.
-2.  **Session Lifecycles:** The `onClose={() => window.close()}` mechanism assumes a single-purpose pop-up window. Developers must ensure that the session cleanup (e.g., releasing media resources, terminating backend streams) is properly triggered either by the `CallRoom` component or by calling the `onClose` prop before `window.close()` is executed.
-3.  **Server/Client Split:** Ensure that the backend API responsible for establishing the communication channel (e.g., WebRTC signaling server) expects and correctly interprets the `serviceType` parameter, as this is critical for configuring media capabilities.
+| Component/Hook | Purpose | Related Area |
+| :--- | :--- | :--- |
+| `useParams()` | Extracts path parameters (e.g., `/call/:roomId`). | React Router / Frontend Routing |
+| `useSearchParams()` | Extracts query parameters (e.g., `?type=...`). | React Router / Frontend Routing |
+| `CallRoom` | Primary rendering component for the call experience. | `../components/CallRoom` (Core Feature) |
+
+### 3. Structural Flow (Calling Logic)
+
+The lifecycle of this component is critical for maintaining session context:
+
+**Link to Related File:** The flow relies heavily on the `CallRoom` component. Ensure that `CallRoom` handles the received `bookingId` and `serviceType` to correctly initialize WebRTC connections or API calls.
+*   [👉 `../components/CallRoom` - Call Session Rendering](../components/CallRoom.jsx)
+
+***
+
+## 💡 Notes
+
+*   **Window Context:** The implementation of `onClose={() => window.close()}` strongly suggests that this page is intended to be loaded in a dedicated popup window or iframe session. This should be documented in the overall system design for call routing.
+*   **Type Safety:** The type assertion (`as "video_call" | "voice_call"`) provides strong TypeScript safety but assumes that the service type passed via the URL is always one of the expected values. Client-side validation is good, but server-side validation is mandatory for robustness.
+*   **Error Handling:** While the current error handling is simple (displaying a message), consider expanding this to include detailed logging or redirection to a specific error page (`/error/invalid-link`).
+
+***
+
+## ⚠️ Warnings & Tech Debt
+
+### 🛑 Highest Priority: Error Handling (Validation)
+The current failure state only displays a generic `Invalid Call Link` message. It does not differentiate *why* the link is invalid (Is `roomId` missing? Is `serviceType` missing? Is the `roomId` structurally invalid?).
+
+**Action Required:** Implement specific checks and feedback for:
+1.  `roomId` missing.
+2.  `serviceType` missing or invalid (e.g., `?type=unknown`).
+3.  Best Practice: Check the existence of `roomId` and `serviceType` and potentially trigger a client-side API call to validate the booking immediately upon loading, rather than relying solely on presence checks.
+
+### 🚧 System Integration (Backend Dependency)
+This frontend component assumes that a valid `roomId` and `serviceType` guarantee an active session. **We must ensure that the corresponding backend services (e.g., an API endpoint `/api/bookings/:roomId/validate`) are used to confirm the session's existence and availability before mounting `CallRoom`**. Without this, the system could hang or fail silently if the booking was cancelled but the link was not updated.
+
+### ♻️ Code Optimization (Readability)
+The use of `if (!roomId || !serviceType) { ... }` is concise, but abstracting the validation logic into a dedicated `useCallParams()` hook or utility function would improve component reusability and adherence to separation of concerns.
+```

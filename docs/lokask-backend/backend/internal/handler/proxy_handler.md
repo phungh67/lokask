@@ -1,64 +1,64 @@
-# 📂 Code Review: Image Proxy Handler (`handler/handler.go`)
 
-This document provides a comprehensive technical review and structural documentation for the `ProxyImage` function, which implements a basic HTTP proxy for fetching images.
+[⬅ Return to Main Compendium](../../README.md)
 
-## 🌟 Overview
+# Module: Image Proxy Handler (`handler/proxy.go`)
 
-The `ProxyHandler` component is designed to act as a robust reverse proxy specifically for image assets. It allows the client to provide a target URL containing an image via a query parameter (`?url=...`). The handler fetches the image content from this external URL, reads the raw binary data, sets appropriate HTTP headers (including CORS and caching instructions), and relays the content back to the original requester.
+This module implements a robust HTTP handler designed to proxy image fetching requests. It allows external clients to provide a remote image URL, and the service fetches, reads, and returns the image content while ensuring proper headers and CORS policies are applied.
 
-**Knowledge Domains Applied:** System Design, Infrastructure (Proxying), Cloud Components, Web Services.
+---
 
-## 🔎 Detail Analysis
+## 🌐 Overview
 
-### 🛠️ Function Signature and Dependencies
+The `ProxyHandler` struct provides the `ProxyImage` method, which serves as an image proxy endpoint. Its primary function is to decouple the calling client from the source location of the image, enhancing security, centralized content management, and allowing for necessary header transformations (like setting cache control or ensuring correct CORS policies) before delivery.
 
-*   **Package:** `handler`
-*   **Dependencies:** `net/http`, `io`, `github.com/gofiber/fiber/v2`
-*   **Method:** `(h *ProxyHandler) ProxyImage(c *fiber.Ctx) error`
-*   **Initialization:** `NewProxyHandler()` ensures the handler object is ready for use.
+**Key Functionality:**
+1. Accepts a `url` query parameter.
+2. Performs a GET request to the specified remote URL.
+3. Reads the entire binary body of the remote response.
+4. Re-routes the data to the client using the Fiber framework.
+5. Handles basic error codes for missing parameters, invalid URLs, and fetch failures.
 
-### ⚙️ Workflow Breakdown
+## 🛠️ Detail
 
-1.  **Input Validation:** It first checks for the presence of the `url` query parameter. Failure results in HTTP 400 Bad Request.
-2.  **Request Preparation:** An `http.NewRequest("GET", targetURL, nil)` is created.
-    *   **Security Measure:** A hardcoded `User-Agent` header (`Mozilla/5.0 (Compatible; LokaskBot/1.0)`) is set on the outbound request, which is useful for identifying the source of the fetching request.
-3.  **Execution:** An `http.Client` executes the request (`client.Do(req)`).
-    *   **Error Handling:** If the remote request fails (e.g., network error, DNS failure), it returns HTTP 502 Bad Gateway.
-4.  **Data Extraction:** The entire response body is read into memory using `io.ReadAll(resp.Body)`.
-5.  **Header Management:**
-    *   **Content Type:** The `Content-Type` is extracted from the remote response. A fallback to `image/jpeg` is provided if no content type is defined by the source.
-    *   **Response Headers:** The following headers are explicitly set on the outgoing response:
-        *   `Content-Type`: Set to the fetched image's type.
-        *   `Access-Control-Allow-Origin`: `*` (CORS enabled).
-        *   `Cache-Control`: `public, max-age=86400` (Enabling client-side caching for 24 hours).
-6.  **Response:** The function sends the raw `imgData` using `c.Status(resp.StatusCode).Send(imgData)`, preserving the original remote HTTP status code.
+### Component Structure
 
-### 🧠 Conceptual Flow Diagram
+| Component | Description | Role |
+| :--- | :--- | :--- |
+| `ProxyHandler` | The struct containing the handler logic. | Encapsulation of proxy functionality. |
+| `NewProxyHandler()` | Constructor function. | Standard initialization pattern. |
+| `ProxyImage(c *fiber.Ctx)` | The core handler method. | Executes the HTTP fetching and proxying logic. |
 
-A high-level representation of the data flow:
+### Execution Flow (`ProxyImage`)
 
-```mermaid
-graph LR
-    A[Client Request] --> B{ProxyImage(target URL)};
-    B --> C[Extract Target URL];
-    C --> D[Construct Outbound Request (GET)];
-    D --> E{HTTP Client.Do()};
-    E -- Success --> F[Read Response Body (imgData)];
-    E -- Fail --> G[Return 502 Error];
-    F --> H[Set Response Headers (CORS, Cache, Content-Type)];
-    H --> I[Return imgData (with original Status Code)];
-    G --> J[Return Error Status];
+1. **Input Validation:** Checks if the `url` query parameter is present. Returns 400 if missing.
+2. **Request Setup:** Creates a new `http.Request` using the provided `targetURL`. Sets a mandatory `User-Agent` header (`LokaskBot/1.0`) for traceability/robot identification.
+3. **Execution:** Uses a standard `http.Client` to execute the request (`client.Do(req)`). Handles connection failures (502).
+4. **Data Capture:** Reads the entire response body into memory (`io.ReadAll`). This ensures the content can be processed and resent even if the initial stream is complex.
+5. **Header Processing:**
+    *   Retrieves the `Content-Type` from the remote response headers.
+    *   Applies a fallback `image/jpeg` if the content type is missing.
+    *   Sets critical proxy headers on the outgoing response: `Content-Type`, `Access-Control-Allow-Origin: *`, and `Cache-Control: public, max-age=86400`.
+6. **Output:** Sends the captured binary data (`imgData`) to the client, matching the status code of the remote response.
+
+### Code Flow Links
+
+*   **[Image Proxy Logic Flow](../../handler/proxy.go#ProxyImage)** (Self-reference to demonstrate the full cycle)
+*   **[Error Handling](../../utils/error.go):** *Links to standardized error response logic if implemented.*
+
+## 💡 Note
+
+*   **Efficiency Consideration:** Reading the entire body into memory (`io.ReadAll`) is simple and reliable for typical images, but for extremely large files (e.g., >100MB), streaming the data directly from `resp.Body` to the Fiber response writer would prevent potential memory exhaustion.
+*   **Header Flexibility:** The current implementation hardcodes the cache control to `max-age=86400`. If source control logic suggests that the cache time should be dynamic or derived from the source's own headers, this section needs modification.
+
+## 🚨 Warning (Critical & Tech Debt)
+
+1. **Security (SSRF/Network):** This endpoint acts as a proxy and is highly susceptible to **Server-Side Request Forgery (SSRF)** attacks. An attacker could potentially provide internal IP addresses (e.g., `http://169.254.169.254/latest/meta-data/`) to exfiltrate internal cloud metadata or probe private networks.
+    *   ***Mitigation Action:*** Implement strict network boundary checks (e.g., using an IP reputation or dedicated proxy IP list) to validate the `targetURL` before making the external request.
+2. **Resource Management (Resource Limiting):** There is no rate limiting or resource usage capping. A denial-of-service (DDoS) attack using this endpoint could quickly exhaust bandwidth or system resources.
+    *   ***Mitigation Action:*** Must integrate rate-limiting middleware (e.g., Redis-backed token bucket) at the router level.
+3. **Timeouts:** The `http.Client` used currently has default timeouts. If the target server hangs or is slow, the handler will block indefinitely or until system default timeouts are hit.
+    *   ***Mitigation Action:*** Explicitly configure the `http.Client` with defined timeouts (e.g., `http.Client{Timeout: 10 * time.Second}`).
+
+---
+**Dependencies/Components:** `net/http`, `io`, `github.com/gofiber/fiber/v2`
 ```
-
-## 📝 Note (Improvements and Best Practices)
-
-1.  **Resource Streaming (Memory Optimization):** Reading the entire response body into memory (`io.ReadAll`) is acceptable for small images but poses a risk if extremely large files (e.g., multi-gigabyte TIFFs) are proxyed. For maximum stability and memory efficiency, consider **streaming** the response body directly to the client writer instead of buffering it entirely.
-2.  **Timeouts:** The current `http.Client` uses default settings. For a stable proxy, always configure explicit timeouts (e.g., `client.Timeout = 10 * time.Second`) to prevent hanging connections and resource exhaustion.
-3.  **Header Whitelisting:** While setting `Access-Control-Allow-Origin: *` is convenient, consider implementing header whitelisting or validation on the *incoming* response headers (e.g., checking if the `Content-Type` actually matches expected image formats) to prevent malicious data injection or improper content serving.
-
-## ⚠️ Warning (Potential Issues and Security Concerns)
-
-1.  **Denial of Service (DoS) Vector:** The primary vulnerability is that this endpoint requires validation on the `targetURL`. An attacker could supply a URL pointing to a resource that requires excessive bandwidth or CPU time, potentially leading to resource exhaustion on the proxy server (e.g., hitting a recursive resource or a massive file).
-2.  **Input Sanitation:** While Go's `http.NewRequest` handles basic URL parsing, there should be strict **URL scheme enforcement** (e.g., only allowing `https://`) and potentially **domain whitelisting** to prevent fetching from unauthorized or prohibited external domains.
-3.  **Rate Limiting:** This endpoint must be protected by robust rate-limiting mechanisms (e.g., IP-based rate limiting) to prevent the handler from becoming a vector for high-volume data exfiltration or DoS attacks.
-4.  **Error Detail Leakage:** The current error handling returns generic strings. In production, be cautious about returning *too* much information about internal failures, as this aids attackers in reconnaissance.

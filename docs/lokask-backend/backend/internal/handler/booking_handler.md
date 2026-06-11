@@ -1,100 +1,123 @@
-# `handler/booking_handler.go` - Booking Service Handler
 
-## 📚 Overview
+[⬅ Return to Main Compendium](../../README.md)
 
-This module provides the `BookingHandler`, which encapsulates all business logic and API endpoints related to managing user bookings (appointments, service schedules). It acts as the service layer interface for the booking functionality, interacting with the database via dedicated repositories (`BookingRepository`, `ConsultantRepository`).
+# 📅 Booking Handler Module (`handler/booking`)
 
-The handler manages key operations such as creating new bookings, retrieving schedules (for both the user and the consultant), deleting bookings, and updating the booking status. It enforces critical business rules like ownership checks, overlap detection, and time format validation.
+## 📄 Overview
 
-### 📐 Knowledge Base Areas Covered
+This module, housed within the `handler` package, is responsible for implementing the API logic related to user bookings and consultant schedules. It acts as the primary entry point (handler layer) for all booking-related HTTP requests, orchestrating interactions between the HTTP request context (`fiber.Ctx`), business domain logic, and data repositories.
 
-*   System Design: Service Layer Implementation, Transaction Management (ACID).
-*   Infrastructure: HTTP Request Handling (`fiber`), Database Interaction (`sqlx`).
-*   Security: Authorization (Ownership checks, Role-based access control).
+The handlers manage core functionalities such as creating new bookings, retrieving personal schedules, viewing public consultant schedules, and updating booking statuses. Robust validation and transaction management are key features implemented here.
 
-## 🔍 Detail Analysis
+### 🚀 Key Features
 
-### 🛠️ Handler Structure
+*   **Transaction Safety:** Utilizes database transactions (`sqlx.DB.BeginTxx`) for critical operations like booking creation to ensure atomicity.
+*   **Authorization Checks:** Implements checks to ensure users can only access/modify resources they own (e.g., `GetMySchedule`, `UpdateStatus`).
+*   **Business Rule Enforcement:** Includes logic to prevent self-booking and handles time conflict detection (e.g., PostgreSQL overlap constraint check).
+*   **Multi-View Support:** Provides separate endpoints for a logged-in user viewing their own schedule vs. public viewing of a consultant's available times.
 
-The `BookingHandler` struct holds dependencies required for booking operations:
+---
+
+## 🔎 Detail Analysis
+
+### 🧩 Struct and Initialization
+
+The core structure is `BookingHandler`, which holds necessary dependencies:
 
 ```go
 type BookingHandler struct {
-	BookingRepo    *repository.BookingRepository
-	Consultantrepo *repository.ConsultantRepository
-	DB             *sqlx.DB // Used for starting database transactions
+	BookingRepo    *repository.BookingRepository // Handles booking persistence logic
+	Consultantrepo *repository.ConsultantRepository // Handles consultant profile lookups
+	DB             *sqlx.DB // Direct database connection for transactions
+}
+
+func NewBookingHandler(bRepo *repository.BookingRepository, cRepo *repository.ConsultantRepository, db *sqlx.DB) *BookingHandler {
+	// ... initialization logic ...
 }
 ```
 
-### 🚀 Endpoint Breakdown
+### ⚙️ Endpoint Implementations
 
-#### 1. `CreateBooking(c *fiber.Ctx)`
-*   **Purpose:** Allows a user (traveler) to book a service slot with a specific consultant.
-*   **Flow:**
-    1.  Extracts `travelerID` from `c.Locals("user_id")`.
-    2.  Parses booking request details (including `ConsultantID`, `StartTime`, `TotalPrice`).
-    3.  **Validation:**
-        *   Checks if the provided `ConsultantID` exists.
-        *   Checks if the traveler is attempting to book their own service (`User cannot book own service`).
-        *   Validates `StartTime` format (must be ISO8601/RFC3339).
-        *   Calculates `EndTime` (currently hardcoded to 60 minutes later for testing).
-    4.  **Transaction:** Starts a database transaction (`DB.BeginTxx`).
-    5.  Calls `BookingRepo.CreateBookingTx`:
-        *   Handles database overlap constraint errors (PostgreSQL GiST) by returning a `409 Conflict`.
-    6.  Commits the transaction upon success.
-*   **Success Response:** `201 Created` with the created booking details.
+#### 1. `CreateBooking(c *fiber.Ctx)` (POST /bookings)
 
-#### 2. `GetMySchedule(c *fiber.Ctx)` (Consultant View)
-*   **Purpose:** Allows a consultant to view their own scheduled bookings.
-*   **Security:** Enforces strict ownership checking. It verifies that the authenticated user (`c.Locals("user_id")`) matches the `ConsultantID` provided in the path parameters.
-*   **Flow:**
-    1.  Retrieves `ConsultantID` from path parameters.
-    2.  Retrieves the consultant's profile to verify identity.
-    3.  **Authorization Check:** Compares `profile.UserID` with the logged-in user's ID. If they don't match, returns `403 Forbidden`.
-    4.  Fetches all bookings associated with the `ConsultantID`.
+This endpoint handles the creation of a new booking record.
 
-#### 3. `PublicGetConsultantSchedule(c *fiber.Ctx)` (Public View)
-*   **Purpose:** Allows any external user (not logged in as the consultant) to view a consultant's public schedule.
-*   **Security:** Skips strict logged-in user checks, relying solely on the `ConsultantID` in the path.
-*   **Note:** Currently, it retrieves *all* bookings, regardless of status.
+**Flow Logic:**
+1.  **Auth Context Retrieval:** Extracts `user_id` (traveler ID) from `c.Locals("user_id")`.
+2.  **Validation:** Parses the request body (`domain.CreateBookingRequest`).
+3.  **Pre-Check (Consultant Existence):** Verifies the target consultant ID exists using `Consultantrepo.GetProfileByID`.
+4.  **Business Rule Check:** Ensures the booking user is not the consultant themselves (`profile.UserID != travelerID`).
+5.  **Time Validation:** Parses and validates the start time using `time.RFC3339`. Calculates end time (currently hardcoded +60 mins).
+6.  **Transaction:** Starts a database transaction (`h.DB.BeginTxx`).
+7.  **Persistence:** Calls `BookingRepo.CreateBookingTx`.
+8.  **Conflict Handling:** Specifically checks for the PostgreSQL `exclude_overlapping_bookings` error string to return a `409 Conflict`.
+9.  **Completion:** Commits the transaction and returns the created booking object (`201 Created`).
 
-#### 4. `GetUserTrips(c *fiber.Ctx)` (Traveler View)
-*   **Purpose:** Allows a user (traveler) to view all bookings associated with their account.
-*   **Flow:**
-    1.  Retrieves `userID` from `c.Locals("user_id")`.
-    2.  Fetches all bookings belonging to this `userID`.
+#### 2. `GetMySchedule(c *fiber.Ctx)` (GET /consultant/{id}/schedule)
 
-#### 5. `DeleteBooking(c *fiber.Ctx)`
-*   **Purpose:** Deletes a booking record by ID.
-*   **Security:** Currently lacks comprehensive ownership checking on the client side, relying on the repository layer (though a check might be needed).
-*   **Flow:** Calls `BookingRepo.DeleteBooking`.
-*   **Success Response:** `204 No Content`.
+Retrieves the schedule specifically for the logged-in user viewing *their own* service provider's availability.
 
-#### 6. `UpdateStatus(c *fiber.Ctx)`
-*   **Purpose:** Updates the status of a booking (e.g., pending $\rightarrow$ confirmed $\rightarrow$ cancelled).
-*   **Security:** **Strict Ownership Check.** The handler first verifies if the authenticated user (`c.Locals("user_id")`) is the owner of the booking ID provided.
-*   **Validation:** Validates the incoming status string (must be "confirmed", "cancelled", or "pending").
-*   **Flow:** Calls `BookingRepo.UpdateBookingStatus`.
+**Authorization:**
+*   Requires the calling user to be the consultant whose schedule is being viewed. A check ensures `profile.UserID == loggedInUserUUID`. If not, returns `403 Forbidden`.
+*   If authorized, calls `BookingRepo.GetConsultantBookings`.
 
-### 🏗️ Data Structures & Types
+#### 3. `PublicGetConsultantSchedule(c *fiber.Ctx)` (GET /consultant/{id}/schedule/public)
 
-| Variable/Struct | Type | Source | Purpose |
+Retrieves the consultant's public schedule.
+
+**Authorization:**
+*   This endpoint intentionally skips logged-in user checks as it is designed for third-party viewing.
+*   Calls `BookingRepo.GetConsultantBookings`.
+
+#### 4. `GetUserTrips(c *fiber.Ctx)` (GET /user/trips)
+
+Retrieves all bookings associated with the currently logged-in user (traveler).
+
+**Security:**
+*   Relies solely on `user_id` from the middleware context.
+*   Calls `BookingRepo.GetUserBookings`.
+
+#### 5. `DeleteBooking(c *fiber.Ctx)` (DELETE /booking/{id})
+
+Deletes a specified booking record.
+
+**Security/State:**
+*   The ownership check is currently commented out (`// TODO: checking`).
+*   Calls `BookingRepo.DeleteBooking`.
+
+#### 6. `UpdateStatus(c *fiber.Ctx)` (PATCH /booking/{id}/status)
+
+Updates the lifecycle status of a booking (e.g., pending $\to$ confirmed).
+
+**Authorization Flow:**
+1.  **ID Validation:** Parses the booking ID.
+2.  **Ownership Check:** Crucial step: `BookingRepo.IsBookingOwner` verifies if the user making the request owns the booking. If not, returns `403 Forbidden`.
+3.  **Status Validation:** Ensures the submitted status is one of the allowed values ("confirmed", "cancelled", "pending").
+4.  **Update:** Calls `BookingRepo.UpdateBookingStatus`.
+
+---
+
+## 📝 Note for Development
+
+*   **Time Handling:** The current implementation for `CreateBooking` hardcodes the duration to 60 minutes: `endTime := startTime.Add(60 * time.Minute)`. This should ideally be configurable or extracted from the request body (`CreateBookingRequest`).
+*   **Ownership Context:** The `UpdateStatus` handler correctly utilizes middleware data (`c.Locals("user_id")`) combined with `BookingRepo.IsBookingOwner` to enforce state transitions and prevent unauthorized changes.
+*   **`GetMySchedule` Scope:** The check `if profile.UserID != loggedInUserUUID` in `GetMySchedule` suggests that this endpoint is meant for the consultant to view their *own* schedule, not the traveler's. Clarifying this documentation is necessary.
+
+---
+
+## ⚠️ Warning & Technical Debt (Tech Debt)
+
+1.  **Missing Booking Ownership Check (`DeleteBooking`):** The deletion handler currently lacks explicit authorization logic (`// TODO: checking`). It must verify that the `user_id` context belongs to the owner of the booking ID before executing the deletion.
+2.  **Inconsistent API Design:** The middleware context usage for `user_id` and the parameter extraction for `id` (booking/consultant ID) needs clear standardization.
+3.  **API Response Consistency:** When returning errors, some endpoints use `fiber.Status...` but the success response structure could be standardized across all handlers.
+4.  **Timezone Management:** The current time handling relies on the client or server context. Explicit use of a standardized timezone library (like `time.Time` with location) is recommended to prevent future bugs.
+
+---
+### 📋 Summary of Dependencies and Interactions
+
+| Component | Responsibility | Dependency/Call | Key Concept |
 | :--- | :--- | :--- | :--- |
-| `c` | `*fiber.Ctx` | Fiber | HTTP Context containing request, parameters, and context locals. |
-| `domain.CreateBookingRequest` | Struct | Domain | Payload for creating a booking (contains `ConsultantID`, `StartTime`, etc.). |
-| `uuid.UUID` | Primitive | UUID library | Used for reliable identification of users and consultants. |
-| `sqlx.Tx` | Interface | SQLX | Database transaction object ensuring atomic operations. |
-
-## 📝 Note (Improvements and Best Practices)
-
-1.  **Consultant Timezone Handling:** The current booking logic uses hardcoded `time.RFC3339` parsing and calculation (`endTime := startTime.Add(60 * time.Minute)`). For a production system, time calculations should use timezone-aware libraries (e.g., `time.Time` with specific zone context) to prevent ambiguity across different geographical locations.
-2.  **Service Duration Abstraction:** The hardcoded 60-minute duration should be derived from the `ServiceType` or specified in the request payload to make the booking logic dynamic.
-3.  **Robust Error Context:** When checking ownership (`UpdateStatus`), consider passing the necessary roles/permissions to the handler. Currently, it only checks if the user *is* the owner, but business logic might require confirming who is allowed to change the status (e.g., only the consultant can cancel/confirm).
-4.  **Data Model Consistency:** The `DeleteBooking` function is missing clear ownership checks, which should be added to prevent unauthorized deletion of records.
-
-## ⚠️ Warning (Incomplete/Potential Issues)
-
-1.  **TODO in `PublicGetConsultantSchedule`:** The comment `@TODO: only show confirmed bookings (front-end side)` indicates that the current implementation fetches *all* bookings. The repository layer or the handler itself should filter bookings to only show available or confirmed slots to prevent exposing unnecessary data.
-2.  **Weak Type Assertions in `GetMySchedule`:** The code uses `c.Locals("user_id").(string)`. If the middleware fails to set `user_id` in the context, this will cause a runtime panic. Robust code should use `c.Locals("user_id").(string)` wrapped in a check or `c.Locals("user_id").(string)` with a type assertion check.
-3.  **Missing Input Validation (Depth):** While basic JSON parsing is used, there is no comprehensive input validation (e.g., ensuring `TotalPrice` is positive, `UserNotes` length limits).
-4.  **Error Handling:** The handlers assume database and external service calls succeed. Robust error handling (e.g., transaction rollback, specific HTTP error codes for resource not found, validation failure) is required.
+| `Handler` (API Layer) | Routing, Request Validation | `Service` layer | HTTP Request/Response |
+| `Service` Layer | Business Logic Execution | `Repository` layer | Transaction Management |
+| `Repository` Layer | Data Access, Persistence | Database Driver (e.g., SQL) | ACID Properties |
+| **Middleware** | Authentication/Context Setting | JWT/Session Manager | Security Context |

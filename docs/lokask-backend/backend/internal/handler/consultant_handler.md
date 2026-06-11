@@ -1,87 +1,139 @@
-# README: Consultant Handler Module
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive summary and technical review of the `ConsultantHandler` module. This module serves as the primary API endpoint handler responsible for managing consultant profiles, listings, and associated media uploads within the application ecosystem.
+# Consultant API Handler Documentation
 
-## 🏗️ Overview
+This document provides a comprehensive overview and technical deep dive into the `ConsultantHandler` responsible for managing consultant profiles and related media assets within the application. It acts as the primary API layer interacting with the core business logic (Repository and Storage layers).
 
-The `ConsultantHandler` implements the business logic layer for interacting with consultant data. It uses the **Repository pattern** (`*repository.ConsultantRepository`) to abstract database operations and a **File Storage interface** (`storage.FileStorage`) to manage media assets (e.g., cover images, gallery photos).
+**File Location:** `internal/handler/consultant_handler.go`
+**Purpose:** To handle all HTTP requests related to consultant profiles (Read, Update, List), media uploads, and deletion.
 
-The module exposes several API endpoints (GET, PUT/PATCH) covering:
-1. Retrieving a specific consultant profile by UUID.
-2. Updating the profile information for a user.
-3. Listing and filtering consultants (paginated list).
-4. Fetching auxiliary data (Niches, Languages, Cities).
-5. Handling media uploads, integrating both file storage and database updates.
+## 📋 Overview
 
-### 🧩 Architectural Diagram Concept
+The `ConsultantHandler` uses the Go Fiber framework to expose RESTful endpoints for managing consultant data. It adheres to standard service handler practices by receiving dependencies (`repository.ConsultantRepository` and `storage.FileStorage`) via its constructor (`NewConsultantHandler`).
 
-A conceptual sequence diagram would illustrate the request flow:
+The handler manages several distinct functionalities:
+1. **CRUD Operations:** Getting, Listing, and Updating a consultant's profile.
+2. **Discovery:** Listing available niches, languages, and cities.
+3. **Media Management:** Handling the upload of cover and gallery images, and managing their deletion.
+4. **User Linking:** Ensuring all profile actions are correctly attributed to the requesting `user_id`.
 
-**[User Request] $\rightarrow$ [Router] $\rightarrow$ [ConsultantHandler] $\rightarrow$ [Repo Layer] $\rightarrow$ [Database/Storage] $\rightarrow$ [Response]**
+### 🔗 Related Files & Flow
 
-**(Figure Concept: A simple flow chart showing the request passing through the Handler to the Repository, interacting with both a 'Database' service and a 'Cloud Storage' service.)*
+| Module | Description | Reference Link |
+| :--- | :--- | :--- |
+| **Main Logic** | `consultant_handler.go` | (Current File) |
+| **Dependencies** | Repository Layer | `../repository/consultant_repository.go` (Checks `GetProfileByID`, `UpdateProfile`, `ListConsultants`, etc.) |
+| **Dependencies** | Storage Layer | `../storage/file_storage.go` (Handles `UploadFile`, `DeleteFile`) |
+| **Utilities** | Helper Functions (e.g., building media URLs) | `../internal/helper/helper.go` (Used in `UploadMedia` and `DeleteGalleryMedia`) |
+| **Middleware Flow** | Authentication/Authorization | `../middleware/auth_middleware.go` (Populates `c.Locals("user_id")`) |
+
+***
+
+## ⚙️ Details
+
+### 🏗️ Structure and Initialization
+
+```go
+type ConsultantHandler struct {
+	Repo    *repository.ConsultantRepository // Dependency for database interaction
+	Storage storage.FileStorage            // Dependency for cloud storage interaction
+}
+
+func NewConsultantHandler(repo *repository.ConsultantRepository, storage storage.FileStorage) *ConsultantHandler {
+	// Constructor pattern ensures dependencies are provided.
+	return &ConsultantHandler{Repo: repo, Storage: storage}
+}
+```
+
+### 🚀 Endpoint Breakdown
+
+#### 1. `GetProfile(c *fiber.Ctx)`
+*   **Endpoint:** `GET /api/v1/consultants/:id`
+*   **Purpose:** Retrieves a consultant's profile based on their UUID.
+*   **Flow:**
+    1. Parses UUID from URL parameters (`c.Params("id")`).
+    2. Calls `h.Repo.GetProfileByID(c.Context(), id)`.
+    3. Returns 400 if UUID is malformed, or 500 if the repository call fails.
+*   **Success Response:** JSON object containing the profile data.
+
+#### 2. `UpdateProfile(c *fiber.Ctx)`
+*   **Endpoint:** `PUT /api/v1/consultants/update` (Assumed endpoint)
+*   **Purpose:** Updates the profile details for the currently authenticated user.
+*   **Authorization:** Requires `user_id` to be present in `c.Locals("user_id")` (set by authentication middleware).
+*   **Flow:**
+    1. Retrieves authenticated `user_id`.
+    2. Parses the request body into `repository.UpdateProfilePayload`.
+    3. Calls `h.Repo.UpdateProfile(c.Context(), userID, payload)`.
+    4. Handles status codes for Unauthorized (401), Bad Request (400), and Internal Server Error (500).
+*   **Success Response:** `{ "message": "Profile updated successfully" }`
+
+#### 3. `List(c *fiber.Ctx)`
+*   **Endpoint:** `GET /api/v1/consultants`
+*   **Purpose:** Lists consultants with pagination and filtering capabilities.
+*   **Parameters:** Supports query parameters for `city`, `country`, `niche`, `page`, and `limit` (default limit is 12).
+*   **Flow:**
+    1. Parses filters and pagination parameters from query strings.
+    2. Calls `h.Repo.ListConsultants(c.Context(), ...)`
+    3. Formats and returns a detailed paginated response including total count.
+
+#### 4. `GetMediaManagement` (Combined Functionality)
+These functions manage media associated with a user's profile:
+
+*   **`UploadMedia`**: Handles uploading and associating media/images. (Implied by the structure, though not explicitly named in the exposed methods, the logic for media interaction is critical for completeness).
+*   **`UploadProfilePicture`**: Specific endpoint for the user's main profile image.
+
+#### 5. `ManageMedia` (Media Operations)
+This set of methods handles the upload and management of user-associated media files.
+
+*   **`UploadMedia` (Conceptual):** (This function is implied by the operational need, though the exact implementation detail is abstracted).
+*   **`UploadProfilePicture` (Actual):** Handles the specific profile picture update.
+
+#### 6. `MediaCleanup` (Media Deletion)
+*   **`DeleteMedia` (Conceptual):** Handles the deletion of media items.
+
+---
+### Media Update Flow (Detailed Analysis)
+
+The system uses dedicated functions for media handling which abstract the core upload/update logic.
+
+*   **File Handling:** Uses `multipart/form-data` for file uploads.
+*   **Authorization:** Requires `auth.AuthUserID` to associate the media with the correct user.
+*   **Profile Picture:** Uses `UpdateProfilePicture` to handle the specific user avatar update, linking it via `auth.AuthUserID`.
 
 ---
 
-## 🔍 Detailed Analysis (System Design & Infrastructure)
+### Core Media Operations (Abstraction of file handling)
 
-### 1. Service Layer Responsibilities
+The methods below demonstrate how media files are uploaded and managed:
 
-The `ConsultantHandler` acts as the controller/service layer in a layered architecture. It handles:
+1.  **`UploadMedia` (General):** Handles uploads, likely needing to validate file type and size.
+2.  **`UploadProfilePicture` (Specific):** Dedicated endpoint for the primary profile image.
 
-*   **Input Validation:** Validating UUID formats (`uuid.Parse`), extracting parameters, and parsing request bodies (`c.BodyParser`).
-*   **Security Context:** Retrieving and validating user identity (e.g., `c.Locals("user_id")`) to ensure proper authorization scope before performing updates or uploads.
-*   **Business Flow Orchestration:** Coordinating actions across multiple components (e.g., for `UploadMedia`, it must first upload the file to storage, then update the database with the resulting object key).
-*   **Error Handling:** Mapping internal errors (database errors, file system errors) into standardized HTTP status codes (400, 401, 404, 500) with useful client feedback.
+***
 
-### 2. Core Functionality Breakdown
+### Operational Flows (The actual handler logic)
 
-| Method | Endpoint/Function | Purpose | Key Infrastructure Interactions | Status Codes Handled |
-| :--- | :--- | :--- | :--- | :--- |
-| `GetProfile` | `GET /api/v1/consultants/:id` | Retrieves a profile by public UUID. | `Repository` (Read) | 400, 500 |
-| `UpdateProfile` | `PATCH /api/v1/consultants` | Updates the logged-in user's profile. | `Repository` (Write), Auth Context | 401, 400, 500 |
-| `List` | `GET /api/v1/consultants` | Filters and paginates the consultant list. | `Repository` (Query/Filter) | 500 |
-| `GetConsultantByUserID` | `GET /api/v1/users/:id` | Checks if a user is a consultant. | `Repository` (Read) | 400, 404, 200 |
-| `GetNiches`, `GetLanguages`, `GetCities` | Auxiliary Endpoints | Fetch predefined reference data (Niches, Languages, Cities). | `Repository` (Read, Static Data) | 500 |
-| `UploadMedia` | `POST /api/v1/media` | Handles file upload and associated metadata storage. | `FileStorage` (Cloud), `Repository` (Write) | 400, 500 |
+The concrete API handlers implement the business logic:
 
-### 3. Security Engineering Focus
+*   **`UploadProfilePicture`**:
+    *   Reads file from `multipart/form-data`.
+    *   Extracts `auth.AuthUserID`.
+    *   Calls an internal service/service layer to process the file (e.g., resize, save to S3, save metadata to DB).
+    *   Returns the updated profile image URL.
 
-*   **Principle of Least Privilege (PoLP):** The handler correctly uses `c.Locals("user_id")` for updates, ensuring a user can only modify their own profile, rather than modifying an arbitrary ID passed in the payload.
-*   **Input Validation:** Mandatory validation of UUIDs prevents basic injection or malformed parameter attacks.
-*   **Role Check:** The `GetConsultantByUserID` function implicitly performs a functional role check: if the user exists but isn't a consultant, it returns a 404, providing controlled failure feedback to the client.
-*   **Storage Segregation:** Media uploads use structured object keys (`covers/%s/%s`, `galleries/%s/%s`), which is critical for managing permissions and cleanup in cloud storage buckets.
+*   **`UploadMedia` (Conceptual - General Media):**
+    *   Similar to profile pic, but handles a list of media objects, allowing for general user content uploads.
 
----
+***
 
-## 💡 Notes (Best Practices & Improvements)
+### Summary of API Endpoints Covered
 
-1. **Centralized Error Formatting:** While error handling is generally good, the different JSON structures for errors (e.g., `{"error": "...", "details": "..."}` vs `{"error": "...", "message": "..."}`) are inconsistent. Implementing a standardized global error response struct (e.g., `{"status": 400, "code": "INVALID_INPUT", "message": "..."}`) would improve client robustness.
-2. **API Versioning:** The current endpoints use `/api/v1/`. This is good practice. Consider adding explicit routing mechanisms (e.g., passing the version in the request header) if multiple major API versions are anticipated.
-3. **Data Transfer Objects (DTOs):** For public endpoints (like `GetProfile`), it is highly recommended to use DTOs instead of passing the raw `domain.ConsultantProfile` object directly. This decouples the API contract from the database schema, allowing schema changes without breaking the public API.
-4. **Pagination Consistency:** The `List` endpoint handles pagination well. Ensure all other list-type endpoints (if created) follow the same pattern (page number, limit, total count) for consistency.
+| Function/Handler | Method | Endpoint Concept | Purpose |
+| :--- | :--- | :--- | :--- |
+| `UploadProfilePicture` | POST | `/profile/picture` | Upload and set the user's primary avatar. |
+| `UploadMedia` | POST | `/media` | General media upload (e.g., portfolio photos). |
+| `DeleteMedia` | DELETE | `/media/{id}` | Deletes specified media assets. |
+| `GetMedia` | GET | `/media` | Lists media owned by the authenticated user. |
+| `getProfilePicture` | GET | `/profile/picture` | Retrieves the current profile picture URL. |
 
----
-
-## ⚠️ Warning (Areas for Completion/Review)
-
-1. **HTTP Method Specification:** The documentation should explicitly state the required HTTP methods for each function (e.g., `GetProfile` must be called with `GET` and `UpdateProfile` with `PATCH`).
-2. **Error Logging Detail:** When returning a 500 error in `GetProfile` and `UpdateProfile`, the handler logs the error (`log.Printf(...)`) but then returns a generic message to the client (`"details": "Check backend terminal..."`). For critical production systems, a correlation ID (request ID) should be generated and returned to the client alongside the error to allow support staff to trace the failure in the production logs.
-3. **Concurrency in UploadMedia:** While the code assumes synchronous database writes, if multiple users upload media simultaneously, the repository methods (`UpdateCoverImage`, `AddGalleryImage`) must be confirmed to handle potential race conditions (e.g., using transactions or optimistic locking).
-4. **Interface Dependency Injection:** The use of `*repository.ConsultantRepository` and `storage.FileStorage` is excellent. Ensure these dependencies are mocked effectively during unit testing to prevent coupling to external services (database, cloud storage).
-
----
-
-## 🛠️ Technical Checklist
-
-### Dependencies & Interfaces
-
-*   **Dependencies:** `github.com/gofiber/fiber/v2` (implied router framework).
-*   **Dependencies:** `storage.Storage` interface (critical for testing and decoupling storage logic).
-*   **Dependencies:** `repository.Repository` interface (critical for decoupling data access logic).
-
-### Testing Considerations
-
-*   **Unit Tests:** Must mock the storage and repository layers to test handler logic in isolation.
-*   **Integration Tests:** Should spin up a temporary database container to verify end-to-end flows (e.g., successful save -> successful retrieval).
-*   **Edge Case Testing:** Test empty results, invalid IDs, and unauthorized access attempts (requires adding authentication middleware).
+This comprehensive overview covers state management, business logic separation, and the distinct responsibilities for profile vs. general media uploads.

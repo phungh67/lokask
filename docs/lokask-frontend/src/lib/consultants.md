@@ -1,80 +1,100 @@
-# 📚 API Service Layer: Consultant Data Management
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive overview and technical detail of the `consultantService` module, which handles all API interactions and data transformations related to consultant profiles, niches, and user management.
+# 💼 Consultant Service Layer Module
 
-## 🌐 Overview
-
-This service module acts as a unified data access layer (DAL) or repository pattern, abstracting the complexities of interacting with various backend API endpoints. Its primary function is to fetch, filter, and transform complex, nested data structures (like consultant profiles, reviews, and badges) retrieved from the API into standardized, type-safe JavaScript/TypeScript objects usable by the frontend components.
-
-The system components managed include:
-*   **Data Retrieval:** Handling pagination and filtering for large datasets.
-*   **Data Mapping:** Standardizing attribute names and ensuring data consistency despite variations in backend JSON structures.
-*   **File Upload:** Managing secure media uploads (covers, galleries).
-*   **User Profile Management:** Facilitating the update of the authenticated user's profile.
-
-### 🧩 Architectural Flow
-
-`Frontend Component` $\rightarrow$ `ConsultantService (This Module)` $\rightarrow$ `fetchJson()` $\rightarrow$ `Backend API Endpoint` $\rightarrow$ `Raw JSON` $\rightarrow$ `mapConsultant()` $\rightarrow$ `Typed Data`
+This module (`consultant-api.ts`) serves as the dedicated service layer for interacting with the Consultant endpoints of the backend API. Its primary responsibility is to standardize, transform, and manage the retrieval of consultant data, ensuring client-side consistency regardless of minor inconsistencies in the backend JSON structure.
 
 ---
 
-## 🔬 Detail
+## ⚙️ Overview
 
-### 📂 Data Structures & Interfaces
+The Consultant Service Layer manages all interactions related to viewing, searching, profile management, and media handling for consultant profiles. It encapsulates the logic for constructing API request parameters (especially for complex filtering) and, critically, normalizes raw API responses into predictable TypeScript interfaces.
 
-| Interface | Purpose | Key Fields | Notes |
+### Key Focus Areas:
+
+1.  **Data Normalization:** Implementing `mapConsultant` to reconcile inconsistent field names and data types (e.g., handling `full_name` vs. `name`).
+2.  **State Management:** Handling paginated retrieval using filtering parameters.
+3.  **Resource Management:** Providing functions for media upload and profile updates.
+
+---
+
+## 🛠️ Detailed Implementation Guide
+
+### 📂 1. Data Models & Interfaces
+
+This module defines several critical interfaces used for strong typing and data structure guarantees:
+
+| Interface | Purpose | Description |
+| :--- | :--- | :--- |
+| `ConsultantFilters` | Search Query | Defines optional parameters for filtering consultant search results (city, niche, language, pricing, etc.). |
+| `PaginatedConsultants` | Search Response | Standardized structure for paginated list retrieval (contains `data`, `total_count`, `page`, `limit`). |
+| `Niche` | Reference Data | Structure for listing available professional niches. |
+| `Consultant`, `Badge`, `Review` | Data Mapping | Core types used in the final normalized data structures. |
+
+### 💡 2. Core Logic: Data Mapping (`mapConsultant`)
+
+The `mapConsultant` function is the single most critical piece of business logic in this file. It acts as a robust data adapter, accepting an arbitrary raw API object (`c: any`) and transforming it into a consistent `Consultant` object.
+
+**Transformation Logic Highlights:**
+
+*   **Field Aliasing:** It handles multiple potential field names for the same data point (e.g., `c.full_name || c.name || "User"`).
+*   **Type Coercion:** It explicitly converts types where necessary (e.g., `Number(c.rating_avg) || ... || 0`, `Boolean(c.is_online)`).
+*   **Composite Data:** It structures complex arrays like `badges` and `reviews`, ensuring deep mapping (e.g., normalizing `review_name` vs. `author_name`).
+
+```typescript
+// Conceptual Flow:
+// Raw API Object (Any) -> mapConsultant() -> Standardized Consultant Object
+```
+
+### 🚀 3. API Interaction Functions
+
+| Function | Endpoint/Action | Description | Usage Flow |
 | :--- | :--- | :--- | :--- |
-| `ConsultantFilters` | Defines criteria for searching and listing consultants. | `city`, `niche[]`, `languages[]`, `minRating`, `maxPrice`, `page`, `limit` | Used to construct URL query parameters for efficient filtering. |
-| `PaginatedConsultants` | Standardized return type for list queries. | `data[]`, `total_count`, `page`, `limit` | Ensures the calling function receives necessary pagination metadata. |
-| `Niche` | Represents a specific professional category/tag. | `id`, `slug`, `display_name` | Used to populate searchable filter options. |
-| `Consultant` | The final, mapped, standardized object for a consultant profile. | `id`, `name`, `rating`, `bio`, `reviews[]`, `badges[]` | This is the core, processed data structure used throughout the application. |
+| `getConsultants(filters?)` | `/consultants` | Fetches a paginated list of consultants. Builds `URLSearchParams` dynamically based on provided filters. | `await getConsultants({ city: '...', niche: ['A'] })` |
+| `getConsultantById(id)` | `/consultants/:id` | Fetches a single consultant's comprehensive profile using their UUID. | `await getConsultantById('uuid-123')` |
+| `getNiches()` | `/niches` | Retrieves the complete list of available niche categories. | N/A |
+| `getLanguages()` | `/languages` | Retrieves a list of supported languages. | N/A |
+| `uploadConsultantMedia(file, type)` | `/consultant/media` (POST) | Handles file uploads for profile cover or gallery images. Uses `FormData` for multi-part encoding. | `await uploadConsultantMedia(file, 'cover')` |
+| `deleteConsultantMedia(imageUrl)` | `/consultant/media` (DELETE) | Deletes media resources based on the provided image URL. | `await deleteConsultantMedia(url)` |
+| `updateConsultantProfile(data)` | `/updateprofile` (PATCH) | Updates the authenticated user's profile information. Sends data as a JSON body. | `await updateConsultantProfile({ bio: 'New Bio' })` |
 
-### ✨ Core Functionality Breakdown
+### 💾 4. Helper Components
 
-#### 1. Data Mapping Utility (`mapConsultant`)
-The `mapConsultant` function is critical. It serves as an anti-corruption layer, accepting a potentially inconsistent raw JSON object and mapping it to the highly structured `Consultant` interface.
-
-**Key Transformation Logic:**
-*   **Field Normalization:** Handles multiple possible JSON key names (e.g., `c.rating_avg` OR `c.rating`).
-*   **Fallback Logic:** Provides default values (e.g., `display_name` fallback to `full_name` or `name`).
-*   **Complex Structure Mapping:** Iterates through nested arrays for `badges` and `reviews`, normalizing their structure (e.g., mapping `icon_name` to `iconName` for consistency).
-*   **Image Handling (`getAvatar`):** Ensures that a placeholder URL (`ui-avatars.com`) is generated if no avatar URL is provided, maintaining UI stability.
-
-#### 2. API Functions
-
-| Function | Endpoint/Method | Input | Output | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `getConsultants` | `GET /consultants` | `ConsultantFilters` | `Promise<PaginatedConsultants>` | Fetches a paginated list of consultants. Automatically constructs query parameters from the filters provided. |
-| `getConsultantById` | `GET /consultants/:id` | `string` (ID) | `Promise<Consultant>` | Fetches the complete, detailed profile for a single consultant. |
-| `getNiches` | `GET /niches` | None | `Promise<Niche[]>` | Retrieves the list of all available professional niches (tags). |
-| `getLanguages` | `GET /languages` | None | `Promise<string[]>` | Retrieves a list of supported languages. |
-| `uploadConsultantMedia` | `POST /consultant/media` | `File`, `"cover" | "gallery"` | `Promise<any>` | Handles the multi-part form data upload for media files, requiring both the file and the intended `type`. |
-| `updateConsultantProfile` | `PATCH /updateprofile` | `Partial<UpdateProfileRequest>` | `Promise<any>` | Updates the currently authenticated user's profile information. |
+*   **`getAvatar(url, name)`:** A utility function responsible for generating a standardized avatar URL. If an explicit URL is provided, it uses it; otherwise, it generates a placeholder using `ui-avatars.com`.
 
 ---
 
-## ⚠️ Warning & Considerations
+## 📝 Notes & Best Practices
 
-### 🚨 Data Integrity and Type Coercion
-The `mapConsultant` function relies heavily on type coercion (e.g., `Number(c.rating_avg) || Number(c.rating) || 0`). While this provides resilience to slight API changes, it masks potential backend data quality issues. If a major data source begins returning non-numeric data for ratings, this fallback logic might silently fail or incorrectly default to `0`.
+1.  **Consistency is Key:** Always treat the output of the `mapConsultant` function as the definitive source of truth for any consultant data within the application. Do not rely on the raw API response structure outside of this mapping function.
+2.  **Filter Parameter Handling:** When calling `getConsultants`, ensure that array types (like `niche` or `languages`) are correctly joined into comma-separated strings before being passed to the function.
+3.  **Media Handling:** When uploading or deleting media, always check the API documentation for the required format (e.g., confirming the `type` enum for uploads or the JSON payload structure for deletions).
+4.  **Typing:** Utilize the exported interfaces (`ConsultantFilters`, `PaginatedConsultants`) on the calling components to ensure compile-time safety.
 
-### 🛡 Security: Input Validation
-When constructing the URL for `getConsultants`, the input filters are directly appended to `URLSearchParams`. While this prevents basic injection, all input values (`city`, `niche`, etc.) coming from the frontend **must** be rigorously sanitized and validated before being passed to this service layer to prevent XSS or query parameter manipulation attacks.
+### 🔗 Related Code Flow Links
 
-### 💾 State Management
-Since this module is primarily for API calls, the consuming components must be prepared to handle:
-1.  **Loading States:** Display appropriate loading indicators during all `await` calls.
-2.  **Error States:** Implement robust `try...catch` blocks to handle network errors or 4xx/5xx API responses.
+*   **Profile Display Component:** This service layer feeds data into the `ConsultantDetail.tsx` component.
+*   **Search/Listing Component:** The `getConsultants` function is utilized by the main directory search view.
+*   **User Settings:** The `updateConsultantProfile` function is directly mapped to the user profile editing module.
 
 ---
 
-## 📝 Notes & Recommendations
+## ⚠️ Warnings & Tech Debt
 
-### 🛠️ Refactoring Opportunity (System Design)
-Consider centralizing the mapping and utility functions related to the `Consultant` profile into a dedicated utility module (e.g., `consultantUtils.ts`) to improve separation of concerns. The service layer should only be responsible for API communication, while the mapping logic handles the data transformation.
+The following items represent potential areas of instability, poor practice, or required future refinement.
 
-### 🗺️ Infrastructure Improvement (Type Safety)
-While the current implementation uses `any` for the fetch results (`fetchJson<any>`), implementing more precise TypeScript generics for every possible API response payload (especially for `data` in `getConsultants`) would significantly boost developer confidence and catch errors at compile time.
+### 🔴 Critical Tech Debt
 
-### 🚀 Optimization (Caching)
-The endpoints `getNiches()` and `getLanguages()` return relatively static data. To improve performance and reduce unnecessary API calls, these services should implement a client-side caching mechanism (e.g., using React Query or a global state store) to store the results and prevent redundant network requests during component lifecycle events.
+1.  **Fragile Data Mapping Logic (High Priority):** The `mapConsultant` function relies heavily on multiple JavaScript logical OR (`||`) fallbacks (`c.full_name || c.name || "User"`). This suggests an underlying issue with the API contract.
+    *   **Recommendation:** Work with backend engineering to enforce a single, consistent field name for key attributes (e.g., always use `full_name`) to drastically simplify the mapper and improve resilience.
+2.  **Type Casting (Medium Priority):** Explicitly casting fields like `Number(c.rating_avg) || Number(c.rating) || 0` introduces potential runtime bugs if the API structure changes.
+    *   **Recommendation:** Implement stricter runtime checks or schema validation (e.g., using Zod or similar validation library) instead of relying purely on fallback numeric operations.
+
+### 🟡 Security & Infrastructure Concerns
+
+1.  **Direct Profile Update Exposure (Medium Priority):** The `updateConsultantProfile` function uses a generic PATCH endpoint. While necessary, ensure that the backend strictly validates and sanitizes *all* incoming data to prevent Over-posting or unauthorized field changes.
+2.  **Circular Dependency Risk:** If multiple client components rely directly on the raw `map` structure, any change in the backend model could break the client. Consider creating a dedicated Adapter or Service Layer to mediate between the UI and the Data Access Layer.
+
+---
+*Generated documentation based on existing service definitions.*

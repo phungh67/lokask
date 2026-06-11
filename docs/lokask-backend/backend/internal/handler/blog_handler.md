@@ -1,83 +1,140 @@
-# 📚 Blog Handler Service Documentation
 
-This document provides a comprehensive overview of the `BlogHandler` package, which serves as the API layer (Controller/Handler) for managing blog posts within the application. It is responsible for handling incoming HTTP requests, orchestrating data flow between the HTTP context, the business logic repository, and external storage services.
+[⬅ Return to Main Compendium](../../README.md)
 
-## 📄 Overview
+# 📖 Blog Service Handler Layer (`handler/`)
 
-The `BlogHandler` is a Go service component built on the Fiber framework. It implements the core API endpoints for blog functionality, including creating new posts, listing filtered posts, and retrieving individual posts by ID.
+This module contains the concrete HTTP handler logic for managing blog post resources. It acts as the presentation layer entry point for the API, coordinating inputs, calling service/repository logic, and formatting the HTTP response.
 
-Architecturally, the handler follows the Controller pattern, acting as the primary interface between the HTTP request and the internal application layers (Repository and Storage). It enforces crucial application constraints such as user authentication checks and data validation before persisting data.
+## 🌟 Overview
 
-### 🚀 Usage Summary
+The `BlogHandler` is responsible for implementing the core business logic endpoints for the blog feature. It interacts with the authentication context (user ID), the file storage system (for cover images), and the database repository to perform CRUD operations.
 
-| Endpoint | HTTP Method | Description | Dependencies |
-| :--- | :--- | :--- | :--- |
-| `/blog` | `POST` | Creates a new blog post. Requires `title`, `content`, and optionally a cover image. | `BlogRepository`, `FileStorage` |
-| `/blog` | `GET` | Lists blog posts, supporting filtering by city, country, or author ID. | `BlogRepository` |
-| `/blog/:id` | `GET` | Retrieves a single blog post by its unique ID. | `BlogRepository` |
+**Key Responsibilities:**
+1.  **Request Handling:** Parsing form values, query parameters, and path parameters.
+2.  **Business Logic Enforcement:** Validating mandatory fields (e.g., title and content).
+3.  **Orchestration:** Managing the flow from file upload $\rightarrow$ model creation $\rightarrow$ database persistence.
 
-## ⚙️ Detailed Implementation Analysis
+---
 
-### 1. Component Structure
+## ⚙️ Detailed Component Breakdown
 
-The `BlogHandler` struct holds necessary dependencies, ensuring proper separation of concerns:
+The `BlogHandler` depends on three major infrastructure components: `fiber` (HTTP context), `storage` (MinIO/S3), and `repository` (Database access).
 
-```go
-type BlogHandler struct {
-	Repo    *repository.BlogRepository // Handles database interaction (persistence)
-	Storage storage.FileStorage       // Handles external file uploads (e.g., MinIO/S3)
-}
-```
+### 💻 `Create(c *fiber.Ctx)` - Create Blog Post (POST)
 
-### 2. Workflow Deep Dive (Create Function)
+Handles the creation of a new blog post. This is the most complex endpoint as it involves multiple dependencies.
 
-The `Create` method demonstrates a complex, multi-stage data pipeline:
-
-1. **Authentication Retrieval:** It securely retrieves the `user_id` from the Fiber context locals, assuming a preceding authentication middleware has populated this data.
-2. **Input Validation:** It validates required fields (`title` and `content`) and parses the user ID, returning a `400 Bad Request` on failure.
-3. **Object Storage Handling:** It attempts to process an optional `cover_image` file.
-    *   The file is uploaded to the external storage service (`h.Storage.UploadFile`).
-    *   It performs a manual string replacement (`strings.Replace(rawURL, ":9001", ":9000", 1)`) to correct the URL, suggesting an endpoint mapping adjustment is needed or expected in the infrastructure configuration.
-4. **Domain Model Construction:** It constructs the `domain.Blog` object, populating all fields including `uuid.New()` for primary keys and setting precise `CreatedAt`/`UpdatedAt` timestamps.
-5. **Persistence:** The finalized model is passed to `h.Repo.Create()`.
-
-### 3. Filtering and Retrieval (List & Get)
-
-*   **`List`:** This method effectively uses query parameters (`c.Query`) to build a structured `repository.BlogFilter` object. This design pattern makes the handler agnostic to how the repository actually executes the query (e.g., SQL `WHERE` clause, NoSQL query filter).
-*   **`Get`:** This method handles path parameters (`c.Params("id")`) and robustly validates the UUID format, ensuring the database lookup only proceeds with valid identifiers.
-
-## 💡 Notes for Development and Maintenance
-
-*   **Error Handling Consistency:** When returning errors, the handler consistently uses structured JSON responses (e.g., `fiber.Map{"error": "...", "detail": "..."}`). This practice should be maintained across all services for standardized client consumption.
-*   **Dependency Injection:** The use of dependency pointers (`*repository.BlogRepository`, `storage.FileStorage`) is excellent practice, ensuring the `BlogHandler` is highly testable and decoupled from concrete infrastructure implementations.
-*   **MinIO/URL Correction:** The line `coverImageURL = strings.Replace(rawURL, ":9001", ":9000", 1)` is a temporary fix or a symptom of an infrastructure misalignment. If the deployment environment changes (e.g., moving from local MinIO port 9001 to 9000), this hardcoded replacement logic might break. **The storage service layer should ideally handle URL generation/normalization.**
-
-## ⚠️ Security and Improvement Warnings
-
-### 🛑 High Priority: Security Concerns
-
-1.  **Input Sanitization:** While the handler validates the presence of fields, it does not explicitly mention sanitization for textual inputs (`title`, `content`, `summary`). If the content is rendered directly to HTML by the client or another backend service without sanitization, this creates a potential **Cross-Site Scripting (XSS)** vulnerability. Always sanitize user-generated content.
-2.  **Rate Limiting:** This handler does not implement rate limiting. Unauthorized use could lead to resource exhaustion or denial-of-service conditions. Implementing rate limiting middleware is strongly recommended, particularly on the `POST` endpoint.
-
-### 📐 Architectural Improvements (Medium Priority)
-
-1.  **Image Handling Abstraction:** The file upload logic is tightly coupled within the `Create` method. Consider abstracting the image upload into a dedicated helper function or service that the `BlogHandler` calls, which would centralize error logging and URL manipulation.
-2.  **Consistency in Error Responses:** While the pattern is good, consider defining standardized error codes/enums instead of just relying on string messages for machine-readable error handling.
-
-## 🗺️ Diagrammatic Flow (Conceptual)
+**Flow Diagram:**
 
 ```mermaid
-graph TD
-    A[Client Request: POST /blog] --> B(BlogHandler.Create);
-    B --> C{Auth Middleware};
-    C --> D[Retrieve User ID];
-    D --> E[Fiber Context];
-    E --> F{Validate Inputs: Title, Content};
-    F -- Valid --> G[File Upload: Cover Image];
-    G --> H(Storage Service: MinIO);
-    H --> I[Return Image URL];
-    I --> J[Construct domain.Blog Object];
-    J --> K(Repository Layer: Save to DB);
-    K -- Success --> L[Return 201 Created];
-    K -- Failure --> M[Handle 500 Error];
+sequenceDiagram
+    participant Client
+    participant Handler
+    participant Middleware
+    participant Storage
+    participant Repository
+
+    Client->>Handler: POST /blogs (Form Data + Image)
+    Handler->>Middleware: Retrieve User ID (from Context)
+    Middleware-->>Handler: user_id
+    Handler->>Handler: Validate Inputs (Title, Content)
+    Note over Handler, Storage: Optional File Upload Handling
+    Handler->>Storage: UploadFile(file, user_id, bucket)
+    Storage-->>Handler: rawURL
+    Handler->>Handler: Construct domain.Blog object
+    Handler->>Repository: Create(blog)
+    Repository-->>Handler: Blog object (Success)
+    Handler-->>Client: 201 Created (Blog Object)
+```
+
+**Steps:**
+1.  **Authentication:** Extracts `user_id` from the request context (`c.Locals("user_id")`).
+2.  **Input Parsing:** Reads `title`, `content`, `summary`, `city`, and `country` from the form data.
+3.  **Image Handling:** If `cover_image` is provided, it is uploaded to the configured storage (`h.Storage.UploadFile`). The URL is then cleaned and stored.
+4.  **Model Creation:** A new `domain.Blog` instance is populated, generating `ID`, setting `AuthorID`, and recording timestamps.
+5.  **Persistence:** Calls `h.Repo.Create(blog)` to save the record to the database.
+
+**Status Codes:**
+*   `201 Created`: Successful creation.
+*   `400 Bad Request`: Missing required fields or invalid user ID.
+*   `500 Internal Server Error`: Failure during image upload or database write.
+
+### 📋 `List(c *fiber.Ctx)` - List All Blogs (GET)
+
+Fetches a paginated and filterable list of blog posts.
+
+**Process:**
+1.  Reads optional query parameters: `city`, `country`, and `author_id`.
+2.  Constructs a `repository.BlogFilter` object using these inputs, setting a default limit (20).
+3.  Calls `h.Repo.List(filter)` to retrieve the list.
+4.  Returns the list of blogs directly.
+
+**URL Example:** `/blogs?city=Rome&country=Italy&author_id=uuid_abc`
+
+### 🖼️ `Get(c *fiber.Ctx)` - Get Single Blog (GET)
+
+Retrieves a single blog post using its unique identifier.
+
+**Process:**
+1.  Extracts the `id` from the URL path parameters (`c.Params("id")`).
+2.  Parses the ID string into a `uuid.UUID` type, validating its format.
+3.  Calls `h.Repo.GetByID(id)`.
+4.  Returns the single blog object.
+
+**Status Codes:**
+*   `200 OK`: Blog found and returned.
+*   `400 Bad Request`: Invalid format for the provided ID.
+*   `404 Not Found`: No blog exists with the given ID.
+
+---
+
+## ⚠️ Notes and Warnings (Security & Technical Debt)
+
+### ⚠️ Security & Authentication Concerns (Critical)
+
+1.  **User Context Dependency:** The `Create` method relies entirely on the `c.Locals("user_id")` context variable. **It is absolutely critical that the authentication middleware runs immediately before this handler.** If the middleware fails or is bypassed, the `userID` will be incorrect, leading to data integrity issues (e.g., attributing a post to an unknown user).
+    *   *Related Module:* This dependency links directly to the assumed authentication flow within `../middleware/auth.go`.
+2.  **Error Leakage:** The handler returns database errors via `detail: err.Error()` in the 500 status response. In production, generic error messages must be used, and specific database error handling should be implemented at the repository layer to prevent revealing backend schema or connectivity details to the client.
+
+### 💡 Design and Code Improvements (Tech Debt)
+
+1.  **URL Replacement Logic:** The line `coverImageURL = strings.Replace(rawURL, ":9001", ":9000", 1)` is brittle. It relies on knowing specific port numbers being changed between staging and production. Instead, the file storage service should ideally return fully canonical URLs based on the deployment environment configuration, eliminating manual string manipulation.
+2.  **Contextualizing Inputs:** When fetching the `user_id`, the code performs `uuid.Parse(userIDStr)` *after* retrieving it from the context. It is better practice to validate the type and format of the data as close to the context retrieval point as possible, possibly by adding specific type assertions or error checks within the middleware itself.
+
+---
+
+## 🚀 System Design / Infrastructure Flow
+
+### Components Interaction Diagram
+
+```mermaid
+graph LR
+    A[Client/HTTP Request] -->|Request Body/Query| B(BlogHandler);
+    subgraph Backend Services
+        B --> C(Auth Middleware);
+        C --> D{Context Locals: user_id};
+        B --> E(File Storage: MinIO/S3);
+        B --> F(Repository: Database);
+    end
+    D --> B;
+    E -->|File URL| B;
+    F -->|Blog Object| B;
+    B --> G[HTTP Response];
+    G --> A;
+
+    style C fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#ccf,stroke:#333,stroke-width:2px
+    style F fill:#ffc,stroke:#333,stroke-width:2px
+```
+
+### 🧩 Related Code Flow Links
+
+For tracing the full lifecycle of a blog post, refer to these related modules:
+
+*   **Authentication Flow:** The acquisition of `user_id` is handled by the middleware layer. Please check the implementation details here:
+    *   [Authentication Middleware Logic](../middleware/auth)
+*   **Database Interaction:** The specific filtering and retrieval logic is housed in the repository layer.
+    *   [Blog Repository Interface and Implementation](../repository/blog_repository)
+*   **Domain Model:** The canonical structure for the blog post.
+    *   [Blog Domain Model](../domain/blog)
 ```

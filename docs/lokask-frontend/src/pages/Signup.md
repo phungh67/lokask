@@ -1,73 +1,95 @@
-# 🚀 Feature Documentation: User Onboarding Flow (Signup Landing Page)
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-**File:** `Signup.jsx` (or equivalent)
-**Context:** User Authentication / Account Creation Funnel
-**System Component:** Frontend Routing / UI Layer
-**Knowledge Base Focus:** System Design, Security, Frontend Architecture
+# 🚀 Signup Flow Entry Point (`Signup.jsx`)
 
-***
+This document details the implementation, logic, and architectural considerations for the main user sign-up landing page component. This component serves as a crucial gateway, directing new users to the appropriate specialized sign-up flow based on their intended role (Traveller or Consultant).
 
-## 💡 Overview
+---
 
-This component serves as the primary entry point for new users wishing to join the Lokask platform. Its core function is to guide users to the correct dedicated signup flow based on their intended role: **Traveller** or **Consultant**.
+## 🔍 Overview
 
-The page utilizes a clean, role-based decision card pattern, redirecting users to specialized routes (`/signup/traveller`, `/signup/consultant`). This design pattern effectively segregates the initial onboarding experience, ensuring that different user types are presented with relevant prompts and data collection forms.
+The `Signup` component is a highly presentational React component responsible for the initial user onboarding experience on the Lokask platform. Its primary function is not to handle registration logic itself, but rather to guide the user by presenting two distinct paths: **Traveller** and **Consultant**.
 
-## 🔎 Detail Analysis
+This design pattern improves UX by segmenting the signup process immediately, ensuring that the user is presented with forms and questions relevant only to their specific role.
 
-### 📁 Component Structure and Implementation
-The component follows a standard marketing/landing page pattern, incorporating a `Navbar` and `Footer` for site consistency.
+### Key Stakeholders:
+*   **Development:** Frontend/React
+*   **Function:** User Onboarding, Routing
+*   **Related Systems:** Authentication Service, User Role Management.
 
-1.  **Core Logic:** The main content area is structured using a grid system (`md:grid-cols-2`) to display the two user roles side-by-side.
-2.  **Navigation:** Instead of handling signup logic internally, the component leverages React Router's `<Link>` component. This ensures that clicking a role card initiates a client-side route transition, directing the user to the next, specialized page.
-3.  **User Roles:**
-    *   **Traveller:** Targeted for users seeking local experiences, guiding them to the `/signup/traveller` path.
-    *   **Consultant:** Targeted for local experts/businesses, guiding them to the `/signup/consultant` path.
-4.  **Visual Design:** The component uses interactive group-hover effects (e.g., color shifts, shadow enhancements) to improve UX and guide the user's focus, providing immediate visual feedback upon interaction.
+## 📐 Detailed Breakdown (Component Logic)
 
-### 🌐 System Interaction Flow
+### Architecture & Flow
+The component utilizes React Router's `<Link>` component to manage routing, effectively acting as a router dispatcher. The structure is designed to be responsive, presenting the two options side-by-side on medium screens and larger (`md:grid-cols-2`).
+
+### Code Logic Highlights
+1.  **Layout:** Uses a standard `Navbar` and `Footer` wrapper, ensuring consistency across the application.
+2.  **Content Segmentation:** The core logic resides within the `grid` element, which contains two separate "Card" components.
+3.  **Card Interaction (Traveller):**
+    *   **Route:** Directs to `/signup/traveller`.
+    *   **Value Proposition:** Appeals to individuals seeking local discovery and travel planning.
+    *   **Styling:** Uses primary branding colors, emphasizing the "local gem" discovery theme.
+4.  **Card Interaction (Consultant):**
+    *   **Route:** Directs to `/signup/consultant`.
+    *   **Value Proposition:** Appeals to local experts or service providers looking to monetize their knowledge.
+    *   **Styling:** Uses a distinct blue branding theme, associating it with professionalism and expertise.
+5.  **Fallback Link:** Includes a visible link for returning users to navigate to the main `/login` page, maintaining a clear user path regardless of their intent.
+
+---
+
+## 💡 Structural Notes
+
+### User Flow Diagram (Conceptual)
 
 ```mermaid
-graph LR
-    A[User lands on /signup] --> B{Read Role Cards};
-    B --> C{User Clicks Traveller Card};
-    C -->|Route to| D[Signup/Traveller Component];
-    B --> E{User Clicks Consultant Card};
-    E -->|Route to| F[Signup/Consultant Component];
-    D --> G[API: Create Traveller Account];
-    F --> H[API: Create Consultant Account];
+graph TD
+    A[User Lands on /signup] --> B{Select Role?};
+    B -- Traveller --> C(Card: I'm a Traveller) --> D[Redirect to /signup/traveller];
+    B -- Consultant --> E(Card: I'm a Consultant) --> F[Redirect to /signup/consultant];
+    B -- Returning User --> G(Link: Log in) --> H[Redirect to /login];
 ```
 
-**Figure:** `Signup Onboarding Flow Diagram`
-*Description: Visual representation showing how the main signup page directs users via specialized client-side routing to separate, role-specific signup endpoints.*
+### Component Relationships
+This component is critical for initializing user state. The subsequent sign-up components (e.g., `SignupTraveller.jsx`, `SignupConsultant.jsx`) must be designed to accept role-specific parameters or context state upon arrival.
 
-## 🛡️ Technical Review & Knowledge Base Insights
+*   **Dependencies:**
+    *   `@/components/Navbar`
+    *   `@/components/Footer`
+    *   `react-router-dom` (`Link`)
 
-### 🔐 Security Engineering Concerns
-*   **Role-Based Access Control (RBAC):** While this page handles *selection*, the downstream components (`/signup/*`) must rigorously enforce RBAC. The backend API calls generated from these signup forms must validate the user's claimed role against the credentials provided to prevent privilege escalation.
-*   **Input Validation:** Since this component does not handle form submission, validation must be fully delegated to the child routes. Ensure all necessary field validations (email format, password strength, required fields) are implemented before API interaction.
-*   **Data Handling:** If sensitive PII (Personally Identifiable Information) is collected, the connection must adhere to current GDPR/CCPA standards, ensuring encrypted transmission (HTTPS/TLS).
+---
 
-### 💻 System Design Considerations
-*   **Microservices Approach:** The separation of the signup flow into two dedicated, role-specific routes is excellent system design. It allows the system to independently manage the data models and business logic for a Traveller vs. a Consultant (e.g., a Consultant needs fields for business registration, which a Traveller does not).
-*   **API Endpoint Layering:** Two distinct API endpoints should be created:
-    1.  `/api/v1/user/signup/traveller`
-    2.  `/api/v1/user/signup/consultant`
-    These endpoints should handle the creation, role assignment, and initial user profile seeding.
+## ⚠️ Warnings & Tech Debt
 
-### ☁️ Infrastructure & Cloud Components
-*   **Edge Routing:** Ensure the cloud load balancer or API Gateway is configured to handle these multiple signup endpoints efficiently, minimizing latency and providing consistent authentication checks at the gateway level.
-*   **Storage:** The initial profile data for both roles must be stored in a robust database system (e.g., PostgreSQL or MongoDB) that supports necessary schema differentiation.
+### 🚩 1. Future Role Scalability (Most Important)
+The current structure is hardcoded for exactly two roles. If the business introduces a third, fourth, or fifth role (e.g., 'Business Partner', 'Admin', 'Reviewer'), this component will require manual code updates and the addition of a new, identical card block.
 
-## 📝 Documentation Notes & Best Practices
+**Recommendation:** Consider refactoring the card rendering logic using a data array structure.
 
-*   **Accessibility (A11y):** Ensure the interactive card elements have appropriate ARIA labels and keyboard focus states (e.g., `:focus-visible`) to meet WCAG standards.
-*   **SEO:** Since this is a public-facing page, ensure appropriate meta tags and structured data markup are included to optimize the page for search engines, describing the core purpose of Lokask.
-*   **Error Handling:** Consider adding visual feedback for the *Login* link area (e.g., a small warning if the login route is deprecated or undergoing maintenance).
-*   **Testing:** Dedicated unit tests should be written for the component structure and the rendering paths for both role cards. Integration tests should verify that clicking the links successfully navigate to the target routes.
+```javascript
+// Pseudo-Code Improvement
+const roles = [
+  { name: 'Traveller', link: '/signup/traveller', icon: User, description: '...' },
+  { name: 'Consultant', link: '/signup/consultant', icon: Briefcase, description: '...' },
+  // New roles can be added here without changing the render loop.
+];
 
-## ⚠️ Warnings (Unfinished/Missing Functionality)
+// Then map over roles to generate the cards.
+```
 
-1.  **Backend Integration:** This component is purely a **frontend routing setup**. The actual mechanism for *creating* the user account, assigning the role, and storing initial data is missing and must be built out in the connected services/APIs.
-2.  **State Management:** The current implementation assumes successful redirection. Handling failure scenarios (e.g., routing failures, network disconnection) requires additional state management logic not present here.
-3.  **Authentication/Authorization:** There is no protection on this route itself, which is acceptable as it is intended for all users. However, any form of account retrieval or listing functionality linked to this flow *must* be secured against unauthorized access attempts.
+### 🚩 2. Global Design Consistency
+While the roles are styled differently (Primary vs. Blue), the transition between the card element's background/border/hover state needs careful review to ensure the visual separation does not feel jarring.
+
+### 🚩 3. Accessibility (A11y)
+Ensure that the focus order (tab sequence) is logical. Since the cards are implemented as links, they should be properly marked up as interactive elements and have visible focus states for keyboard navigation.
+
+## 📚 Documentation Links
+
+*   **Related Component: Traveller Signup Flow:** [`../signup/traveller/SignupTraveller.jsx`](../signup/traveller/SignupTraveller.jsx)
+    *   *Purpose:* Handles sign-up specific to travelers.
+*   **Related Component: Consultant Signup Flow:** [`../signup/consultant/SignupConsultant.jsx`](../signup/consultant/SignupConsultant.jsx)
+    *   *Purpose:* Handles sign-up specific to consultants.
+*   **Global Auth Flow:** [`../login/LoginPage.jsx`](../login/LoginPage.jsx)
+    *   *Purpose:* Central login page.
+```

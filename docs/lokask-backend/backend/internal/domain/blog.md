@@ -1,64 +1,62 @@
-# 💾 Domain Model Documentation: `Blog`
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
+
+# Data Model: Blog Post Entity (`domain/Blog`)
+
+This document describes the structure and purpose of the `Blog` domain model, which serves as the core data representation for a single blog post within the system.
+
+## 📚 Overview
+
+The `Blog` struct is a comprehensive representation of a blog article, encompassing not only the primary content fields (Title, Content, etc.) but also metadata required for sophisticated user interactions, such as geographical categorization (`City`, `Country`), author details (`AuthorName`, `AuthorAvatar`), and community engagement metrics (`Rating`, `ReviewCount`).
+
+This model is designed to be used across various layers: the database persistence layer (via `db:` tags), the API serialization layer (via `json:` tags), and the application logic layer (for type safety and business validation).
+
+## 📝 Detail Analysis
+
+### `domain/Blog` Struct Definition
+
+| Field | Type | Tags | Description | Purpose/Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `ID` | `uuid.UUID` | `db:"id" json:"id"` | Unique identifier for the blog post. | Primary Key. |
+| `AuthorID` | `uuid.UUID` | `db:"author_id" json:"author_id"` | Foreign key linking the post to its creator. | Enforces ownership relation. |
+| `Title` | `string` | `db:"title" json:"title"` | The main title of the article. | Required field (business validation needed). |
+| `Summary` | `string` | `db:"summary" json:"summary"` | Short description or abstract of the content. | Optimized for listing views. |
+| `Content` | `string` | `db:"content" json:"content"` | The full, rich-text body of the blog post. | Primary content storage. |
+| `CoverImageURL` | `string` | `db:"cover_image_url" json:"cover_image_url"` | URL pointing to the featured image. | Used for graphical representation. |
+| `City` | `string` | `db:"city" json:"city"` | Geographical location metadata (city). | Used for filtering and context. |
+| `Country` | `string` | `db:"country" json:"country"` | Geographical location metadata (country). | Used for filtering and context. |
+| `Rating` | `float64` | `db:"rating" json:"rating"` | Average rating given by users. | Calculated field. |
+| `ReviewCount` | `int` | `db:"review_count" json:"review_count"` | Total number of reviews/ratings. | Counter/Aggregated field. |
+| `CreatedAt` | `time.Time` | `db:"created_at" json:"created_at"` | Timestamp of record creation. | Audit/Chronology tracking. |
+| `UpdatedAt` | `time.Time` | `db:"updated_at" json:"updated_at"` | Timestamp of last modification. | Audit/Change tracking. |
+| `AuthorName` | `string` | `db:"author_name" json:"author_name,omitempty"` | Full name of the author. | Denormalized data for read speed (JOIN simulation). |
+| `AuthorAvatar` | `string` | `db:"author_avatar" json:"author_avatar,omitempty"` | URL to the author's profile picture. | Denormalized data for read speed (JOIN simulation). |
+
+### Architectural Notes (Relationship Management)
+
+The inclusion of `AuthorName` and `AuthorAvatar` strongly suggests that this struct is intended to represent a **denormalized view** of the data, typically used in API responses or complex list queries that join the `blogs` table with the `users` table.
+
+*   **Relationship Flow:**
+    *   `Blog.AuthorID` $\rightarrow$ **Foreign Key** $\rightarrow$ `User.ID`
+    *   The `AuthorName` and `AuthorAvatar` should be fetched by the service layer logic *after* retrieving the base `Blog` record, or via a single, optimized database JOIN query.
+
+## 📌 Important Considerations (Notes)
+
+1.  **Data Consistency:** Since `AuthorName` and `AuthorAvatar` are denormalized fields, a robust mechanism (e.g., database triggers or application service hooks) must be implemented to ensure these fields are updated whenever the actual author's name or avatar changes in the `User` table.
+2.  **Service Abstraction:** The service layer must handle the logic of hydrating these denormalized fields. The repository should ideally only deal with the persistent fields (`ID`, `AuthorID`, `Title`, etc.), keeping the domain model clean of complex join logic.
+3.  **Input Validation:** Input validation (e.g., ensuring `Title` is not empty, `Content` adheres to length limits) must be implemented in the service or controller layer *before* calling the repository.
+
+## ⚠️ Technical Debt & Warnings (Warnings)
+
+*   **Atomic Updates:** The `Rating` and `ReviewCount` are aggregated fields. Direct client-side updates to these fields are dangerous. The repository methods must wrap the logic for incrementing the count and recalculating the average rating *atomically* within a database transaction.
+    *   *Action Item:* Refactor the rating update mechanism to use database-level aggregation functions (e.g., `UPDATE ... SET rating = ...`) instead of fetching, calculating, and saving in the application layer.
+*   **Concurrency:** Consider implementing pessimistic locking or optimistic concurrency control (e.g., using a version column) when updating the `Content` to prevent lost updates during high write concurrency.
+*   **Pagination/Filtering:** This model is currently comprehensive. When implementing list views, determine if all fields (`City`, `Country`, `AuthorName`, etc.) are necessary, or if a subset can be used to keep payload size minimal and query performance optimal.
 
 ***
-
-### Overview
-
-This document describes the `Blog` domain model structure, defined within the `domain` package. This structure represents the canonical data entity for a blog post within the application's core services. It is designed to serve as the primary data transfer object (DTO) and the representation of the entity within the system's persistence layer.
-
-The model incorporates fields for core content, metadata (e.g., timestamps, location), and aggregated data (e.g., ratings, author presentation details).
-
-### 🛠️ Detail Specification
-
-The `Blog` struct is designed to map directly to a database table, utilizing Go struct tags for defining database column names (`db`) and API serialization (`json`).
-
-#### Core Identification and Linking
-| Field | Type | Description | Constraints/Notes |
-| :--- | :--- | :--- | :--- |
-| `ID` | `uuid.UUID` | Unique primary identifier for the blog post. | Must be globally unique (UUID v4 recommended). |
-| `AuthorID` | `uuid.UUID` | Foreign key linking the post to the author entity. | Links to the `users` or `authors` table. |
-| `Title` | `string` | The headline or main title of the article. | Mandatory field. |
-| `Summary` | `string` | A short, concise description of the content (used for listings/previews). | |
-| `Content` | `string` | The full, rich-text body content of the article. | Should handle markdown or HTML formatting. |
-| `CoverImageURL` | `string` | URL pointing to the primary featured image. | Should adhere to cloud storage URL formats (e.g., S3). |
-
-#### Location and Metadata
-| Field | Type | Description | Constraints/Notes |
-| :--- | :--- | :--- | :--- |
-| `City` | `string` | The primary city associated with the content/author. | Optional. |
-| `Country` | `string` | The primary country associated with the content/author. | Optional. |
-| `Rating` | `float64` | The calculated average rating of the post. | Range: typically 0.0 to 5.0. |
-| `ReviewCount` | `int` | The total number of user reviews submitted for the post. | Derived/Aggregated counter. |
-| `CreatedAt` | `time.Time` | Timestamp indicating the initial creation time of the post. | Automatically set upon insertion. |
-| `UpdatedAt` | `time.Time` | Timestamp indicating the last time the post content was modified. | Automatically updated on every save/write operation. |
-
-#### Presentation Layer Fields (Denormalization)
-These fields are included for convenience, reducing joins during read operations (e.g., in a feed listing).
-
-| Field | Type | Description | Source/Notes |
-| :--- | :--- | :--- | :--- |
-| `AuthorName` | `string` | The display name of the author. | **Denormalized.** Populated by joining with the Author/User table. |
-| `AuthorAvatar` | `string` | URL pointing to the author's profile picture. | **Denormalized.** Populated by joining with the Author/User table. |
-
----
-
-### 💡 Engineering Notes & Architectural Considerations
-
-1.  **UUID Usage:** The exclusive use of `uuid.UUID` for primary keys ensures distributed readiness and collision avoidance, which is standard practice in modern microservice architectures.
-2.  **Denormalization Trade-offs:** The inclusion of `AuthorName` and `AuthorAvatar` significantly improves Read performance by avoiding a `JOIN` during common read paths (like fetching a feed). However, this introduces **data redundancy**. The service layer consuming this struct *must* implement logic to keep these fields synchronized whenever the author's name or avatar changes.
-3.  **Time Management:** Using `time.Time` for lifecycle tracking is critical. The persistence layer (e.g., database migration or ORM hooks) must be configured to automatically populate `CreatedAt` (on insert) and `UpdatedAt` (on update).
-4.  **Data Integrity:** The `Rating` and `ReviewCount` fields imply a complex interaction with a separate `Review` entity. The service layer should encapsulate the business logic for updating these fields atomically to prevent race conditions (e.g., ensuring that a review submission increments `ReviewCount` and recalculates `Rating` in a single transaction).
-
-### ⚠️ Warning (Incomplete/Action Items)
-
-The current domain model is comprehensive, but several critical business logic components require immediate attention and completion:
-
-1.  **Input Validation Logic:** The struct itself does not enforce constraints (e.g., minimum character length for `Title`, required format for `CoverImageURL`). Dedicated validation service layers must be implemented before the data is passed to the repository.
-2.  **Denormalization Sync Mechanism:** The critical dependency on `AuthorName` and `AuthorAvatar` needs a clear, idempotent mechanism. Consider implementing a **Domain Event** (e.g., `AuthorNameUpdatedEvent`) that triggers asynchronous updates to the `Blog` records that reference the changed author.
-3.  **API Response Mapping:** The `json` tags are defined, but the corresponding API handler/controller logic must be documented to ensure proper error handling and data transformation when this struct is returned to clients.
-
-### 📝 Future Considerations (To Be Implemented)
-
-*   **Tagging/Categorization:** Consider adding an array of foreign keys or a dedicated association table to link `Blog` to multiple `Category` entities.
-*   **SEO Fields:** Adding structured metadata fields like `Slug` (URL-friendly identifier) and `Keywords` would enhance discoverability.
-*   **Author Relationship:** If the blog post is meant to support collaboration, the model might need an association list for co-authors.
+*Knowledge Base Context:*
+*   **System Design:** The model hints at a read-heavy data structure requiring denormalization for performance.
+*   **Infrastructure:** Requires persistent storage capable of handling UUIDs and timestamps (`PostgreSQL/MySQL`).
+*   **Security:** Review authorization checks to ensure that only the `AuthorID` or an Admin can modify the content.
+*   **Cloud Components:** The `CoverImageURL` and `AuthorAvatar` imply integration with a dedicated Object Storage service (e.g., AWS S3, GCP Cloud Storage).
+```

@@ -1,88 +1,58 @@
-# 🔒 Route Protection Middleware (`Protect`)
+[⬅ Return to Main Compendium](../../README.md)
 
-This document provides a comprehensive guide and technical specification for the `Protect` middleware function. This middleware is responsible for authenticating incoming requests, validating the user's session token against a central data store (Redis), and ensuring the session is refreshed for active users.
+# 🛡️ Authentication Middleware: Session Protection (`middleware/protect.go`)
 
-## 💡 Overview
+This document details the implementation of the `Protect` middleware, which is crucial for securing API routes by validating user sessions against a centralized Redis store.
 
-The `Protect` middleware implements a critical security layer for protected API routes. Its primary function is to extract a valid user token from multiple potential sources (HTTP Headers, Cookies, Query Parameters) and then verify the token's existence and validity in Redis. If successful, the middleware injects the user ID into the request context, allowing downstream handlers to access the authenticated user's details.
+## 📋 Overview
 
-**Component:** Authentication/Authorization Middleware
-**Knowledge Domains:** System Design, Security Engineering, Infrastructure (Caching/Redis)
-**Technology Stack:** Go (fiber/v2), Redis
+The `Protect` function acts as a gatekeeper middleware for routes that require an authenticated user. It implements a layered approach to retrieving the session token from multiple possible sources (Authorization Header, Cookies, or Query Parameters). Upon successful token retrieval, it validates the session using Redis. If valid, it refreshes the session expiry time and attaches the `user_id` to the request context for downstream handlers to use.
 
-## 🛠️ Detailed Analysis
+**Knowledge Base Focus:** Security Engineering, Infrastructure (Redis), Middleware Design.
 
-The middleware operates in three distinct phases: Token Extraction, Token Validation, and Session Management.
+## 🔍 Detail Analysis
 
-### 1. Token Extraction Strategy (The Fallback Logic)
+### 1. Token Retrieval Logic
+The middleware prioritizes token detection in the following order:
 
-The middleware employs a robust fallback mechanism to locate the authentication token in the following order:
+1.  **Authorization Header:** Checks the `Authorization` header (expects a Bearer token structure, extracting everything after the 7th character).
+2.  **Cookies:** Checks for a cookie named `session_id`.
+3.  **Query Parameters:** Checks for a `token` parameter in the URL query string.
 
-1.  **Authorization Header:** Checks `c.Get("Authorization")`. It assumes a standard Bearer scheme and strips the initial characters (specifically `Bearer ` or similar prefix based on the `len(authHeader) >= 8` check).
-2.  **Cookie:** Checks for a cookie named `session_id` using `c.Cookies("session_id")`.
-3.  **Query Parameter:** Checks for a plain `token` parameter in the request query string (`c.Query("token")`).
+If no token is found after these checks, the request is immediately rejected with a `401 Unauthorized` status.
 
-*If none of the above yield a token, the request is rejected with HTTP 401.*
+### 2. Session Validation (Redis Interaction)
+1.  **Key Construction:** A unique Redis key is constructed using the format `session:{token}`.
+2.  **Data Fetch:** It attempts to retrieve the associated `user_id` from Redis using the client (`config.RedisClient`).
+3.  **Failure Handling:** If Redis returns an error (indicating the key does not exist or the connection failed), the session is considered expired, and the request is rejected with a `401 Unauthorized` status ("Session expired").
+4.  **Session Refresh:** If the token is successfully validated, the `RedisClient.Expire()` method is called to extend the session validity by **6 hours**, ensuring the user remains logged in during the active session time.
+5.  **Context Enrichment:** The retrieved `userID` is attached to `c.Locals("user_id", userID)`, making it accessible to the subsequent handler logic.
 
-### 2. Token Validation (Redis Interaction)
+### 🔗 Related Files and Flow
 
-Upon successful extraction, the middleware constructs a unique Redis key using the format: `session:{token}`.
+*   **`main.go` / `router.go`**: This middleware must be applied globally or to specific route groups within the main application router setup.
+*   **`config/redis.go`**: Dependency injection relies heavily on the global `config.RedisClient` singleton for all database interactions.
+*   **`handler/user.go` (Conceptual)**: Any downstream handler function must assume the `user_id` is available via `c.Locals("user_id")` to process protected endpoints.
 
-1.  **Lookup:** It attempts to retrieve the `userID` associated with this key from `config.RedisClient`.
-2.  **Failure Handling:** If Redis returns an error (e.g., connection timeout, key not found), the middleware assumes the session is invalid or expired and rejects the request with HTTP 401 ("Session expired").
-3.  **Context Injection:** If the lookup succeeds, the retrieved `userID` is stored in the Fiber context using `c.Locals("user_id", userID)`.
+## 💡 Notes & Best Practices
 
-### 3. Session Management (Heartbeat Refresh)
+*   **Centralized Security:** Utilizing Redis for session storage is a robust pattern, decoupling session management from the application server and ensuring high availability and consistency across scaled instances.
+*   **Token Layering:** The prioritized checking (Header > Cookie > Query) provides flexibility for clients and enhances usability by allowing different authentication methods to function while maintaining a clear priority structure.
+*   **Efficiency:** The middleware design ensures that validation and refresh happen in a single request cycle, minimizing latency for authenticated users.
 
-A key component of the security pattern is the automatic session renewal. After successfully validating the user token, the middleware executes:
+## ⚠️ Warnings & Tech Debt
 
-```go
-config.RedisClient.Expire(c.Context(), key, 6*time.Hour)
-```
+### 🚨 Critical Security/Design Concern (High Priority)
+**Hardcoded Token Extraction:** The line `token = authHeader[7:]` assumes the `Authorization` header always follows a fixed `Bearer ` prefix (7 characters). If the client sends a different scheme (e.g., `CustomToken ` or no scheme), this logic will fail silently or incorrectly extract the token.
 
-This action acts as a "session heartbeat," resetting the expiry time for the user's session in Redis to 6 hours, ensuring the user remains logged in for the duration of the session.
+*   **Recommendation:** Use `strings.SplitN` or regular expressions to reliably parse the token based on the scheme (e.g., checking for "Bearer ").
 
-***
+### 🧩 Infrastructure/Maintainability Concern (Medium Priority)
+**Global Dependency:** The reliance on `config.RedisClient` makes unit testing difficult as the middleware cannot be easily mocked without affecting the global configuration state.
 
-## 📝 Documentation Notes & Best Practices
+*   **Recommendation:** Refactor the `Protect` function to accept the Redis client dependency as an argument (or wrap the middleware logic in a struct that holds the client) to enable dependency injection and proper mocking for testing.
 
-*   **Idempotency:** This middleware is designed to be called early in the routing chain and should be applied globally or to specific groups of routes requiring authentication.
-*   **Storage Pattern:** The implementation uses Redis as a **Session Store**. The token itself is used as the key identifier, and the value stored (`userID`) represents the authenticated user identity.
-*   **Token Type Assumption:** The middleware assumes the tokens retrieved are session identifiers or opaque tokens (i.e., tokens that only grant validity when looked up against an internal session store like Redis), rather than self-contained formats like JWTs (which would typically validate signature locally without a database call).
-*   **Middleware Order:** Ensure that services that need user context access (`user_id`) are placed *after* this `Protect()` middleware in the routing configuration.
+### 🐛 Functionality Gap (Low Priority)
+**Error Message Specificity:** The error message `"Session expired"` is generic. While the middleware detects the key absence, a clearer distinction between "Token not found (Missing)" and "Token found but invalid/expired" would improve client-side error handling.
 
-## ⚠️ Warnings & Items Left Unfinished (TODOs)
-
-### ❌ Security & Robustness
-1. **Error Logging:** The use of `fmt.Printf` for logging (`[INFO] MIDDLEWARE: ...`) is not production-grade. It should be replaced with a structured logging library (e.g., `log/slog` or a company-specific wrapper) to ensure logs capture necessary context (request IP, route path, etc.).
-2. **Input Validation:** The token extraction logic assumes specific prefixes (e.g., stripping 7 bytes from the `Authorization` header). A more robust check using regex or a dedicated library would prevent potential off-by-one errors or incorrect token parsing.
-3. **Key Generation Security:** While using a private Redis instance mitigates exposure, the entire session life cycle relies on the secrecy of the Redis connection. Connection pooling and secret management (e.g., Vault) must be strictly enforced.
-
-### ⏳ Development & Reliability
-1. **Time Handling:** The `6*time.Hour` expiration is hardcoded. This constant should be extracted into a configuration struct (e.g., `config.SessionExpiryDuration`) to allow environmental changes without code modification.
-2. **Context Key Collision:** While unlikely, if multiple middlewares use `c.Locals("user_id", ...)` without coordinating, a collision could occur. Defining a unique context key namespace (e.g., `UserContextKey`) would improve type safety and prevent conflicts.
-3. **Rate Limiting Integration:** This middleware only validates *existence*. To mitigate brute-force attacks on expired sessions, integrating rate limiting (e.g., using a Redis counter to limit login attempts per IP address) should be implemented before the Redis lookup.
-
-***
-### ⚙️ Component Structure Diagram (Conceptual)
-
-```mermaid
-graph TD
-    A[Incoming Request] --> B{Middleware: Protect()};
-
-    subgraph Token Acquisition
-        B --> B1{Check 1: Authorization Header};
-        B1 --> B2{Check 2: Cookies (session_id)};
-        B2 --> B3{Check 3: Query Param (token)};
-        B3 --> C{Token Found?};
-        C -- No --> D[Return 401: Missing Token];
-        C -- Yes --> E{Construct Redis Key};
-    end
-
-    E --> F[Redis Client: GET UserID];
-    F --> G{Key Found?};
-    G -- No/Error --> H[Return 401: Session Expired];
-    G -- Yes --> I[Action: Redis EXPIRE (6 Hrs)];
-    I --> J[Set Context: user_id];
-    J --> K[c.Next() -> Next Handler];
-```
+*   **Recommendation:** Consider checking the Redis error type (e.g., `redis.Nil`) to differentiate between a missing key and a connection failure.

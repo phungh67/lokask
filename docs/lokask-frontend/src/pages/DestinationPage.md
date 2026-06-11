@@ -1,62 +1,80 @@
-# README.md
+```markdown
+[⬅ Return to Main Compendium](../../README.md)
 
-## 🌍 Destination Consultant Listing Page Component
+# 🗺️ Destination Page Component (`DestinationPage.tsx`)
 
-This document provides a comprehensive technical summary and implementation guide for the `DestinationPage` component, responsible for displaying a list of local consultants based on a geographical destination slug.
+**Path:** `src/pages/DestinationPage.tsx`
+**Description:** A feature-rich landing page component designed to display information and local expert profiles for a specific geographical destination based on URL slugs.
 
-### 🚀 Overview
+***
 
-The `DestinationPage` component is a client-side view designed to serve as the main landing page for "Local Experts" within a specific global destination (e.g., Thailand, Paris). It utilizes React Router's `useParams` hook to determine the target destination from the URL slug. It implements data fetching using React Query (`@tanstack/react-query`) to fetch relevant consultant data, filtering the results based on the identified city.
+## 📈 Overview
 
-The component structure includes a Hero section with visual branding and a main content area that dynamically renders the list of consultant profiles.
+The `DestinationPage` component serves as the primary user interface for showcasing local consultants associated with a particular destination. It handles routing by extracting a `slug` parameter from the URL. It fetches consultant data using React Query, presents destination metadata (Hero image, name), and dynamically renders individual consultant profiles using `ConsultantCardCompact`.
 
-**Knowledge Area:** Frontend Architecture, State Management, API Integration.
+This component is critical for the user journey after navigating from a home or list page to a specific location detail page.
 
-### 🔎 Detailed Analysis
+## 💡 Detail
 
-#### 1. Component Structure & Dependencies
-The component leverages several external libraries and internal modules:
-*   **`react-router-dom`**: For routing (`useParams`, `Link`).
-*   **`lucide-react`**: For standard UI icons (e.g., `ArrowLeft`, `Loader2`).
-*   **`@tanstack/react-query`**: For optimized data fetching and state management (`useQuery`).
-*   **`@/lib/api`**: Contains the primary API interaction function (`getConsultants`).
-*   **`@/types/consultant`**: Defines the TypeScript interface for consultant data.
+### 1. Initialization & Route Handling
+*   **Input:** The component relies on `useParams` to capture the destination `slug` from the URL (e.g., `/destination/paris`).
+*   **Metadata Lookup:** It first attempts to match the slug against a predefined `DESTINATION_METADATA` object (e.g., `thailand`, `paris`).
+*   **Fallback Logic:** If the slug is not found in the static metadata, a fallback mechanism converts the slug into a formatted name and uses a generic image URL, ensuring the component remains operational even for unmanaged routes.
 
-#### 2. Logic Flow (Execution Steps)
-1.  **Parameter Extraction:** The component extracts the `slug` (e.g., 'thailand') from the URL parameters.
-2.  **Metadata Resolution:** It checks the `DESTINATION_METADATA` constant using the slug to resolve the destination object, which contains the `name` and `imageUrl`. If no slug is found in the metadata, it renders a "Destination not found" fallback page.
-3.  **Data Fetching (Conditional):** `useQuery` hooks into the `getConsultants` API endpoint. The fetching is conditionally enabled (`enabled: !!destination`) to prevent API calls on invalid or missing slugs.
-    *   The API call passes the resolved destination name as the `city` filter.
-4.  **State Handling:** The component manages three primary states:
-    *   **`isLoading`**: Renders a loading skeleton/spinner (using `Loader2`).
-    *   **`displayConsultants`**: Renders the grid of `ConsultantCardCompact` components when data is successfully retrieved.
-    *   **No Data**: Renders a "No locals found" message if `displayConsultants` is an empty array.
-5.  **Rendering:** The UI is structured into two main visual sections: the Hero component (using the destination's image) and the main content area (displaying the list).
+### 2. Data Fetching (React Query)
+*   **Hook:** `useQuery` is utilized for asynchronous data fetching.
+*   **Current Query:** The hook calls `getConsultants({ city: "Hanoi" })`.
+    *   *Note:* The `enabled` flag ensures that the query only runs if a destination slug is successfully determined.
+*   **State Management:** The component successfully manages three states:
+    1.  **Loading:** Displays a spinner and "Finding local experts..." text (`isLoading` check).
+    2.  **Data Available:** Renders the grid of consultants using the fetched `displayConsultants` array.
+    3.  **No Data:** Displays a clear message if the array is empty.
 
-#### 3. Architectural Diagram (Conceptual Flow)
+### 3. Rendering Flow
+*   **Hero Section:** Displays the destination name and image in a visually prominent "Hero" banner. This section includes back navigation (`Link` to `/`).
+*   **Consultant Display:** The main content area features a responsive grid (1 to 4 columns) that maps over the fetched consultant data, passing each instance to `<ConsultantCardCompact />`.
 
-```mermaid
-graph TD
-    A[User Accesses /destination/slug] --> B{Extract Slug};
-    B --> C{Metadata Check};
-    C -- Slug Valid --> D[Initialize useQuery];
-    C -- Slug Invalid --> E[Render 404/Not Found Page];
-    D --> F[Call getConsultants(city=Destination.name)];
-    F --> G{API Response};
-    G -- Loading --> H[Display Loading State];
-    G -- Success --> I{Consultants Array};
-    I -- Data Found --> J[Render Consultant Grid];
-    I -- Empty Array --> K[Render No Locals Found Message];
+### 💻 Code Flow Diagram
+
+*(Figure Placeholder: A flowchart illustrating the data flow: URL Slug -> Metadata Check -> UseQuery (Hanoi) -> Data -> Render Hero -> Render Grid.)*
+
+---
+
+## 🗒️ Knowledge Notes
+
+### Architecture
+*   **State Management:** The use of `@tanstack/react-query` is best practice for handling complex, server-side data fetching, providing caching, stale-while-revalidate, and automatic retry logic.
+*   **Component Separation:** The logic for rendering individual expert details is correctly delegated to `<ConsultantCardCompact />`, ensuring high cohesion and low coupling.
+*   **Type Safety:** Using explicit types (`useParams<{ slug: string }>`, `Consultant`) improves code maintainability and reduces runtime errors.
+
+### Related Components & Logic
+*   **Routing Logic:** The `react-router-dom` library manages URL parameters and navigation links.
+    *   *Related:* Navigation logic related to routing parameters should be checked in `[../src/App.tsx]` or the main Router setup file.
+*   **Data Fetching Function:** The underlying data retrieval logic is handled by the external utility function.
+    *   *Link:* See the API implementation in `[../src/lib/consultants]`.
+*   **Display Component:** The visual representation of an individual consultant.
+    *   *Link:* Uses `[../components/ConsultantCardCompact]`.
+
+## ⚠️ Warnings & Tech Debt
+
+### 🚩 CRITICAL: Hardcoded Query City (High Priority)
+The most significant issue is that the data fetching hook *always* queries for consultants in **"Hanoi"**, regardless of which destination slug is passed in the URL (`destination`).
+
+```typescript
+// Current implementation snippet (BUG):
+queryKey: ["fixed-consultant-data", "city", "Hanoi"],
+queryFn: () => getConsultants({ city: "Hanoi" }),
 ```
 
-### 📝 Notes for Implementation & Improvement
+**Action Required:** The `getConsultants` function call inside `useQuery` must be refactored to dynamically use the `destination.name` or a city derived from the `slug` to fetch the correct local data.
 
-1.  **SEO & Accessibility:** Ensure that the `DestinationPage` component handles proper semantic HTML (e.g., `main`, `section`) and that image descriptions (`alt` attributes) are fully descriptive to improve SEO performance and accessibility.
-2.  **Error Handling:** While the component handles the "destination not found" case and the "no consultants found" case, explicit error handling for API failures (e.g., network failure, 500 status code) should be added to the `useQuery` block. A dedicated `isError` check is recommended.
-3.  **Performance Optimization:** Given that the consultant list can grow, consider implementing infinite scrolling or client-side pagination instead of fetching all consultants in a single batch request to improve initial load time and memory usage.
+### 🚩 Metadata Scalability (Medium Priority)
+The `DESTINATION_METADATA` is a hardcoded object. As the application scales to include more destinations, maintaining this object will become cumbersome.
 
-### 🚨 Warning (Areas for Review & Security Concerns)
+**Suggestion:** Consider migrating the destination metadata source to a dedicated API endpoint or a separate configuration file loaded at startup, making the component more data-driven.
 
-1.  **Client-Side Dependency on Slug:** The current implementation assumes that the `slug` parameter extracted from the URL is trusted and directly maps to a key in `DESTINATION_METADATA`. While this is acceptable for a controlled micro-frontend, if the application were to expose this endpoint to arbitrary user input without validation, an attacker could potentially test for endpoint availability or misuse the internal metadata structure. **Recommendation:** Implement server-side validation or use a dedicated routing layer to validate the slug against a controlled list of valid destinations before component rendering.
-2.  **Hardcoded Assets:** The `DESTINATION_METADATA` contains hardcoded image URLs (`unsplash.com`). This introduces external dependencies for core application branding. **Recommendation:** Migrate these images to a controlled Asset Management System (e.g., AWS S3 or dedicated CDN) and reference them via internal paths to guarantee availability and control caching headers.
-3.  **Security on API Consumption:** The `getConsultants` function consumes the destination name as a parameter. Ensure that the backend API layer sanitizes and validates this `city` input to prevent potential NoSQL injection or improper query parameter handling.
+### 🚩 Error Handling (Medium Priority)
+The `useQuery` hook lacks comprehensive error handling (e.g., `queryClient.onSuccess` or `onError`). If `getConsultants` fails due to network issues or invalid parameters, the user will likely see a blank screen or an unhandled React Query error boundary.
+
+**Action Required:** Implement a dedicated `onError` block within `useQuery` to provide user-friendly feedback (e.g., "Could not load experts. Please try again.").
+```

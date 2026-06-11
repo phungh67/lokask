@@ -315,7 +315,6 @@ const ConsultantDashboard = () => {
       return;
     }
 
-    // 🟢 ADDED: Find the current conversation to understand WHO is typing
     const currentConv = conversations.find(
       (c) => c.id === activeConversationId,
     );
@@ -324,7 +323,6 @@ const ConsultantDashboard = () => {
 
     const tempId = "temp-" + Date.now();
 
-    // match with interface update
     const optimisticMsg = {
       id: tempId,
       conversation_id: activeConversationId,
@@ -354,7 +352,6 @@ const ConsultantDashboard = () => {
         error.status === 404;
 
       if (isSessionError) {
-        // 🟢 FIX: Smart Routing for Session Errors
         if (isSelfChat) {
           toast({
             title: "Test Chat",
@@ -369,7 +366,6 @@ const ConsultantDashboard = () => {
             variant: "destructive",
           });
         } else {
-          // Normal flow: The actual traveler needs to pay!
           setShowPurchaseDialog(true);
         }
       } else {
@@ -424,7 +420,6 @@ const ConsultantDashboard = () => {
                   session={activeSession}
                   userRole={userRole}
                   onSendMessage={handleSendMessage}
-                  // 🟢 FIX: Added missing "="
                   onTriggerPurchase={() => setShowPurchaseDialog(true)}
                   onScheduleCall={() => {}}
                   onCancelCall={() => {}}
