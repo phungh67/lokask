@@ -143,6 +143,35 @@ export async function updateConsultantProfile(data: Partial<UpdateProfileRequest
 }
 
 // blog section
+
+// Create a new blog post
+export async function createBlog(data: {
+  title: string;
+  summary: string;
+  content: string;
+  city: string;
+  country: string;
+  coverImage?: File;
+}) {
+  const formData = new FormData();
+  formData.append("title", data.title);
+  formData.append("summary", data.summary);
+  formData.append("content", data.content);
+  formData.append("city", data.city);
+  formData.append("country", data.country);
+  
+  if (data.coverImage) {
+    formData.append("cover_image", data.coverImage);
+  }
+
+  // Assuming your custom fetch wrapper from core.ts handles FormData correctly
+  // (which we verified earlier that it does!)
+  return fetchJson<any>("/blogs", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export async function getConsultantBlogs(authorId: string) {
     return fetchJson<Blog[]>(`/blogs?author_id=${authorId}&limit=4`);
 }

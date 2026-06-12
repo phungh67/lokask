@@ -1,33 +1,60 @@
 // src/components/dashboard/DashboardSidebar.tsx
-import { Inbox, Calendar, User, DollarSign, Settings, HelpCircle, Lock } from "lucide-react";
+import {
+  Inbox,
+  Calendar,
+  User,
+  DollarSign,
+  Settings,
+  HelpCircle,
+  Lock,
+  FileText,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Consultant } from "@/types/consultant";
 
 interface DashboardSidebarProps {
   consultant: Consultant;
-  activeSection: "inbox" | "bookings" | "profile";
-  onSectionChange: (section: "inbox" | "bookings" | "profile") => void;
-  // 🟢 Add the missing property here
-  userRole: string | null; 
+  activeSection: "inbox" | "bookings" | "profile" | "articles";
+  onSectionChange: (
+    section: "inbox" | "bookings" | "profile" | "articles",
+  ) => void;
+  userRole: string | null;
 }
 
-const DashboardSidebar = ({ 
-  consultant, 
-  activeSection, 
+const DashboardSidebar = ({
+  consultant,
+  activeSection,
   onSectionChange,
-  userRole // 🟢 Destructure the new prop
+  userRole,
 }: DashboardSidebarProps) => {
-  
   const isConsultant = userRole === "consultant";
 
   const navItems = [
     { id: "inbox" as const, label: "Inbox", icon: Inbox, restricted: false },
-    { id: "bookings" as const, label: "Bookings", icon: Calendar, restricted: false },
+    {
+      id: "bookings" as const,
+      label: "Bookings",
+      icon: Calendar,
+      restricted: false,
+    },
     { id: "profile" as const, label: "Profile", icon: User, restricted: false },
+    {
+      id: "articles" as const,
+      label: "Articles",
+      icon: FileText,
+      restricted: !isConsultant,
+    },
   ];
 
   const footerItems = [
-    { id: "earnings", label: "Earnings", icon: DollarSign, disabled: true, badge: "Coming soon", restricted: !isConsultant },
+    {
+      id: "earnings",
+      label: "Earnings",
+      icon: DollarSign,
+      disabled: true,
+      badge: "Coming soon",
+      restricted: !isConsultant,
+    },
     { id: "settings", label: "Settings", icon: Settings, restricted: false },
     { id: "help", label: "Help", icon: HelpCircle, restricted: false },
   ];
@@ -49,14 +76,15 @@ const DashboardSidebar = ({
 
         <h2 className="font-semibold text-lg">{consultant.name}</h2>
         <p className="text-sm text-muted-foreground">
-          {consultant.city}{consultant.country ? `, ${consultant.country}` : ''}
+          {consultant.city}
+          {consultant.country ? `, ${consultant.country}` : ""}
         </p>
-        
+
         {/* Optional: Show role badge */}
         <div className="mt-2">
-           <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-             {userRole}
-           </span>
+          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+            {userRole}
+          </span>
         </div>
       </div>
 
@@ -68,12 +96,17 @@ const DashboardSidebar = ({
           {navItems.map((item) => (
             <li key={item.id}>
               <button
-                onClick={() => onSectionChange(item.id)}
+                onClick={() => {
+                  if (!item.restricted) {
+                    onSectionChange(item.id);
+                  }
+                }}
+                disabled={item.restricted}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
                   activeSection === item.id
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
               >
                 <div className="flex items-center gap-3">

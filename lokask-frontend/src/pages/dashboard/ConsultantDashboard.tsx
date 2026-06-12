@@ -6,7 +6,8 @@ import InboxPanel from "@/components/dashboard/InboxPanel";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
 import BookingsPanel from "@/components/dashboard/BookingsPanel";
-import { Dialog, DialogContent } from "@/components/ui/dialog"; // 🟢 ADDED IMPORT
+import BlogPanel from "@/components/dashboard/BlogPanel";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import {
@@ -29,6 +30,7 @@ interface DashboardLocationState {
 
 const fallbackProfile: Consultant = {
   id: "loading",
+  userId: "loading",
   name: "Loading...",
   displayName: "Loading...",
   city: "",
@@ -75,7 +77,7 @@ const ConsultantDashboard = () => {
   const state = location.state as DashboardLocationState;
 
   const [activeSection, setActiveSection] = useState<
-    "inbox" | "bookings" | "profile"
+    "inbox" | "bookings" | "profile" | "articles"
   >("inbox");
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
@@ -449,6 +451,10 @@ const ConsultantDashboard = () => {
                 )
               }
             />
+          )}
+
+          {activeSection === "articles" && (
+            <BlogPanel consultant={consultantProfile} />
           )}
         </main>
       </div>
