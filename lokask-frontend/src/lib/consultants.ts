@@ -32,7 +32,7 @@ export interface Niche {
 // prototype for an unified form of returned object
 export const mapConsultant = (c: any): Consultant => ({
     id: String(c.id),
-    userId: String(c.userId) || String(c.user_id),
+    userId: c.user_id ? String(c.user_id) : (c.userId ? String(c.userId) : ""),
     name: c.full_name || c.name || "User",
     displayName: c.display_name || c.full_name || c.name || "User",
     city: c.city_name || c.city || "",
@@ -173,5 +173,9 @@ export async function createBlog(data: {
 }
 
 export async function getConsultantBlogs(authorId: string) {
+    if (!authorId || authorId === "undefined") {
+        return [];
+    }
+    
     return fetchJson<Blog[]>(`/blogs?author_id=${authorId}&limit=4`);
 }
