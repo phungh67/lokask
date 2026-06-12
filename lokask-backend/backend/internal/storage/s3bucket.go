@@ -16,6 +16,7 @@ import (
 type FileStorage interface {
 	UploadProfilePicture(file *multipart.FileHeader, userID string) (string, error)
 	UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error)
+	UploadBlogCover(file *multipart.FileHeader, blogID string) (string, error)
 	DeleteFile(ctx context.Context, key string) error
 }
 
@@ -94,6 +95,38 @@ func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, object
 
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, s.Region, objectKey)
 	return url, nil
+}
+
+func (s *S3Client) UploadBlogCover(file *multipart.FileHeader, blogID string) (string, error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	ext := filepath.Ext(file.Filename)
+	if ext == "" {
+		ext = ".jpg"
+	}
+
+	objectKey := fmt.Sprintf("blog/%s/cover%s", blogID, ext)
+
+	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	contentType := file.Header.Get("Content-Type")
+
+	_, err = s.Client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(bucketName),
+		Key:         aws.String(objectKey),
+		Body:        src,
+		ContentType: aws.String(contentType),
+	})
+
+	if err != nil {
+		log.Printf("[S3] Blog cover upload failed: %v", err)
+		return "", err
+	}
+
+	return objectKey, nil
 }
 
 func (s *S3Client) DeleteFile(ctx context.Context, key string) error {

@@ -41,11 +41,11 @@ func (h *BlogHandler) Create(c *fiber.Ctx) error {
 	var coverImageKey string
 	file, err := c.FormFile("cover_image")
 	if err == nil {
-		// Upload to MinIO
-		key, uploadErr := h.Storage.UploadFile(file, newBlogID.String(), "blog")
+		key, uploadErr := h.Storage.UploadBlogCover(file, newBlogID.String())
 		if uploadErr != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to upload cover image"})
 		}
+		coverImageKey = key
 		coverImageKey = key
 	}
 
