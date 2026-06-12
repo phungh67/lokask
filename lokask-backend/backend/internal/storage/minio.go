@@ -139,6 +139,42 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, obj
 	return url, nil
 }
 
+// UploadBlogCover handles blog cover images for MinIO and returns the relative object key
+func (m *MinioClient) UploadBlogCover(file *multipart.FileHeader, blogID string) (string, error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	ext := filepath.Ext(file.Filename)
+	if ext == "" {
+		ext = ".jpg" // Fallback just in case
+	}
+
+	objectKey := fmt.Sprintf("blog/%s/cover%s", blogID, ext)
+
+	ctx := context.Background()
+	contentType := file.Header.Get("Content-Type")
+	bucketName := getEnv("MINIO_MEDIA_BUCKET", "lokask-media")
+
+	if err := m.CreateIfNotExist(ctx, bucketName); err != nil {
+		log.Printf("[ERR][MINIO] Bucket creation failed: %v", err)
+		return "", err
+	}
+
+	_, err = m.Client.PutObject(ctx, bucketName, objectKey, src, file.Size, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+
+	if err != nil {
+		log.Printf("[MINIO] Blog cover upload failed: %v", err)
+		return "", err
+	}
+
+	return objectKey, nil
+}
+
 func (m *MinioClient) DeleteFile(ctx context.Context, key string) error {
 	bucket := os.Getenv("MINIO_MEDIA_BUCKET")
 	if bucket == "" {
