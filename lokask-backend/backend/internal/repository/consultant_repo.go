@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/helper"
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -40,6 +41,11 @@ type ConsultantRepository struct {
 
 func NewConsultantRepository(db *sqlx.DB) *ConsultantRepository {
 	return &ConsultantRepository{DB: db}
+}
+
+// helper
+func generateSlug(name string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(name), " ", "-"))
 }
 
 func (r *ConsultantRepository) CreateConsultantTx(tx *sqlx.Tx, c *Consultant) error {
@@ -457,23 +463,42 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 		}
 
 		if len(activeTags) > 0 {
-			var secondaryNicheIDs []int
-			query := `SELECT id FROM niches WHERE display_name = ANY($1) OR slug = ANY($1)`
-			err = tx.SelectContext(ctx, &secondaryNicheIDs, query, pq.Array(activeTags))
-			if err != nil {
-				return fmt.Errorf("failed to resolve tag strings to niche ids: %w", err)
-			}
-
-			for _, nid := range secondaryNicheIDs {
-				if activeMainNicheID != nil && nid == *activeMainNicheID {
+			for _, tag := range activeTags {
+				tag = strings.TrimSpace(tag)
+				if tag == "" {
 					continue
 				}
+
+				var nicheID int
+				slug := generateSlug(tag)
+
+				err = tx.GetContext(ctx, &nicheID, `SELECT id FROM niches WHERE display_name ILIKE $1 OR slug = $2 LIMIT 1`, tag, slug)
+
+				if err == sql.ErrNoRows {
+					err = tx.QueryRowContext(ctx, `
+						INSERT INTO niches (slug, display_name) 
+						VALUES ($1, $2) 
+						RETURNING id
+					`, slug, tag).Scan(&nicheID)
+
+					if err != nil {
+						return fmt.Errorf("failed to create new niche '%s': %w", tag, err)
+					}
+				} else if err != nil {
+					return fmt.Errorf("failed to lookup niche '%s': %w", tag, err)
+				}
+
+				if activeMainNicheID != nil && nicheID == *activeMainNicheID {
+					continue
+				}
+
 				_, err = tx.ExecContext(ctx, `
 					INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
 					VALUES ($1, $2, false)
-					ON CONFLICT DO NOTHING`, consultantID, nid)
+					ON CONFLICT DO NOTHING`, consultantID, nicheID)
+
 				if err != nil {
-					return fmt.Errorf("failed to insert secondary niche: %w", err)
+					return fmt.Errorf("failed to insert secondary niche link: %w", err)
 				}
 			}
 		}
