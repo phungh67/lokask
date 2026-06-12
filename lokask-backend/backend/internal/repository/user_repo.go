@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,11 @@ type User struct {
 	Email        string `db:"email" json:"email"`
 	PasswordHash string `db:"password_hash" json:"-"`
 	FullName     string `db:"full_name" json:"full_name"`
+
+	// prevent spam or disposable mail
+	IsVerified        bool           `db:"is_verified" json:"is_verified"`
+	VerificationToken sql.NullString `db:"verification_token" json:"-"`
+	TokenExpiresAt    sql.NullTime   `db:"token_expires_at" json:"-"`
 
 	// additional fields for displaying the avatar in profile,...
 	AvatarURL     sql.NullString `db:"avatar_url" json:"-"`
@@ -32,10 +38,10 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 }
 
 // transaction to create an user
-func (r *UserRepository) CreateUserTx(tx *sqlx.Tx, user *User) error {
+func (r *UserRepository) CreateUserTx(tx *sqlx.Tx, user *User, token string, expiresAt time.Time) error {
 	// insert
-	query := `INSERT INTO users (email, password_hash, full_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id`
-	return tx.QueryRow(query, user.Email, user.PasswordHash, user.FullName, user.AvatarURL).Scan(&user.ID)
+	query := `INSERT INTO users (email, password_hash, full_name, avatar_url, verification_token, token_expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	return tx.QueryRow(query, user.Email, user.PasswordHash, user.FullName, user.AvatarURL, token, expiresAt).Scan(&user.ID)
 }
 
 // lookup by checking email
@@ -81,4 +87,34 @@ func (r *UserRepository) UpdateAvatar(userID uuid.UUID, avatarURL string) error 
 	_, err := r.DB.ExecContext(ctx, query, avatarURL, time.Now(), userID)
 
 	return err
+}
+
+// verification
+func (r *UserRepository) VerifyUserEmail(ctx context.Context, token string) error {
+	query := `
+		UPDATE users 
+		SET is_verified = TRUE, 
+		    verification_token = NULL, 
+		    token_expires_at = NULL, 
+		    updated_at = NOW()
+		WHERE verification_token = $1 
+		  AND token_expires_at > NOW() 
+		  AND is_verified = FALSE
+	`
+
+	result, err := r.DB.ExecContext(ctx, query, token)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("invalid or expired verification token")
+	}
+
+	return nil
 }

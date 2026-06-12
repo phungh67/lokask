@@ -2,6 +2,8 @@ package handler
 
 import (
 	"asklocal/internal/config"
+	"asklocal/internal/helper"
+	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
 	"crypto/md5"
 	"database/sql"
@@ -22,6 +24,7 @@ type AuthHandler struct {
 	// check user, consultant,...
 	UserRepo       *repository.UserRepository
 	ConsultantRepo *repository.ConsultantRepository
+	Mailer         *mailer.MailService
 	DB             *sqlx.DB
 }
 
@@ -53,6 +56,18 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			"cause": err.Error(),
 		})
 	}
+
+	// mail guard here
+	if !helper.IsValidEmailDomain(req.Email) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Registration currently does not support this type of mail",
+		})
+	}
+
+	// OTP
+	// token
+	verificationToken := uuid.New().String()
+	expiresAt := time.Now().Add(24 * time.Hour)
 
 	// validation logic
 	if req.Role == "consultant" {
@@ -105,7 +120,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		AvatarURL:    sql.NullString{String: defaultAvatarURL, Valid: true},
 	}
 
-	if err := h.UserRepo.CreateUserTx(tx, user); err != nil {
+	if err := h.UserRepo.CreateUserTx(tx, user, verificationToken, expiresAt); err != nil {
 		// This usually catches the UNIQUE(email) constraint
 		return c.Status(500).JSON(fiber.Map{
 			"error":  "Could not create user",
@@ -145,11 +160,30 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
+	go func(email, name, token string) {
+		h.Mailer.SendVerificationEmail(email, name, token)
+	}(user.Email, user.FullName, verificationToken)
+
 	return c.Status(201).JSON(fiber.Map{
 		"message": "User registered successfully",
 		"user_id": user.ID,
 		"role":    req.Role,
 	})
+}
+
+// verification by email
+func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
+	token := c.Query("token")
+	if token == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing token"})
+	}
+
+	err := h.UserRepo.VerifyUserEmail(c.Context(), token)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid or expired verification link"})
+	}
+
+	return c.Redirect("https://www.lokask.se/login?verified=true", fiber.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
