@@ -308,7 +308,6 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	// 🟢 Check role so Navbar knows whether to show "Dashboard"
 	role := "traveller"
 	var consultantID string
 	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
