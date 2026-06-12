@@ -2,6 +2,7 @@ package repository
 
 import (
 	"asklocal/internal/domain"
+	"asklocal/internal/helper"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -39,6 +40,20 @@ func (r *BlogRepository) GetByID(id uuid.UUID) (*domain.Blog, error) {
 		WHERE b.id = $1
 	`
 	err := r.DB.Get(&blog, query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	coverURL, _ := helper.BuildMediaURL(blog.CoverImageURL)
+	if coverURL == "" {
+		blog.CoverImageURL = coverURL
+	}
+
+	avatarURL, _ := helper.BuildMediaURL(blog.AuthorAvatar)
+	if avatarURL != "" {
+		blog.AuthorAvatar = avatarURL
+	}
+
 	return &blog, err
 }
 
@@ -100,6 +115,16 @@ func (r *BlogRepository) List(filter BlogFilter) ([]*domain.Blog, error) {
 	}
 
 	err := r.DB.Select(&blogs, query, args...)
+
+	for _, b := range blogs {
+		if coverURL, _ := helper.BuildMediaURL(b.CoverImageURL); coverURL != "" {
+			b.CoverImageURL = coverURL
+		}
+		if avatarURL, _ := helper.BuildMediaURL(b.AuthorAvatar); avatarURL != "" {
+			b.AuthorAvatar = avatarURL
+		}
+	}
+
 	return blogs, err
 }
 
