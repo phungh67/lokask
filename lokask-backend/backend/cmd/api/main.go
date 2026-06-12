@@ -163,6 +163,9 @@ func main() {
 	// public get
 	api.Get("/public/:id", bookHandler.PublicGetConsultantSchedule)
 
+	// public verification
+	api.Get("/new/verify", authHandler.VerifyEmail)
+
 	// upload avatar
 	// move to protected
 
