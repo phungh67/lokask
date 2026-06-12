@@ -17,6 +17,7 @@ export interface Review {
 
 export interface Consultant {
   id: string;
+  userId: string;
   name: string; // full name
   displayName: string; // display name
   city: string;
