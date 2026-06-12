@@ -104,6 +104,7 @@ func main() {
 		UserRepo:       userRepo,
 		ConsultantRepo: consultantRepo,
 		DB:             db,
+		Mailer:         mailService,
 	}
 
 	// 3. Setup Fiber App
