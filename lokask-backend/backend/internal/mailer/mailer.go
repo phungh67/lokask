@@ -72,7 +72,7 @@ func (m *MailService) SendVerificationEmail(toEmail, toName, token string) {
 	subject := "Subject: Verify your Lokask account\n"
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 
-	verificationURL := fmt.Sprintf("https://lokask.se/api/v1/auth/verify?token=%s", token)
+	verificationURL := fmt.Sprintf("https://lokask.se/api/v1/new/verify?token=%s", token)
 
 	body := fmt.Sprintf(`
 		<div style="font-family: Arial, sans-serif; max-w-lg; margin: 0 auto; color: #2E2E2E;">

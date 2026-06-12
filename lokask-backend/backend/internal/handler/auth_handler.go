@@ -229,8 +229,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	sessionToken := uuid.New().String()
 
 	// debug logic
-	key := "session:" + sessionToken
-	fmt.Printf("[INFO] LOGIN: Saving Key [%s] for User [%s]\n", key, user.ID)
+	// key := "session:" + sessionToken
+	// fmt.Printf("[INFO] LOGIN: Saving Key [%s] for User [%s]\n", key, user.ID)
+
+	if user.IsVerified == false {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "not verified yet",
+		})
+	}
 
 	err = config.RedisClient.Set(c.Context(), "session:"+sessionToken, user.ID, 6*time.Hour).Err()
 	if err != nil {
