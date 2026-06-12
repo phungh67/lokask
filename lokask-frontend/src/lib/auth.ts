@@ -1,7 +1,5 @@
-// for authentication features
 import { fetchJson } from "./core";
 
-// Request Types
 export interface RegisterData {
     fullName: string;
     email: string;
@@ -17,7 +15,10 @@ export interface LoginData {
     password: string;
 }
 
-// response
+export interface RegisterResponse {
+    message: string;
+}
+
 export interface AuthResponse {
     token: string;
     user: {
@@ -26,13 +27,13 @@ export interface AuthResponse {
         full_name: string;
         email: string;
         avatar_url: string;
-        role: "traveller" | "consultant";
+        role: "traveler" | "consultant";
     };
 }
 
-// POST /api/v1/auth/register
+// POST /api/v1/auth/register (Traveller)
 export async function registerTraveller(data: RegisterData) {
-    return fetchJson<AuthResponse>("/auth/register", {
+    return fetchJson<RegisterResponse>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
             full_name: data.fullName,
@@ -43,9 +44,9 @@ export async function registerTraveller(data: RegisterData) {
     });
 }
 
-// POST /api/v1/auth/register
+// POST /api/v1/auth/register (Consultant)
 export async function registerConsultant(data: RegisterConsultantData) {
-    return fetchJson<AuthResponse>("/auth/register", {
+    return fetchJson<RegisterResponse>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
             full_name: data.fullName,
@@ -65,7 +66,7 @@ export async function login(data: LoginData) {
     });
 }
 
-// getme - keep session betweenb f5 or switch tabs
+// GET /api/v1/auth/me 
 export async function getMe() {
-    return fetchJson<any>("/auth/me");
+    return fetchJson<AuthResponse>("/auth/me");
 }

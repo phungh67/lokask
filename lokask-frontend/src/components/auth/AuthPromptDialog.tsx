@@ -13,7 +13,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { login, registerTraveller, registerConsultant } from "@/lib/auth";
 import { toast } from "sonner";
 
-type AuthStep = "initial" | "login" | "signup";
+type AuthStep = "initial" | "login" | "signup" | "verify";
 
 interface AuthPromptDialogProps {
   open: boolean;
@@ -128,7 +128,7 @@ const AuthPromptDialog = ({
       if (onSignup) onSignup();
 
       // After signup, force login step
-      setStep("login");
+      setStep("verify");
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
     } finally {
@@ -137,6 +137,37 @@ const AuthPromptDialog = ({
   };
 
   // --- Renders ---
+
+  const renderVerifyStep = () => (
+    <>
+      <DialogHeader className="text-center space-y-4 pt-4">
+        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+           {/* You can use a Mail icon from lucide-react here */}
+           <span className="text-2xl">✉️</span> 
+        </div>
+        <DialogTitle className="text-2xl font-display font-semibold">
+          Check your email
+        </DialogTitle>
+      </DialogHeader>
+      
+      <div className="mt-4 text-center space-y-6">
+        <p className="text-muted-foreground">
+          We've sent a secure verification link to <strong>{email}</strong>. Please check your inbox and click the link to activate your account.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Note: The link will expire in 24 hours.
+        </p>
+        
+        <Button
+          type="button"
+          onClick={() => setStep("login")}
+          className="w-full h-12 rounded-full font-medium"
+        >
+          I've verified my account
+        </Button>
+      </div>
+    </>
+  );
 
   const renderInitialStep = () => (
     <>
@@ -319,6 +350,7 @@ const AuthPromptDialog = ({
         {step === "initial" && renderInitialStep()}
         {step === "login" && renderLoginStep()}
         {step === "signup" && renderSignupStep()}
+        {step === "verify" && renderVerifyStep()}
       </DialogContent>
     </Dialog>
   );
