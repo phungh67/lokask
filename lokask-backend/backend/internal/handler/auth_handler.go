@@ -233,7 +233,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// fmt.Printf("[INFO] LOGIN: Saving Key [%s] for User [%s]\n", key, user.ID)
 
 	if user.IsVerified == false {
-		log.Printf("[LOG] user status: %s %t", user.FullName, user.IsVerified)
+		// log.Printf("[LOG] user status: %s %t", user.FullName, user.IsVerified)
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "not verified yet",
 		})

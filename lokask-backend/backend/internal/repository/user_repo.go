@@ -48,7 +48,7 @@ func (r *UserRepository) CreateUserTx(tx *sqlx.Tx, user *User, token string, exp
 func (r *UserRepository) GetByEmail(email string) (*User, error) {
 	var user User
 	// update query to include avatar
-	query := `SELECT id, email, password_hash, full_name, avatar_url FROM users WHERE email = $1`
+	query := `SELECT id, email, password_hash, full_name, avatar_url, is_verified FROM users WHERE email = $1`
 	err := r.DB.Get(&user, query, email)
 
 	// place data in json
