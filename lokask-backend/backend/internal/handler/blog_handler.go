@@ -27,7 +27,7 @@ func (h *BlogHandler) Create(c *fiber.Ctx) error {
 	// extract data
 	title := c.FormValue("title")
 	content := c.FormValue("content")
-	summary := c.FormValue("summary") // Optional: Short desc for the card
+	summary := c.FormValue("summary")
 	city := c.FormValue("city")
 	country := c.FormValue("country")
 

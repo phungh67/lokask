@@ -1,5 +1,6 @@
 import { fetchJson } from "./core";
 import { Consultant, Badge, Review, UpdateProfileRequest } from "@/types/consultant";
+import { Blog } from "@/types/blog";
 
 // interface to apply filter in search nav bar
 interface ConsultantFilters {
@@ -31,6 +32,7 @@ export interface Niche {
 // prototype for an unified form of returned object
 export const mapConsultant = (c: any): Consultant => ({
     id: String(c.id),
+    userId: String(c.userId) || String(c.user_id),
     name: c.full_name || c.name || "User",
     displayName: c.display_name || c.full_name || c.name || "User",
     city: c.city_name || c.city || "",
@@ -138,4 +140,9 @@ export async function updateConsultantProfile(data: Partial<UpdateProfileRequest
         method: "PATCH",
         body:JSON.stringify(data)
     })
+}
+
+// blog section
+export async function getConsultantBlogs(authorId: string) {
+    return fetchJson<Blog[]>(`/blogs?author_id=${authorId}&limit=4`);
 }

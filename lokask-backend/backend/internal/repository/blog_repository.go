@@ -45,7 +45,7 @@ func (r *BlogRepository) GetByID(id uuid.UUID) (*domain.Blog, error) {
 	}
 
 	coverURL, _ := helper.BuildMediaURL(blog.CoverImageURL)
-	if coverURL == "" {
+	if coverURL != "" {
 		blog.CoverImageURL = coverURL
 	}
 

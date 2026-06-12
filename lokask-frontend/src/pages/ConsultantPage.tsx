@@ -17,11 +17,16 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import LocalsCarousel from "@/components/LocalsCarousel";
-import { getConsultantById, getConsultants } from "@/lib/api";
+import {
+  getConsultantById,
+  getConsultants,
+  getConsultantBlogs,
+} from "@/lib/consultants";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
+import BlogCardFeatured from "@/components/BlogCardFeatured";
+import BlogCardCompact from "@/components/BlogCardCompact";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";
 import ReviewCard from "@/components/ReviewCard";
@@ -48,6 +53,15 @@ const ConsultantPage = () => {
     queryFn: () => getConsultants({ city: consultant?.city }),
     enabled: !!consultant?.city,
   });
+
+  // blog
+  const { data: blogsResponse } = useQuery({
+    queryKey: ["blogs", consultant?.userId],
+    queryFn: () => getConsultantBlogs(consultant?.userId as string),
+    enabled: !!consultant?.userId,
+  });
+
+  const consultantBlogs = blogsResponse || [];
 
   const relatedConsultants = Array.isArray(relatedResponse)
     ? relatedResponse
@@ -449,6 +463,49 @@ const ConsultantPage = () => {
           )}
         </div>
       )}
+
+      {/* Travel Articles (Blog) Section */}
+      {consultantBlogs.length > 0 && (
+        <div className="mt-20 pt-16 border-t border-zinc-200 max-w-[1271px] mx-auto w-full">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+            <div>
+              <h2 className="text-[32px] font-display font-bold text-zinc-900 leading-tight">
+                Travel articles by{" "}
+                <span className="text-[#C56A49]">
+                  {consultant.displayName || consultant.name}
+                </span>
+              </h2>
+              <p className="text-zinc-500 mt-2 text-lg">
+                Local insights and hidden gems from {consultant.city}
+              </p>
+            </div>
+            <Link
+              to={`/consultant/${consultant.id}/articles`}
+              className="inline-flex items-center justify-center px-6 py-2.5 border border-[#C56A49] text-[#C56A49] rounded-full text-sm font-medium hover:bg-[#FCE8E0] transition-colors shrink-0"
+            >
+              View all articles →
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            {/* The Featured Blog (First item in array) */}
+            <BlogCardFeatured blog={consultantBlogs[0]} />
+
+            {/* The Compact Grid (Next 3 items) */}
+            {consultantBlogs.length > 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {consultantBlogs.slice(1, 4).map((blog) => (
+                  <BlogCardCompact key={blog.id} blog={blog} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Existing CTA Section */}
+      <section className="w-full bg-white border-t border-zinc-200 pt-20 pb-8 mt-16"></section>
 
       {/* CTA Section (Centered per Figma) */}
       <section className="w-full bg-white border-t border-zinc-200 pt-20 pb-8 mt-16">
