@@ -464,7 +464,7 @@ const ConsultantPage = () => {
         </div>
       )}
 
-      {/* Travel Articles (Blog) Section */}
+      {/* ravel Articles (Blog) Section */}
       {consultantBlogs.length > 0 && (
         <div className="mt-20 pt-16 border-t border-zinc-200 max-w-[1271px] mx-auto w-full">
           {/* Header Row */}
