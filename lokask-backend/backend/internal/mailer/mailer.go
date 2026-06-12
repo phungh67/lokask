@@ -99,6 +99,9 @@ func (m *MailService) SendVerificationEmail(toEmail, toName, token string) {
 
 	msg := []byte(subject + mime + body)
 
+	log.Printf("[DEBUG] Check username, password and host: %s, %s, %s", m.Username, m.Password, m.Host)
+	log.Printf("[DEBUG] Check body: %s", body)
+
 	auth := smtp.PlainAuth("", m.Username, m.Password, m.Host)
 	addr := fmt.Sprintf("%s:%s", m.Host, m.Port)
 
