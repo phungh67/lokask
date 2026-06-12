@@ -4,7 +4,6 @@ import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,14 +17,14 @@ type BlogHandler struct {
 
 // Create handles posting a new blog with a cover image
 func (h *BlogHandler) Create(c *fiber.Ctx) error {
-	// 1. Get User ID from Auth Middleware
+	// userID
 	userIDStr := c.Locals("user_id").(string)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	// 2. Parse Form Fields
+	// extract data
 	title := c.FormValue("title")
 	content := c.FormValue("content")
 	summary := c.FormValue("summary") // Optional: Short desc for the card
@@ -36,33 +35,35 @@ func (h *BlogHandler) Create(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Title and Content are required"})
 	}
 
-	// 3. Handle Cover Image Upload (Optional but recommended)
-	var coverImageURL string
+	// cover image
+	newBlogID := uuid.New()
+
+	var coverImageKey string
 	file, err := c.FormFile("cover_image")
 	if err == nil {
 		// Upload to MinIO
-		rawURL, err := h.Storage.UploadFile(file, userIDStr, "travel-photos")
-		if err != nil {
+		key, uploadErr := h.Storage.UploadFile(file, newBlogID.String(), "blog")
+		if uploadErr != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to upload cover image"})
 		}
-		coverImageURL = strings.Replace(rawURL, ":9001", ":9000", 1)
+		coverImageKey = key
 	}
 
-	// 4. Create Model
+	// object
 	blog := &domain.Blog{
-		ID:            uuid.New(),
+		ID:            newBlogID,
 		AuthorID:      userID,
 		Title:         title,
 		Summary:       summary,
 		Content:       content,
-		CoverImageURL: coverImageURL,
+		CoverImageURL: coverImageKey,
 		City:          city,
 		Country:       country,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 
-	// 5. Save to DB
+	// push to db
 	if err := h.Repo.Create(blog); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save blog post", "detail": err.Error()})
 	}
