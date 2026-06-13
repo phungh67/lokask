@@ -124,6 +124,12 @@ export async function getConsultantById(id: string): Promise<Consultant> {
     return mapConsultant(data);
 }
 
+export async function getConsultantByUserId(userId: string): Promise<Consultant> {
+    const data = await fetchJson<any>(`/users/${userId}/consultant`);
+    // Assuming mapConsultant is imported
+    return mapConsultant(data); 
+}
+
 export async function getNiches(): Promise<Niche[]> {
     const data = await fetchJson<Niche[]>("/niches");
     return data || [];
@@ -187,6 +193,11 @@ export async function createBlog(data: {
         method: "POST",
         body: formData,
     });
+}
+
+export async function getBlogById(id: string): Promise<Blog> {
+    const data = await fetchJson<any>(`/blogs/${id}`);
+    return mapBlog(data);
 }
 
 export async function getConsultantBlogs(authorId: string) {
