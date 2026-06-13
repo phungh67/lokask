@@ -76,6 +76,23 @@ export const mapConsultant = (c: any): Consultant => ({
     })) : []
 });
 
+export const mapBlog = (b: any): Blog => ({
+    id: String(b.id),
+    title: b.title || "",
+    summary: b.summary || "",
+    content: b.content || "",
+
+    coverImageUrl: b.cover_image_url || b.coverImageUrl || "",
+    createdAt: b.created_at || b.createdAt || new Date().toISOString(),
+
+    authorName: b.author_name || b.authorName || "Local Expert",
+    authorAvatar: b.author_avatar || b.authorAvatar || "",
+
+    category: b.category || "General",
+    readTime: b.readTime || "5 min read",
+    viewsCount: Number(b.views_count) || 0
+});
+
 // Helper to generate a placeholder if the avatar is missing
 const getAvatar = (url: string, name: string) => {
     if (url && url.trim() !== "") return url;
@@ -94,7 +111,7 @@ export async function getConsultants(filters?: ConsultantFilters): Promise<Pagin
 
     const response = await fetchJson<any>("/consultants?" + params.toString());
 
-return {
+    return {
         data: (response.data || []).map(mapConsultant),
         total_count: response.total_count || 0,
         page: response.page || filters?.page || 1,
@@ -113,7 +130,7 @@ export async function getNiches(): Promise<Niche[]> {
 }
 
 export async function getLanguages(): Promise<string[]> {
-    return fetchJson<string[]>("/languages"); 
+    return fetchJson<string[]>("/languages");
 }
 
 // upload media function
@@ -135,10 +152,10 @@ export async function deleteConsultantMedia(imageUrl: string) {
     });
 }
 
-export async function updateConsultantProfile(data: Partial<UpdateProfileRequest>){
+export async function updateConsultantProfile(data: Partial<UpdateProfileRequest>) {
     return fetchJson<any>("/updateprofile", {
         method: "PATCH",
-        body:JSON.stringify(data)
+        body: JSON.stringify(data)
     })
 }
 
@@ -146,36 +163,38 @@ export async function updateConsultantProfile(data: Partial<UpdateProfileRequest
 
 // Create a new blog post
 export async function createBlog(data: {
-  title: string;
-  summary: string;
-  content: string;
-  city: string;
-  country: string;
-  coverImage?: File;
+    title: string;
+    summary: string;
+    content: string;
+    city: string;
+    country: string;
+    coverImage?: File;
 }) {
-  const formData = new FormData();
-  formData.append("title", data.title);
-  formData.append("summary", data.summary);
-  formData.append("content", data.content);
-  formData.append("city", data.city);
-  formData.append("country", data.country);
-  
-  if (data.coverImage) {
-    formData.append("cover_image", data.coverImage);
-  }
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("summary", data.summary);
+    formData.append("content", data.content);
+    formData.append("city", data.city);
+    formData.append("country", data.country);
 
-  // Assuming your custom fetch wrapper from core.ts handles FormData correctly
-  // (which we verified earlier that it does!)
-  return fetchJson<any>("/blogs", {
-    method: "POST",
-    body: formData,
-  });
+    if (data.coverImage) {
+        formData.append("cover_image", data.coverImage);
+    }
+
+    // Assuming your custom fetch wrapper from core.ts handles FormData correctly
+    // (which we verified earlier that it does!)
+    return fetchJson<any>("/blogs", {
+        method: "POST",
+        body: formData,
+    });
 }
 
 export async function getConsultantBlogs(authorId: string) {
     if (!authorId || authorId === "undefined") {
         return [];
     }
-    
-    return fetchJson<Blog[]>(`/blogs?author_id=${authorId}&limit=4`);
+
+    const response = await fetchJson<any[]>(`/blogs?author_id=${authorId}&limit=4`);
+
+    return (response || []).map(mapBlog);
 }
