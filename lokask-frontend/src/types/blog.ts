@@ -3,6 +3,7 @@ export interface Blog {
   title: string;
   summary: string;
   coverImageUrl: string;
+  content: string;
   createdAt: string;
   authorName?: string;
   authorAvatar?: string;
