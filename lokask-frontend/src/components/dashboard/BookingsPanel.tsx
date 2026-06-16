@@ -23,11 +23,6 @@ const BookingsPanel = ({
   userRole,
 }: BookingsPanelProps) => {
   // debug
-  console.log("DEBUG BookingPanel: Props receieved:", {
-    consultantId,
-    userId,
-    userRole,
-  });
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] =
     useState<BookingStatusFilter>("upcoming");
@@ -41,14 +36,6 @@ const BookingsPanel = ({
       setIsLoading(true);
       // const data = await getConsultantBookings(consultantId);
       let data;
-
-      if (consultantId && consultantId !== "" && consultantId !== "loading") {
-        console.log(`[DEBUG] Fetching Consultant Jobs for ID: ${consultantId}`);
-        data = await getConsultantBookings(consultantId);
-      } else if (userId) {
-        console.log(`[DEBUG] Fetching Traveler Trips for ID: ${userId}`);
-        data = await getMyTrips(userId);
-      }
 
       setBookings(data || []);
     } catch (error) {
@@ -68,10 +55,6 @@ const BookingsPanel = ({
 
   // 2. Filter logic updated for flat keys
   const filteredBookings = useMemo(() => {
-    console.log(
-      `[DEBUG BookingsPanel] Running filter. Active status: ${activeStatus}. Total raw bookings:`,
-      bookings.length,
-    );
     let result = [...bookings];
 
     if (activeStatus === "upcoming") {
@@ -97,10 +80,6 @@ const BookingsPanel = ({
       );
     }
 
-    console.log(
-      "[DEBUG BookingsPanel] Filtered bookings count:",
-      result.length,
-    );
     return result;
   }, [bookings, activeStatus, searchQuery]);
 
