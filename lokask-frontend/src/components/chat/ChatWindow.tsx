@@ -57,9 +57,8 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         const history = await getChatHistory(conversation.id);
         setMessages(history);
 
-        // 🟢 Fetch initial session
-        const session = await getChatSession(conversation.id);
-        setActiveSession(session);
+        // const session = await getChatSession(conversation.id);
+        // setActiveSession(session);
       } catch (error) {
         console.error("Failed to start chat:", error);
         toast.error("Could not connect to chat");
@@ -86,9 +85,8 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         const history = await getChatHistory(conversationId);
         setMessages(history);
 
-        // 🟢 Keep session fresh
-        const session = await getChatSession(conversationId);
-        setActiveSession(session);
+        // const session = await getChatSession(conversationId);
+        // setActiveSession(session);
       } catch (err) {
         console.error("Polling error", err);
       }
