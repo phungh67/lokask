@@ -38,9 +38,6 @@ const ConsultantScheduleSidebar = ({
     const fetchSchedule = async () => {
       setIsLoading(true);
       try {
-        console.log(
-          `[DEBUG] Fetching public schedule for consultant: ${consultantId}`,
-        );
         const data = await getPublicConsultantBookings(consultantId);
 
         const confirmedPublicBookings = (data || [])

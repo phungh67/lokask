@@ -24,7 +24,6 @@ const SignupConsultant = () => {
     setIsLoading(true);
     
     try {
-      console.log("Submitting consultant data:", formData); // Debug log
       await registerConsultant(formData);
       toast.success("Consultant account created!");
       navigate("/login");

@@ -23,7 +23,6 @@ const SignupTraveller = () => {
     setIsLoading(true);
     
     try {
-      console.log("Submitting traveller data:", formData); // Debug log
       await registerTraveller(formData); 
       toast.success("Account created successfully!");
       navigate("/login");

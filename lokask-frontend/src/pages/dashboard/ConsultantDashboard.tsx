@@ -311,8 +311,6 @@ const ConsultantDashboard = () => {
 
   // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
-    console.log("[DEBUG] Attempting to send message...");
-
     if (!activeConversationId || !accountUserId) {
       toast({ title: "Error", description: "Missing active chat or profile." });
       return;
@@ -342,9 +340,7 @@ const ConsultantDashboard = () => {
 
     try {
       await sendMessage(activeConversationId, content);
-      console.log("[DEBUG] Message sent successfully to API!");
     } catch (error: any) {
-      console.error("[DEBUG] Backend rejected the message:", error);
       setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
 
       const errorStr = JSON.stringify(error).toLowerCase();
