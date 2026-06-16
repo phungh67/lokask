@@ -1,10 +1,22 @@
-import { useState } from "react";
-import { Search, ChevronDown, Calendar } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { Search, ChevronDown, Calendar, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getNiches, Niche } from "@/lib/consultants";
 
-// 🟢 Define filter options locally to replace mockData imports
-const WHO_FILTER_OPTIONS = [
+const VIETNAM_CITIES = [
+  "Hanoi",
+  "Ho Chi Minh City",
+  "Da Nang",
+  "Hoi An",
+  "Nha Trang",
+  "Da Lat",
+  "Phu Quoc",
+  "Quang Binh",
+  "Sapa",
+  "Hue"
+];
+
+const FALLBACK_NICHES = [
   "Foodie & Local Cuisines",
   "History & Architecture",
   "Nature & Outdoors",
@@ -14,50 +26,89 @@ const WHO_FILTER_OPTIONS = [
 ];
 
 interface SearchBarProps {
-  onSearch: (filters: { where: string; who: string }) => void;
+  onSearch: (filters: { where: string; who: string; when?: string }) => void;
 }
 
-const SearchBar = ({onSearch}:SearchBarProps) => {
+const SearchBar = ({ onSearch }: SearchBarProps) => {
   const [where, setWhere] = useState("");
   const [when, setWhen] = useState("");
   const [who, setWho] = useState("");
+  
+  const [isWhereOpen, setIsWhereOpen] = useState(false);
   const [isWhoOpen, setIsWhoOpen] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  const [niches, setNiches] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchNiches = async () => {
+      try {
+        const data = await getNiches();
+        setNiches(data.map((n: Niche) => n.display_name));
+      } catch (error) {
+        console.error("Failed to load niches from API, using fallback", error);
+        setNiches(FALLBACK_NICHES);
+      }
+    };
+    fetchNiches();
+  }, []);
+
   const handleSearchClick = () => {
-    // Pass the 'where' (City) and 'who' (Niche/Tag) to the parent
-    onSearch({ where, who });
+    // Pass the 'where', 'when', and 'who' to the parent
+    onSearch({ where, who, when });
   };
 
   return (
     <div className="w-full">
       {/* Desktop Search Bar */}
       <div className="hidden md:flex items-stretch bg-card rounded-full shadow-medium border border-border/50 transition-shadow hover:shadow-strong relative z-10">
-        {/* Where */}
+        
+        {/* WHERE */}
         <div 
           className={cn(
-            "search-segment flex-1 border-r border-border/50 cursor-text transition-all rounded-l-full px-6 py-2",
+            "search-segment flex-1 border-r border-border/50 cursor-pointer transition-all rounded-l-full px-6 py-2 relative",
             focusedField === 'where' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
           )}
+          onClick={() => setIsWhereOpen(!isWhereOpen)}
+          onBlur={() => {
+            setFocusedField(null);
+            setTimeout(() => setIsWhereOpen(false), 150);
+          }}
+          tabIndex={0}
+          onFocus={() => setFocusedField('where')}
         >
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block" htmlFor="search-where">Where</label>
-          <input
-            id="search-where"
-            type="text"
-            placeholder="Destination / City"
-            value={where}
-            onChange={(e) => setWhere(e.target.value)}
-            onFocus={() => setFocusedField('where')}
-            onBlur={() => setFocusedField(null)}
-            className="text-sm font-medium bg-transparent outline-none w-full placeholder:text-foreground/40"
-            aria-label="Enter destination or city"
-          />
+          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
+            Where (Vietnam)
+            <MapPin size={12} className="text-[#C77752]" />
+          </label>
+          <span className="text-sm font-medium truncate block mt-0.5">
+            {where || <span className="text-foreground/40">Select a city...</span>}
+          </span>
+
+          {/* City Dropdown */}
+          {isWhereOpen && (
+            <div className="absolute top-full left-0 w-[240px] mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
+              {VIETNAM_CITIES.map((city) => (
+                <button
+                  key={city}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWhere(city);
+                    setIsWhereOpen(false);
+                  }}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* When */}
+        {/* WHEN (Native Calendar Picker) */}
         <div 
           className={cn(
-            "search-segment flex-1 border-r border-border/50 cursor-text transition-all px-6 py-2",
+            "search-segment flex-1 border-r border-border/50 cursor-pointer transition-all px-6 py-2",
             focusedField === 'when' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
           )}
         >
@@ -67,18 +118,16 @@ const SearchBar = ({onSearch}:SearchBarProps) => {
           </label>
           <input
             id="search-when"
-            type="text"
-            placeholder="Travel Dates / Period"
+            type="date"
             value={when}
             onChange={(e) => setWhen(e.target.value)}
             onFocus={() => setFocusedField('when')}
             onBlur={() => setFocusedField(null)}
-            className="text-sm font-medium bg-transparent outline-none w-full placeholder:text-foreground/40"
-            aria-label="Enter travel dates"
+            className="text-sm font-medium bg-transparent outline-none w-full mt-0.5 text-foreground cursor-pointer [color-scheme:light]"
           />
         </div>
 
-        {/* Who */}
+        {/* WHO */}
         <div 
           className={cn(
             "search-segment flex-1 cursor-pointer relative transition-all rounded-r-full px-6 py-2",
@@ -96,14 +145,14 @@ const SearchBar = ({onSearch}:SearchBarProps) => {
             Who
             <ChevronDown size={12} className={cn("text-muted-foreground transition-transform", isWhoOpen ? 'rotate-180' : '')} />
           </span>
-          <span className="text-sm font-medium truncate block">
-            {who || "Type of local consultant"}
+          <span className="text-sm font-medium truncate block mt-0.5">
+            {who || <span className="text-foreground/40">Type of local consultant</span>}
           </span>
 
-          {/* Dropdown */}
+          {/* Niche Dropdown */}
           {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in">
-              {WHO_FILTER_OPTIONS.map((option) => (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
+              {niches.map((option) => (
                 <button
                   key={option}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -129,47 +178,72 @@ const SearchBar = ({onSearch}:SearchBarProps) => {
         </button>
       </div>
 
-      {/* Mobile Search Bar */}
+      {/* MOBILE SEARCH BAR */}
       <div className="md:hidden flex flex-col gap-3 bg-card rounded-2xl shadow-medium border border-border/50 p-4">
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground" htmlFor="mobile-where">Where</label>
-          <input
-            id="mobile-where"
-            type="text"
-            placeholder="Destination / City"
-            value={where}
-            onChange={(e) => setWhere(e.target.value)}
-            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
-          />
+        
+        {/* Mobile Where */}
+        <div className="space-y-1 relative">
+          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
+            Where (Vietnam) <MapPin size={10} className="text-[#C77752]"/>
+          </label>
+          <button
+            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm text-left flex items-center justify-between"
+            onClick={() => setIsWhereOpen(!isWhereOpen)}
+          >
+            <span className={where ? 'text-foreground font-medium' : 'text-foreground/40'}>
+              {where || "Select a city..."}
+            </span>
+            <ChevronDown size={16} className={cn("text-muted-foreground transition-transform", isWhereOpen ? 'rotate-180' : '')} />
+          </button>
+
+          {isWhereOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 max-h-[200px] overflow-y-auto">
+              {VIETNAM_CITIES.map((city) => (
+                <button
+                  key={city}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                  onClick={() => {
+                    setWhere(city);
+                    setIsWhereOpen(false);
+                  }}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* Mobile When */}
         <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground" htmlFor="mobile-when">When</label>
+          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1" htmlFor="mobile-when">
+            When <Calendar size={10} />
+          </label>
           <input
             id="mobile-when"
-            type="text"
-            placeholder="Travel Dates / Period"
+            type="date"
             value={when}
             onChange={(e) => setWhen(e.target.value)}
-            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 [color-scheme:light]"
           />
         </div>
 
+        {/* Mobile Who */}
         <div className="space-y-1 relative">
           <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Who</label>
           <button
             className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm text-left flex items-center justify-between"
             onClick={() => setIsWhoOpen(!isWhoOpen)}
           >
-            <span className={who ? 'text-foreground' : 'text-foreground/40'}>
+            <span className={who ? 'text-foreground font-medium' : 'text-foreground/40'}>
               {who || "Type of local consultant"}
             </span>
             <ChevronDown size={16} className={cn("text-muted-foreground transition-transform", isWhoOpen ? 'rotate-180' : '')} />
           </button>
 
           {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50">
-              {WHO_FILTER_OPTIONS.map((option) => (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 max-h-[200px] overflow-y-auto">
+              {niches.map((option) => (
                 <button
                   key={option}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -186,7 +260,7 @@ const SearchBar = ({onSearch}:SearchBarProps) => {
         </div>
 
         <button onClick={handleSearchClick}
-          className="w-full py-3 rounded-full bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+          className="w-full py-3 rounded-full bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity mt-2"
           aria-label="Search for local consultants"
         >
           <Search size={18} />
