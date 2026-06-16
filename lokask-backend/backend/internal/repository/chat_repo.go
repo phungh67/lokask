@@ -136,15 +136,10 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 		return err
 	}
 
-	isSelfChat := conv.TravelerID == conv.ConsultantID
-	var session *domain.ConsultantSession
+	log.Printf("[DEBUG] TravelerID: %s, consultantID: %s", conv.TravelerID.String(), conv.ConsultantID.String())
 
-	if !isSelfChat {
-		session, err = r.sessionValidation(ctx, conversationID)
-		if err != nil {
-			return err
-		}
-	}
+	// isSelfChat := conv.TravelerID == conv.ConsultantID
+	// session, err := r.sessionValidation(ctx, conversationID)
 
 	tx, err := r.DB.BeginTxx(ctx, nil)
 	if err != nil {
@@ -152,19 +147,19 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 	}
 	defer tx.Rollback()
 
-	if !isSelfChat && session != nil && session.Status == "awaiting_reply" && senderID == conv.ConsultantID {
-		expiresAt := time.Now().Add(time.Duration(session.DurationHours) * time.Hour)
+	// if !isSelfChat && session != nil && session.Status == "awaiting_reply" && senderID == conv.ConsultantID {
+	// 	expiresAt := time.Now().Add(time.Duration(session.DurationHours) * time.Hour)
 
-		_, err = tx.ExecContext(ctx, `
-			UPDATE consultation_sessions
-			SET status = 'active', started_at = NOW(), expires_at = $1
-			WHERE id = $2
-		`, expiresAt, session.ID)
+	// 	_, err = tx.ExecContext(ctx, `
+	// 		UPDATE consultation_sessions
+	// 		SET status = 'active', started_at = NOW(), expires_at = $1
+	// 		WHERE id = $2
+	// 	`, expiresAt, session.ID)
 
-		if err != nil {
-			return err
-		}
-	}
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	// Insert Message
 	_, err = tx.ExecContext(ctx, `INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)`,
