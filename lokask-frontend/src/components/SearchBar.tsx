@@ -54,7 +54,6 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
   }, []);
 
   const handleSearchClick = () => {
-    // Pass the 'where', 'when', and 'who' to the parent
     onSearch({ where, who, when });
   };
 
@@ -78,11 +77,17 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
           onFocus={() => setFocusedField('where')}
         >
           <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-            Where (Vietnam)
+            Where
             <MapPin size={12} className="text-[#C77752]" />
           </label>
           <span className="text-sm font-medium truncate block mt-0.5">
-            {where || <span className="text-foreground/40">Select a city...</span>}
+            {where ? (
+              <span>
+                {where} <span className="text-muted-foreground font-normal">- Vietnam</span>
+              </span>
+            ) : (
+              <span className="text-foreground/40">Select a city...</span>
+            )}
           </span>
 
           {/* City Dropdown */}
@@ -91,21 +96,22 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
               {VIETNAM_CITIES.map((city) => (
                 <button
                   key={city}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     setWhere(city);
                     setIsWhereOpen(false);
                   }}
                 >
-                  {city}
+                  <span className="font-medium">{city}</span>
+                  <span className="text-muted-foreground text-xs">- Vietnam</span>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* WHEN (Native Calendar Picker) */}
+        {/* WHEN */}
         <div 
           className={cn(
             "search-segment flex-1 border-r border-border/50 cursor-pointer transition-all px-6 py-2",
@@ -178,20 +184,22 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
         </button>
       </div>
 
-      {/* MOBILE SEARCH BAR */}
+      {/* 📱 MOBILE SEARCH BAR */}
       <div className="md:hidden flex flex-col gap-3 bg-card rounded-2xl shadow-medium border border-border/50 p-4">
         
         {/* Mobile Where */}
         <div className="space-y-1 relative">
           <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-            Where (Vietnam) <MapPin size={10} className="text-[#C77752]"/>
+            Where <MapPin size={10} className="text-[#C77752]"/>
           </label>
           <button
             className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm text-left flex items-center justify-between"
             onClick={() => setIsWhereOpen(!isWhereOpen)}
           >
             <span className={where ? 'text-foreground font-medium' : 'text-foreground/40'}>
-              {where || "Select a city..."}
+              {where ? (
+                <span>{where} <span className="text-muted-foreground font-normal">- Vietnam</span></span>
+              ) : "Select a city..."}
             </span>
             <ChevronDown size={16} className={cn("text-muted-foreground transition-transform", isWhereOpen ? 'rotate-180' : '')} />
           </button>
@@ -201,13 +209,14 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
               {VIETNAM_CITIES.map((city) => (
                 <button
                   key={city}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center gap-1"
                   onClick={() => {
                     setWhere(city);
                     setIsWhereOpen(false);
                   }}
                 >
-                  {city}
+                  <span className="font-medium">{city}</span>
+                  <span className="text-muted-foreground text-xs">- Vietnam</span>
                 </button>
               ))}
             </div>
