@@ -126,7 +126,6 @@ export async function getConsultantById(id: string): Promise<Consultant> {
 
 export async function getConsultantByUserId(userId: string): Promise<Consultant> {
     const data = await fetchJson<any>(`/users/${userId}/consultant`);
-    // Assuming mapConsultant is imported
     return mapConsultant(data); 
 }
 

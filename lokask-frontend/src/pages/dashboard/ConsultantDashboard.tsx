@@ -15,9 +15,10 @@ import {
   getChatHistory,
   sendMessage,
   startChat,
-  ChatMessage,
   getChatSession,
-} from "@/lib/api";
+} from "@/lib/chat";
+import { ChatMessage } from "@/types/chat";
+
 
 import { Consultant } from "@/types/consultant";
 
@@ -289,8 +290,8 @@ const ConsultantDashboard = () => {
 
         setCurrentMessages(uiMessages);
 
-        const sessionData = await getChatSession(activeConversationId);
-        setActiveSession(sessionData);
+        // const sessionData = await getChatSession(activeConversationId);
+        // setActiveSession(sessionData);
       } catch (error) {
         console.error("Failed to load history", error);
       }
