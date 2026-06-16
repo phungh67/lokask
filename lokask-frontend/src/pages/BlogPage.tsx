@@ -2,8 +2,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { getBlogById, getConsultantByUserId } from "@/lib/consultants";
-import ConsultantBannerCompact from "@/components/blog/ConsultantBannerCompact";
-import ConsultantBannerFull from "@/components/blog/ConsultantBannerFull";
+import ConsultantBannerCompact from "@/components/ConsultantBannerCompact";
+import ConsultantBannerFull from "@/components/ConsultantBanner";
 
 const BlogPage = () => {
   const { id } = useParams<{ id: string }>();
