@@ -187,7 +187,7 @@ func main() {
 	protected.Get("/auth/me", authHandler.GetMe)
 	protected.Post("/conversations", chatHandler.StartChat)
 	protected.Get("/conversations", chatHandler.GetInbox)
-	protected.Get("/conversations/:id/session", chatHandler.GetSession)
+	// protected.Get("/conversations/:id/session", chatHandler.GetSession)
 	protected.Post("/conversations/:id/messages", chatHandler.SendMessage)
 	protected.Get("/conversations/:id/messages", chatHandler.GetHistory)
 	protected.Post("/users/avatar", userHandler.UploadAvatar)
