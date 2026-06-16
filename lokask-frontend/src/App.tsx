@@ -17,6 +17,7 @@ import CallPage from "./pages/CallPage";
 import SignupTraveller from "./pages/SignupTraveller";
 import SignupConsultant from "./pages/SignupConsultant";
 import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
+import BlogPage from "./pages/BlogPage";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ChoosePackagePage from "./pages/ChoosePackagePage"; 
@@ -54,6 +55,8 @@ const App = () => (
 
             {/* Calling */}
             <Route path="/call/:roomId" element={<CallPage />} />
+
+            <Route path="/blog/:id" element={<BlogPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,5 +1,6 @@
 export interface Blog {
   id: string;
+  authorId: string;
   title: string;
   summary: string;
   coverImageUrl: string;

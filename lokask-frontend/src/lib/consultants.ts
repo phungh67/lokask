@@ -78,6 +78,7 @@ export const mapConsultant = (c: any): Consultant => ({
 
 export const mapBlog = (b: any): Blog => ({
     id: String(b.id),
+    authorId: b.author_id || b.authorId || "",
     title: b.title || "",
     summary: b.summary || "",
     content: b.content || "",
