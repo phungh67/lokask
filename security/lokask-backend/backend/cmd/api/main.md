@@ -16,15 +16,15 @@ The `main.go` file serves as the application's bootstrap module. It initializes 
 
 ### 🚨 Vulnerability Summary Table
 
-| Component/Function | Vulnerable Element | Risk Level | Reason |
-| :--- | :--- | :--- | :--- |
-| **CORS Configuration** | `AllowOrigins: "*"` | **High** | Allows any domain to interact with the API, potentially bypassing frontend origin checks. |
-| **Environment Variable Handling** | `getEnv` usage (Implicit) | **High** | If database credentials (DB\_*, MAIL\_*) are not properly masked/secured in production environment variables, they are at risk. |
-| **Error Handling (Fiber)** | Custom `ErrorHandler` | **Medium** | Returning `err.Error()` directly exposes internal details (stack traces, database connection errors) to the client. |
-| **Auth Routes** | `/auth/login` | **High** | Potential exposure to credential stuffing, brute-force attacks, and lack of explicit rate limiting. |
-| **Public Routes** | `/public/:id` (`bookHandler.PublicGetConsultantSchedule`) | **Medium** | Accessing core scheduling data without any authentication/authorization check. |
-| **Proxy Handler** | `proxyImageHandler` | **Medium** | Lack of input validation or URL sanitization when fetching external content could lead to SSRF or DoS attacks. |
-| **Unprotected Routes** | `/consultants`, `/blogs` | **Low** | Data retrieval endpoints should ideally require some form of minimum authentication/user context. |
+| Component/Function                | Vulnerable Element                                        | Risk Level | Reason                                                                                                                          |
+| :-------------------------------- | :-------------------------------------------------------- | :--------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **CORS Configuration**            | `AllowOrigins: "*"`                                       | **High**   | Allows any domain to interact with the API, potentially bypassing frontend origin checks.                                       |
+| **Environment Variable Handling** | `getEnv` usage (Implicit)                                 | **High**   | If database credentials (DB\_*, MAIL\_*) are not properly masked/secured in production environment variables, they are at risk. |
+| **Error Handling (Fiber)**        | Custom `ErrorHandler`                                     | **Medium** | Returning `err.Error()` directly exposes internal details (stack traces, database connection errors) to the client.             |
+| **Auth Routes**                   | `/auth/login`                                             | **High**   | Potential exposure to credential stuffing, brute-force attacks, and lack of explicit rate limiting.                             |
+| **Public Routes**                 | `/public/:id` (`bookHandler.PublicGetConsultantSchedule`) | **Medium** | Accessing core scheduling data without any authentication/authorization check.                                                  |
+| **Proxy Handler**                 | `proxyImageHandler`                                       | **Medium** | Lack of input validation or URL sanitization when fetching external content could lead to SSRF or DoS attacks.                  |
+| **Unprotected Routes**            | `/consultants`, `/blogs`                                  | **Low**    | Data retrieval endpoints should ideally require some form of minimum authentication/user context.                               |
 
 ---
 
