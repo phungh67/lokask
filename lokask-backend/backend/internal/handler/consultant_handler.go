@@ -7,6 +7,7 @@ import (
 	"asklocal/internal/storage"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,14 @@ type ConsultantHandler struct {
 
 type DeleteMediaRequest struct {
 	ImageURL string `json:"image_url"`
+}
+
+var allowedExtensions = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".webp": true,
+	".gif":  true,
 }
 
 func NewConsultantHandler(repo *repository.ConsultantRepository, storage storage.FileStorage) *ConsultantHandler {
@@ -203,9 +212,17 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 
 	mediaType := c.FormValue("type") // to check if it meant to be cover or galleries
 	var uploadedURLs []string
-	// uniformed filename (for tracking)
 
 	for _, fileHeader := range files {
+		// check ext
+		ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+		if !allowedExtensions[ext] {
+			log.Printf("[WARN] Blocked unsupported file format: %s", ext)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": fmt.Sprintf("Unsupported file format: %s. Allowed formats are JPG, PNG, WEBP, and GIF.", ext),
+			})
+		}
+
 		fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), fileHeader.Filename)
 		var objectKey string
 
