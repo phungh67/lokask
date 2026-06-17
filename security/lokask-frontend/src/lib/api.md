@@ -1,4 +1,4 @@
-```markdown
+
 [⬅ Return to Main Compendium](../../README.md)
 
 # 🛡️ Client API Layer Security Analysis Report (`api-client.ts`)
