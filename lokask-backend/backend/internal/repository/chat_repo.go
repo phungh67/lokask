@@ -28,7 +28,7 @@ type Conversation struct {
 }
 
 type Message struct {
-	ID             int       `db:"id" json:"id"`
+	ID             uuid.UUID `db:"id" json:"id"`
 	ConversationID uuid.UUID `db:"conversation_id" json:"conversation_id"`
 	SenderID       uuid.UUID `db:"sender_id" json:"sender_id"`
 	Content        string    `db:"content" json:"content"`
