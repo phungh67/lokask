@@ -198,6 +198,7 @@ func main() {
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
 	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
+	protected.Delete("/consultant/media", consultantHandler.DeleteGalleryMedia)
 	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
 
 	// use for test @TODO: disabled it on release
