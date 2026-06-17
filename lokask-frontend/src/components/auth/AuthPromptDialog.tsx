@@ -26,6 +26,20 @@ interface AuthPromptDialogProps {
   onFacebookAuth?: () => void;
 }
 
+// 🟢 Pre-defined list of supported cities
+const VIETNAM_CITIES = [
+  "Hanoi",
+  "Ho Chi Minh City",
+  "Da Nang",
+  "Hoi An",
+  "Nha Trang",
+  "Da Lat",
+  "Phu Quoc",
+  "Quang Binh",
+  "Sapa",
+  "Hue"
+];
+
 const AuthPromptDialog = ({
   open,
   onOpenChange,
@@ -60,14 +74,12 @@ const AuthPromptDialog = ({
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // 1. Initial Step Logic (Now handles form submit)
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidEmail(email)) return;
     setStep("login");
   };
 
-  // 2. Handle Login with Smart Redirect
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
@@ -76,23 +88,16 @@ const AuthPromptDialog = ({
 
       toast.success(`Welcome back, ${res.user.full_name}!`);
 
-      // Save session
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
 
-      // broadcast changing information
       window.dispatchEvent(new Event("auth-changed"));
+      onOpenChange(false);
 
-      onOpenChange(false); // Close dialog
-
-      // Trigger external login callback if provided
       if (onLogin) onLogin();
 
-      // REDIRECT LOGIC
       const userRole = (res.user as any).role;
-
       if (userRole === "consultant") {
-        console.log("Redirecting to Consultant Dashboard");
         navigate("/dashboard");
       }
     } catch (error: any) {
@@ -102,9 +107,15 @@ const AuthPromptDialog = ({
     }
   };
 
-  // 3. Handle Signup
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    
+    // 🟢 Extra validation to ensure city is selected for consultants
+    if (defaultRole === "consultant" && !city) {
+      toast.error("Please select a city from the list.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (defaultRole === "consultant") {
@@ -124,10 +135,7 @@ const AuthPromptDialog = ({
         toast.success("Traveller account created! Please log in.");
       }
 
-      // Trigger external signup callback if provided
       if (onSignup) onSignup();
-
-      // After signup, force login step
       setStep("verify");
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
@@ -142,7 +150,6 @@ const AuthPromptDialog = ({
     <>
       <DialogHeader className="text-center space-y-4 pt-4">
         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-           {/* You can use a Mail icon from lucide-react here */}
            <span className="text-2xl">✉️</span> 
         </div>
         <DialogTitle className="text-2xl font-display font-semibold">
@@ -204,7 +211,7 @@ const AuthPromptDialog = ({
         </div>
 
         <Button
-          type="button" // stops Enter key from triggering this button
+          type="button"
           variant="outline"
           className="w-full h-12 rounded-full"
           onClick={() => setStep("signup")}
@@ -248,11 +255,7 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         <Button
@@ -263,7 +266,7 @@ const AuthPromptDialog = ({
           {isLoading ? <Loader2 className="animate-spin" /> : "Log in"}
         </Button>
         <button
-          type="button" // prevent accidental submission
+          type="button"
           onClick={() => setStep("initial")}
           className="text-sm text-center w-full text-muted-foreground hover:text-primary"
         >
@@ -287,6 +290,7 @@ const AuthPromptDialog = ({
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           className="h-12 rounded-xl border-2 px-4"
+          required
         />
         <Input
           type="email"
@@ -294,15 +298,27 @@ const AuthPromptDialog = ({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-12 rounded-xl border-2 px-4"
+          required
         />
 
+        {/* 🟢 Replaced standard input with styled dropdown */}
         {defaultRole === "consultant" && (
-          <Input
-            placeholder="City (e.g., Tokyo)"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="h-12 rounded-xl border-2 px-4"
-          />
+          <div className="relative">
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full h-12 rounded-xl border-2 border-input bg-transparent px-4 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
+              required
+            >
+              <option value="" disabled>Select your city...</option>
+              {VIETNAM_CITIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-xs">
+              ▼
+            </div>
+          </div>
         )}
 
         <div className="relative">
@@ -312,17 +328,14 @@ const AuthPromptDialog = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="h-12 rounded-xl border-2 px-4 pr-12"
+            required
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
 
@@ -334,7 +347,7 @@ const AuthPromptDialog = ({
           {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
         </Button>
         <button
-          type="button" // prevent accidental submission
+          type="button"
           onClick={() => setStep("initial")}
           className="text-sm text-center w-full text-muted-foreground hover:text-primary"
         >
