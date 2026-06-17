@@ -42,6 +42,19 @@ type RegisterRequest struct {
 	CityName string `json:"city"`
 }
 
+var validCities = map[string]bool{
+	"Hanoi":            true,
+	"Ho Chi Minh City": true,
+	"Da Nang":          true,
+	"Hoi An":           true,
+	"Nha Trang":        true,
+	"Da Lat":           true,
+	"Phu Quoc":         true,
+	"Quang Binh":       true,
+	"Sapa":             true,
+	"Hue":              true,
+}
+
 // a login request
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -50,10 +63,19 @@ type LoginRequest struct {
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req RegisterRequest
-	if err := c.BodyParser(&req); err != nil {
+	err := c.BodyParser(&req)
+	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid input",
-			"cause": err.Error(),
+		})
+	}
+
+	log.Printf("[ERROR][AUTH] Error in registration, caused by: %v", err)
+
+	// validate city
+	if !validCities[req.CityName] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid or unsupported city selected.",
 		})
 	}
 

@@ -3,24 +3,43 @@ import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Briefcase, Loader2 } from "lucide-react";
-import { registerConsultant } from "@/lib/api"; // 🟢 Import API
+import { registerConsultant } from "@/lib/api";
 import { toast } from "sonner";
+
+// 🟢 Pre-defined list of supported cities
+const VIETNAM_CITIES = [
+  "Hanoi",
+  "Ho Chi Minh City",
+  "Da Nang",
+  "Hoi An",
+  "Nha Trang",
+  "Da Lat",
+  "Phu Quoc",
+  "Quang Binh",
+  "Sapa",
+  "Hue"
+];
 
 const SignupConsultant = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   
-  // 🟢 1. State for inputs
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    city: "", // Captures the city name
+    city: "", 
     password: ""
   });
 
-  // 🟢 2. The function that sends the data
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🟢 Ensure user selects a city instead of leaving the placeholder
+    if (!formData.city) {
+      toast.error("Please select your city.");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -54,7 +73,6 @@ const SignupConsultant = () => {
             </div>
 
             <div className="card-soft p-8">
-              {/* 🟢 3. Connect the submit handler */}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -80,19 +98,32 @@ const SignupConsultant = () => {
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                   />
                 </div>
+                
+                {/* 🟢 Replaced standard input with styled dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Your location (City)
                   </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    placeholder="e.g., Tokyo"
-                    value={formData.city}
-                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                  />
+                  <div className="relative">
+                    <select
+                      required
+                      className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none cursor-pointer"
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    >
+                      <option value="" disabled>Select a city...</option>
+                      {VIETNAM_CITIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-xs">
+                      ▼
+                    </div>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Password
