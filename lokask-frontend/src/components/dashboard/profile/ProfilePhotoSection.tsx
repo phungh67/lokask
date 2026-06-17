@@ -25,14 +25,27 @@ const ProfilePhotoSection = ({
   const coverInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    callback: (file: File) => void
+    callback: (file: File) => void,
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      callback(file);
-    }
+    const files = e.target.files;
+    if (!files) return;
+
+    const validFiles = Array.from(files).filter((file) => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        alert(
+          `Format not supported: ${file.name}. Please upload JPG, PNG, or WebP.`,
+        );
+        return false;
+      }
+      return true;
+    });
+
+    validFiles.forEach((file) => callback(file));
+
     e.target.value = "";
   };
 
@@ -65,12 +78,14 @@ const ProfilePhotoSection = ({
           </div>
           <div className="text-sm text-muted-foreground">
             <p>Click to upload a new photo</p>
-            <p className="text-xs">Recommended: Square image, at least 400x400px</p>
+            <p className="text-xs">
+              Recommended: Square image, at least 400x400px
+            </p>
           </div>
           <input
             ref={avatarInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg, image/png, image/webp, image/gif"
             className="hidden"
             onChange={(e) => handleFileChange(e, onAvatarChange)}
           />
@@ -104,7 +119,7 @@ const ProfilePhotoSection = ({
         <input
           ref={coverInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg, image/png, image/webp, image/gif"
           className="hidden"
           onChange={(e) => handleFileChange(e, onCoverChange)}
         />
@@ -147,7 +162,7 @@ const ProfilePhotoSection = ({
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg, image/png, image/webp, image/gif"
           multiple
           className="hidden"
           onChange={(e) => {
