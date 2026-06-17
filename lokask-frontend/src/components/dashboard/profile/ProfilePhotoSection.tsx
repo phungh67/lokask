@@ -148,8 +148,15 @@ const ProfilePhotoSection = ({
           ref={galleryInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
-          onChange={(e) => handleFileChange(e, onGalleryAdd)}
+          onChange={(e) => {
+            const files = e.target.files;
+            if (files) {
+              Array.from(files).forEach((file) => onGalleryAdd(file));
+            }
+            e.target.value = "";
+          }}
         />
       </div>
     </div>

@@ -157,5 +157,12 @@ jobs:
                     echo "Cleaning up..."
                     sudo docker image prune -f
                     docker logout
-                    rm -rf /home/${SSH_HOST_USER}/.docker/config.json
+                    rm -rf /home/${{ secrets.SSH_HOST_USER }}/.docker/config.json
+                    sleep 5
+                    running_container=\$(sudo docker ps -q | wc -l)
+                    if (( \$running_container >= 4 )); then
+                      echo "Deployment completed successfully! Running containers: \$running_container"
+                    else
+                      echo "Deployment failed! Only \$running_container containers are running."
+                    fi
                 EOF

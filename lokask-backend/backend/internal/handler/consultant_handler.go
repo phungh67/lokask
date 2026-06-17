@@ -182,61 +182,77 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		})
 	}
 
-	fileHeader, err := c.FormFile("file")
+	// upload multiple files
+	form, err := c.MultipartForm()
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "No file was uploaded",
-			"error":   err.Error(),
+			"message": "Error",
+		})
+	}
+
+	// log
+	log.Printf("[ERROR] Error when parsing data: %v", err)
+
+	files := form.File["file"]
+	if len(files) == 0 {
+		files = form.File["gallery_images"]
+		return c.Status(400).JSON(fiber.Map{
+			"message": "No file provided.",
 		})
 	}
 
 	mediaType := c.FormValue("type") // to check if it meant to be cover or galleries
+	var uploadedURLs []string
 	// uniformed filename (for tracking)
-	var objectKey string
-	fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), fileHeader.Filename)
 
-	if mediaType == "cover" {
-		objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)
-	} else {
-		objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)
+	for _, fileHeader := range files {
+		fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), fileHeader.Filename)
+		var objectKey string
+
+		if mediaType == "cover" {
+			objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)
+		} else {
+			objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)
+		}
+
+		_, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
+		if err != nil {
+			log.Printf("[ERR] Bucket upload failed for %s: %v", fileName, err)
+			continue
+		}
+
+		if mediaType == "cover" {
+			err = h.Repo.UpdateCoverImage(userID, objectKey)
+		} else {
+			err = h.Repo.AddGalleryImage(userID, objectKey)
+		}
+
+		if err != nil {
+			log.Printf("[ERR] Failed to update database for %s: %v", fileName, err)
+			continue
+		}
+
+		mediaURL, err := helper.BuildMediaURL(objectKey)
+		if err == nil {
+			uploadedURLs = append(uploadedURLs, mediaURL)
+			log.Printf("[LOG] Upload media successfully to %s\n", mediaURL)
+		}
+
+		if mediaType == "cover" {
+			break
+		}
 	}
 
-	url, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
-
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Bucket upload failed",
-			"error":   err.Error(),
-		})
+	response := fiber.Map{
+		"message": "Successfully uploaded media.",
 	}
 
-	if mediaType == "cover" {
-		err = h.Repo.UpdateCoverImage(userID, objectKey)
-	} else if mediaType == "gallery" {
-		err = h.Repo.AddGalleryImage(userID, objectKey)
+	if len(uploadedURLs) > 0 {
+		response["media_url"] = uploadedURLs[0]
+		response["media_urls"] = uploadedURLs
 	}
 
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Failed to update database with image key",
-			"error":   err.Error(),
-		})
-	}
-
-	log.Printf("[LOG] Upload media successfully to %s\n", url)
-
-	mediaURL, err := helper.BuildMediaURL(objectKey)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Error in constructing URL",
-			"error":   err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"media_url": mediaURL,
-		"message":   "Successfully upload media.",
-	})
+	return c.JSON(response)
 }
 
 func (h *ConsultantHandler) DeleteGalleryMedia(c *fiber.Ctx) error {
