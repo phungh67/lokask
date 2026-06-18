@@ -26,7 +26,7 @@ type MessageNotificationData struct {
 }
 
 // SendMessageNotification sends an HTML email to the receiver
-func (m *MailService) SendMessageNotification(toEmail, toName, senderName, messagePreview string) {
+func (m *MailService) SendMessageNotification(toEmail, toName, senderName, messagePreview string) error {
 	params := &resend.SendEmailRequest{
 		From:    "Notification <notification@lokask.se>",
 		To:      []string{toEmail},
@@ -48,6 +48,8 @@ func (m *MailService) SendMessageNotification(toEmail, toName, senderName, messa
 	} else {
 		log.Printf("[INFO] Verification email successfully sent to %s", toEmail)
 	}
+
+	return err
 }
 
 // send verification email function

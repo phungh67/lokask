@@ -140,6 +140,12 @@ func main() {
 			})
 		}
 
+		err := mailService.SendMessageNotification(toEmail, "Test User", "No Reply", "Hello Worlds")
+
+		if err != nil {
+			log.Printf("[ERROR][MAILER] Error %v", err)
+		}
+
 		return c.JSON(fiber.Map{
 			"status": "success",
 		})
