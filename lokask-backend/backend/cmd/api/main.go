@@ -131,6 +131,20 @@ func main() {
 	// register routes
 	api := app.Group("/api/v1")
 
+	// test email
+	app.Get("/api/v1/test-email", func(c *fiber.Ctx) error {
+		toEmail := c.Query("to")
+		if toEmail == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Missing 'to' parameter. Usage: /api/v1/test-email?to=lhpespoir39@email.com",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"status": "success",
+		})
+	})
+
 	// get
 	// app.Get("/api/v1/proxy/image", proxyHandler.ProxyImage)
 
@@ -164,21 +178,6 @@ func main() {
 	// public verification
 	api.Get("/new/verify", authHandler.VerifyEmail)
 
-	// upload avatar
-	// move to protected
-
-	// a protected api group, must log in
-	// protected := api.Group("/", jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte("super_secret_jwt_key")}, // MUST MATCH auth_handler key
-	// 	SuccessHandler: func(c *fiber.Ctx) error {
-	// 		userToken := c.Locals("user").(*jwt.Token)
-	// 		claims := userToken.Claims.(jwt.MapClaims)
-
-	// 		c.Locals("user_id", claims["user_id"])
-	// 		return c.Next()
-	// 	},
-	// }))
-
 	protected := api.Group("/", middleware.Protect())
 
 	// message api group. of course, protected
@@ -204,20 +203,6 @@ func main() {
 
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
-
-	// test email
-	app.Get("/api/v1/test-email", func(c *fiber.Ctx) error {
-		toEmail := c.Query("to")
-		if toEmail == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Missing 'to' parameter. Usage: /api/v1/test-email?to=lhpespoir39@email.com",
-			})
-		}
-
-		return c.JSON(fiber.Map{
-			"status": "success",
-		})
-	})
 
 	// start server
 	port := getEnv("PORT", "8080")
