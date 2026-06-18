@@ -7,6 +7,7 @@ import (
 	"asklocal/internal/storage"
 	"fmt"
 	"log"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -288,10 +289,18 @@ func (h *ConsultantHandler) DeleteGalleryMedia(c *fiber.Ctx) error {
 		})
 	}
 
-	parts := strings.Split(req.ImageURL, ".com/")
-	imageKey := req.ImageURL
-	if len(parts) > 1 {
-		imageKey = parts[1]
+	parsedURL, err := url.Parse(req.ImageURL)
+	var imageKey string
+
+	if err == nil && parsedURL.Path != "" {
+		imageKey = strings.TrimPrefix(parsedURL.Path, "/")
+
+		unescapedKey, unescapeErr := url.QueryUnescape(imageKey)
+		if unescapeErr == nil {
+			imageKey = unescapedKey
+		}
+	} else {
+		imageKey = req.ImageURL
 	}
 
 	if err := h.Repo.RemoveGalleryImage(userID, imageKey); err != nil {
