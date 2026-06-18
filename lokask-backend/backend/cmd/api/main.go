@@ -15,7 +15,6 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Postgres Driver
@@ -111,24 +110,10 @@ func main() {
 	app := fiber.New(fiber.Config{
 		// limit size in avatar or image upload
 		BodyLimit: 20 * 1024 * 1024,
-		// custom error hanlder
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			log.Printf("Server error: %v", err)
-			return c.Status(500).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		},
 	})
 
 	// logger setup
 	app.Use(logger.New())
-
-	// cors, currently not working
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",                                            // Allow ALL origins (Flutter Web on any port)
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",  // Allow these headers
-		AllowMethods: "GET, POST, HEAD, PUT, DELETE, PATCH, OPTIONS", // Allow all methods
-	}))
 
 	// register routes
 	api := app.Group("/api/v1")
