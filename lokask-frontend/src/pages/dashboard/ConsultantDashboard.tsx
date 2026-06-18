@@ -19,7 +19,6 @@ import {
 } from "@/lib/chat";
 import { ChatMessage } from "@/types/chat";
 
-
 import { Consultant } from "@/types/consultant";
 
 interface DashboardLocationState {
@@ -77,9 +76,29 @@ const ConsultantDashboard = () => {
   const location = useLocation();
   const state = location.state as DashboardLocationState;
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/v1/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout request failed", e);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      // Clear saved dashboard state on logout
+      localStorage.removeItem("dashboard_active_section");
+
+      window.location.href = "/";
+    }
+  };
+
+  // Lazily initialize state from localStorage to persist between refreshes
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
-  >("inbox");
+  >(() => {
+    const saved = localStorage.getItem("dashboard_active_section");
+    return (saved as "inbox" | "bookings" | "profile" | "articles") || "inbox";
+  });
+
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<
@@ -98,6 +117,11 @@ const ConsultantDashboard = () => {
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync activeSection changes to localStorage
+  useEffect(() => {
+    localStorage.setItem("dashboard_active_section", activeSection);
+  }, [activeSection]);
 
   // Handles jumping to existing chats OR creating new ones
   useEffect(() => {
@@ -396,7 +420,7 @@ const ConsultantDashboard = () => {
 
   return (
     <div className="h-screen flex flex-col bg-[#F5F2EE]">
-      <DashboardHeader />
+      <DashboardHeader onLogout={handleLogout} />
 
       <div className="flex-1 flex overflow-hidden">
         <DashboardSidebar
@@ -456,7 +480,6 @@ const ConsultantDashboard = () => {
         </main>
       </div>
 
-      {/* 🟢 FIX: Added the missing Dialog component for the Purchase Popup */}
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
         <DialogContent className="max-w-md rounded-2xl p-6">
           <div className="text-center space-y-4">
