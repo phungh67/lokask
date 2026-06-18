@@ -60,9 +60,6 @@ func main() {
 
 	// mail service
 	mailService := mailer.NewMailService(
-		getEnv("MAIL_SERVER", "smtp.mailtrap.io"),
-		getEnv("MAIL_PORT", "25"),
-		getEnv("MAIL_USERNAME", "username"),
 		getEnv("MAIL_API_KEY", "password"),
 		"noreply@lokask.com",
 	)
@@ -207,6 +204,20 @@ func main() {
 
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
+
+	// test email
+	app.Get("/api/v1/test-email", func(c *fiber.Ctx) error {
+		toEmail := c.Query("to")
+		if toEmail == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Missing 'to' parameter. Usage: /api/v1/test-email?to=lhpespoir39@email.com",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"status": "success",
+		})
+	})
 
 	// start server
 	port := getEnv("PORT", "8080")
