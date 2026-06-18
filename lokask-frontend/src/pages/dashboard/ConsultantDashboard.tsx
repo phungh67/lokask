@@ -19,7 +19,6 @@ import {
 } from "@/lib/chat";
 import { ChatMessage } from "@/types/chat";
 
-
 import { Consultant } from "@/types/consultant";
 
 interface DashboardLocationState {
@@ -76,6 +75,19 @@ const ConsultantDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as DashboardLocationState;
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/v1/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout request failed", e);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      window.location.href = "/";
+    }
+  };
 
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
@@ -396,7 +408,7 @@ const ConsultantDashboard = () => {
 
   return (
     <div className="h-screen flex flex-col bg-[#F5F2EE]">
-      <DashboardHeader />
+      <DashboardHeader onLogout={handleLogout} />
 
       <div className="flex-1 flex overflow-hidden">
         <DashboardSidebar

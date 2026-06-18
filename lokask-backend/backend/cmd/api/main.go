@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	rediscfg "asklocal/internal/config"
 	"asklocal/internal/handler"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Postgres Driver
@@ -111,6 +113,20 @@ func main() {
 		// limit size in avatar or image upload
 		BodyLimit: 20 * 1024 * 1024,
 	})
+
+	// limiter
+	app.Use("/api/.env", limiter.New(limiter.Config{
+		Max:        1,
+		Expiration: 24 * time.Hour,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Access denied.",
+			})
+		},
+	}))
 
 	// logger setup
 	app.Use(logger.New())

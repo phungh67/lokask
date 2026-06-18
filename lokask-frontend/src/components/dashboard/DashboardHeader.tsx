@@ -1,10 +1,14 @@
 import { Link } from "react-router-dom";
-import { Bell, User } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const DashboardHeader = () => {
+interface DashboardHeaderProps {
+  onLogout: () => void;
+}
+
+const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
   const userJson = localStorage.getItem("user");
   const user = userJson ? JSON.parse(userJson) : null;
 
@@ -25,7 +29,7 @@ const DashboardHeader = () => {
 
       {/* Right section */}
       <div className="flex items-center gap-4">
-        {/* Earnings Badge - Hardcoded for now as requested since we aren't using mock files */}
+        {/* Earnings Badge */}
         <Badge className="bg-green-100 text-green-700 hover:bg-green-100 px-3 py-1 font-medium border-none">
           This week $0.00
         </Badge>
@@ -53,6 +57,17 @@ const DashboardHeader = () => {
             </AvatarFallback>
           </Avatar>
         </div>
+
+        {/* 🟢 Actionable Logout Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onLogout}
+          className="rounded-full px-4 border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 flex items-center gap-2 transition-all ml-2 h-9"
+        >
+          <LogOut size={14} />
+          <span className="hidden md:inline text-xs font-semibold">Logout</span>
+        </Button>
       </div>
     </header>
   );
