@@ -1,66 +1,72 @@
-```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# 📄 Component Security Verification Report: `BlogPage.tsx`
+# 🛡️ Security Verification Report: `BlogPage` Component
 
-**File:** `src/pages/BlogPage.tsx`
-**Functionality:** Displays a detailed view of a single blog article, including author information, related content, and calls-to-action (CTAs) for consulting services.
-**Domain:** Public-facing Content Consumption, Lead Generation.
-**Last Verified:** 2024-05-15
-***
-
-## 🔍 Overview
-
-The `BlogPage` component is responsible for rendering a rich, article-detail view. It leverages TanStack Query to fetch associated data sequentially: the primary blog post, the author/consultant details (via `authorId`), and related consultants (via `city`). The page acts as a crucial touchpoint for content consumption while also serving a business goal: converting readers into service leads via the "Ask the Consultant" CTA.
-
-## 🏗️ Detail Analysis
-
-### 🔄 Component Flow Logic
-
-1.  **Initialization:** Retrieves the article ID (`id`) from the URL parameters.
-2.  **Primary Fetch:** Calls `getBlogById(id!)` using `useQuery`. (Initial blocking state/loading view is handled).
-3.  **Author Fetch:** If `blog` data is successfully retrieved, it uses `blog.authorId` to fetch detailed consultant information using `getConsultantByUserId`.
-4.  **Related Content Fetch:** If `consultant` data is successfully retrieved and a `city` is available, it calls `getConsultants({ city: consultant?.city })` to populate the related locals carousel.
-5.  **Rendering:**
-    *   Displays article metadata (Title, Summary, Author).
-    *   Renders the main article body (`blog.content`) within a `prose` container.
-    *   Renders the consultant profile summary at the bottom.
-    *   Renders a dedicated CTA section encouraging the user to book a chat session with the consultant.
-6.  **Authentication Handling:** The final CTA button checks `localStorage` for a token and uses the custom `useAuthPrompt` hook to manage restricted navigation (`/dashboard`).
-
-### 🔗 Architectural Links
-
-*   **Query Flow Dependency:** The data fetching is highly coupled. `getConsultantByUserId` depends on `blog.authorId`, and `getRelatedUsers` depends on the results of `getConsultantProfile`.
-*   **State Management:** Relies heavily on asynchronous data fetching within `react-query` hooks.
-
-## ⚠️ Security & Review Findings
-
-### 1. Cross-Site Scripting (XSS) Risk (High Severity)
-The primary risk area is the rendering of content pulled from the backend, specifically `blog.content`. If the backend fails to properly sanitize or escape user-generated content before serving it, the frontend will render it unsafely.
-
-*   **Recommendation:** Ensure that the backend *always* outputs HTML content as properly escaped text, or if rich HTML rendering is required, use a robust library (like DOMPurify) on the client side *after* retrieval, treating it as untrusted input.
-
-### 2. Client-Side Authorization Flaw (Medium Severity)
-The logic governing the final call-to-action (chat/contact) relies solely on client-side validation (e.g., the user *appearing* to be logged in).
-
-*   **Recommendation:** Any endpoint triggered by this action must enforce strict, server-side role and session checks to prevent unauthorized users from initiating private communications or viewing restricted profiles.
-
-### 3. Information Leakage (Low Severity)
-The dashboard exposes the `consultant.profile` details, including names and potentially vague service descriptions.
-
-*   **Recommendation:** Implement a capability-based access control (CBAC) layer. If this profile data is not strictly necessary for a general public view, consider stripping sensitive identifiers.
-
-## 🚀 Future Improvements & Best Practices
-
-### 1. Type Safety and Validation
-While not a security flaw, the heavy reliance on network data makes the component brittle.
-
-*   **Improvement:** Implement Zod or Yup schemas on the frontend to strictly validate the structure and expected types of all incoming API payloads (e.g., ensuring `authorId` is always a UUID string).
-
-### 2. Error Boundary Implementation
-The component handles multiple asynchronous operations. A failure in one part (e.g., fetching the related users) should not crash the entire component.
-
-*   **Improvement:** Wrap the main rendering logic in a React Error Boundary to provide graceful fallbacks (e.g., "We could not load related experts, but you can still browse our main catalog.")
+**File Path:** `src/pages/BlogPage.tsx`
+**Module Role:** Displays a detailed blog article, fetching related consultant profiles and content.
+**Security Focus:** Data integrity, XSS prevention, authorization flow, and secure dependency handling.
 
 ---
-***Disclaimer:** This review is based solely on the provided component structure and assumed standard industry practices. A full penetration test is required for a definitive security assessment.*
+
+## 📝 Overview
+
+The `BlogPage` component is a complex client-side page responsible for fetching and displaying blog content (`blog`), the associated author/consultant profile (`consultant`), and related local consultants (`relatedResponse`).
+
+From a security perspective, the primary risks are **Cross-Site Scripting (XSS)** due to rendering unsanitized user-generated content (blog `content`, `title`, `summary`) and potential **Authorization/Data Leakage** if the backend APIs (`getBlogById`, `getConsultants`) do not adequately validate ownership or restrict data scope.
+
+**Overall Security Posture:** **Medium Risk**. The front-end handling seems to implement basic protections (like React's JSX rendering), but the reliance on external APIs for content rendering and authentication state management requires careful validation.
+
+---
+
+## 🔬 Detailed Vulnerability Analysis
+
+### 🔴 Vulnerable Functions, Objects, and Payloads
+
+| Payload/Object | Vulnerability Type | Risk Priority | Affected Logic | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blog.content` | **XSS (High)** | High | Article rendering section (`<article>`) | Blog content is displayed using `whitespace-pre-wrap` and raw text rendering. If the content source is not strictly sanitized server-side, an attacker could inject scripts (e.g., image payloads, malicious HTML). |
+| `blog.title`, `blog.summary` | **XSS (Medium)** | Medium | Header rendering section (`<h1>`, `<p>`) | These fields are used in rendered headings and paragraphs. While React usually handles escaping, if the data source passes unescaped HTML strings (e.g., using `dangerouslySetInnerHTML` indirectly), it poses a risk. |
+| `consultant.displayName` / `consultant.name` | **XSS (Low)** | Low | CTA Button text | These names are displayed in the call-to-action button. If they contain malicious scripts, they could execute, although this risk is mitigated by React's standard escaping mechanisms. |
+| `getBlogById(id!)` | **IDOR/Authorization (High)** | High | `useQuery` hook (Blog data fetch) | The API call relies solely on the `id` from `useParams`. There is no apparent check to ensure the authenticated user has permission to view this specific blog post (e.g., enforcing paid content or membership status). |
+| `getConsultants({ city: consultant?.city })` | **Data Leakage/Rate Limiting (Medium)** | Medium | `useQuery` hook (Related consultants fetch) | Repeated fetching of related consultants based on city could lead to resource exhaustion or reveal too much data about the city/service area if not rate-limited and paginated correctly on the backend. |
+| `localStorage.getItem("token")` | **Client-Side Auth (Low)** | Low | CTA Button logic | Relying on `localStorage` for authentication tokens is generally discouraged due to potential access via XSS, even if the token is only used for presence checking here. |
+
+---
+
+## 🛠️ Technical Deep Dive & Recommendations
+
+### ⭐️ High Priority Vulnerabilities
+
+1. **Cross-Site Scripting (XSS) in Blog Content (`blog.content`)**
+    * **Detail:** The raw blog content is rendered directly inside the `<article>` tag. This is the most critical vulnerability. If the content is rich text generated by a WYSIWYG editor or user input, it must be sanitized (e.g., using libraries like DOMPurify) **before** being stored in the database and **again** (ideally) upon retrieval or before rendering.
+    * **Mitigation:** Implement strict server-side sanitization of `blog.content`. On the client side, if sanitization is impossible, consider using a Markdown rendering library that properly escapes HTML tags.
+    * **Link for Review:** `../lib/blog-sanitizer` (Placeholder link for required utility/service)
+
+2. **Insecure Direct Object Reference (IDOR) / Missing Authorization Check**
+    * **Detail:** The fetching of blog data (`getBlogById(id!)`) uses an unvalidated ID. An attacker could enumerate IDs and view private or restricted articles without proper authorization checks.
+    * **Mitigation:** The backend API endpoint handling `getBlogById` **must** check if the requesting user is authorized to view the resource (e.g., checking user roles, subscription status, or if the blog is public).
+    * **Link for Review:** `../backend/api/v1/blog/get-by-id` (Link to backend endpoint definition)
+
+### 🟡 Medium Priority Vulnerabilities
+
+1. **Client-Side Authentication State Management**
+    * **Detail:** The use of `localStorage` to check for authentication status is prone to XSS attacks.
+    * **Mitigation:** For robust applications, authentication state should be managed via secure, HttpOnly cookies (managed by the server) rather than client-side storage like `localStorage`.
+    * **Link for Review:** `../hooks/useAuthPrompt` (Check how authentication state is derived)
+
+2. **Resource Exhaustion / Rate Limiting on Related Consults**
+    * **Detail:** The related consultants section fetches a list based only on `city`. If this endpoint is called frequently or maliciously, it could lead to overuse of resources.
+    * **Mitigation:** Implement rate limiting on the API endpoint serving related data.
+
+---
+
+## 📊 Summary Checklist
+
+| Area | Risk Level | Issue Identified | Recommended Action |
+| :--- | :--- | :--- | :--- |
+| **Input Validation** | High | None (Assuming server-side validation exists) | Ensure all data fetched is sanitized before being rendered. |
+| **Authorization** | High | Potential exposure of private content via URL ID. | Implement scope checks on `getById` endpoint. |
+| **Data Output** | Medium | Potential XSS via `blog.content`. | Use modern templating engines that automatically escape HTML entities. |
+| **Session Management** | Medium | N/A | Review cookie security flags (HttpOnly, Secure). |
+
+**Conclusion:** The primary focus must be on **Authorization** and **Output Encoding** to prevent unauthorized data viewing and XSS attacks stemming from user-generated content within the blog post body.

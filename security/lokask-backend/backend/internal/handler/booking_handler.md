@@ -1,70 +1,94 @@
-# 📄 `handler/booking_handler.go` - Booking Management Handlers
-
 [⬅ Return to Main Compendium](../../README.md)
 
-## 🔍 Security Verification Overview
+# 🛡️ Booking Handler Security Verification Report
 
-This file contains the request handlers responsible for managing all booking lifecycle events (creation, retrieval, update, deletion). The handlers enforce authorization checks in some endpoints (`GetMySchedule`, `UpdateStatus`) but exhibit critical deficiencies in ownership validation in other areas (`DeleteBooking`).
-
-The most critical vulnerability is the lack of ownership validation during the booking deletion process, allowing potential unauthorized data manipulation.
-
-### 🚩 Vulnerability Ranking Summary
-
-| Vulnerable Component | Vulnerability Type | Priority | Description |
-| :--- | :--- | :--- | :--- |
-| `DeleteBooking` | Authorization Bypass (IDOR) | **High** | Does not check if the authenticated user owns the booking being deleted. |
-| `PublicGetConsultantSchedule` | Information Leakage | **Medium** | Retrieves and returns all booking data without filtering, potentially exposing private/draft appointments. |
-| `CreateBooking` | Business Logic Flaw | **Low** | Fixed 60-minute duration for bookings. Requires strict business validation review. |
+**File:** `handler/booking_handler.go`
+**Purpose:** Handles all core business logic related to creating, retrieving, and modifying user bookings and consultant schedules.
+**Analyst:** Documentation-Security Verification Engineer
 
 ---
 
-## 📑 File Details
+## 🔍 Overview
 
-### 🌐 File Description
-This handler manages HTTP requests related to user booking interactions. It encapsulates logic for creating new bookings, viewing personal schedules, retrieving public consultant schedules, and managing booking status changes.
+The `BookingHandler` encapsulates critical API endpoints for managing user bookings. It interacts heavily with domain models, repository layers (`BookingRepository`, `ConsultantRepository`), and the underlying database transaction management (`sqlx.DB`). The handler uses context locals (`c.Locals("user_id")`) for identifying the current user, which is essential for enforcing authorization checks.
 
-### 🔄 Cross-References & Logic Flow
+Overall, the code demonstrates an attempt to implement proper ACID transactions and basic authorization logic (ownership checks). However, several areas, particularly around authorization context handling, exposed details, and incomplete security checks, introduce significant risk.
 
-*   **Core Logic Flow:** The handlers heavily rely on `github.com/gofiber/fiber/v2` for context handling and request parsing.
-*   **Dependency Injection:** Requires proper initialization of `BookingRepo` and `ConsultantRepo` in the application setup.
-*   **Auth Check:** Functions like `GetMySchedule` and `UpdateStatus` correctly utilize `c.Locals("user_id")` which *must* be populated by a preceding authentication middleware (e.g., `middleware/auth.go`).
+### 🚨 Summary of Vulnerable Components
 
----
-
-## 🔍 Vulnerability Deep Dive
-
-### 🟢 1. `DeleteBooking` (Booking Deletion)
-
-**Vulnerability:** Missing Authorization Check (Insecure Direct Object Reference - IDOR)
-**Priority:** **HIGH**
-
-#### 🛑 Detail & Attack Vector
-The handler retrieves the `bookingID` from URL parameters (`c.Params("id")`) and immediately calls `h.BookingRepo.DeleteBooking(...)`. Crucially, it fails to pass or validate the authenticated user's ID (`c.Locals("user_id")`). An attacker only needs to guess a valid `bookingID` to delete *any* booking, regardless of who created it.
-
-#### 🛠 Remediation Plan
-1.  **Retrieve User ID:** Must enforce retrieving the authenticated user's ID.
-2.  **Ownership Validation:** Before calling `h.BookingRepo.DeleteBooking`, the handler must call a repository method (e.g., `h.BookingRepo.CheckOwnership(context, bookingID, userID)`) to verify that the current `user_id` matches the `booking.user_id`.
-3.  If validation fails, return HTTP 403 Forbidden.
-
-### 🟠 `PublicGetConsultantSchedule` (Conceptual - General Data Exposure)
-
-**Vulnerability:** While not strictly in the provided code, any endpoint retrieving schedules must be checked for PII leakage. If the function returns excessive user details (e.g., full names, contact info) rather than just availability slots, it constitutes a PII leak.
-
-**Remediation:** Implement strict data masking/filtering for all retrieved availability data.
-
-### 🟡 `GetMySchedule` (Data Integrity Risk)
-
-**Vulnerability:** If the logic relies solely on a `user_id` provided in the path, an attacker could potentially enumerate schedules for other users if the endpoint does not enforce ownership checks on the queried ID.
-
-**Remediation:** Ensure that the `user_id` queried is the ID of the currently authenticated user, preventing enumeration attacks.
+| Component | Function/Object | Vulnerable Payload/Data | Priority | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Authorization** | `GetMySchedule` | N/A (Access Control) | Medium | Relies on `profile.UserID != loggedInUserUUID` check, but the flow of setting `c.Locals("user_id")` is assumed and not validated. |
+| **Authorization** | `PublicGetConsultantSchedule` | N/A (Access Control) | Medium | Lacks any security checks, allowing public access without rate limiting or proper scope definition. |
+| **Authorization** | `DeleteBooking` | `bookingID` (Path Param) | High | Lacks authorization check (ownership check) before deletion, making it vulnerable to IDOR (Insecure Direct Object Reference). |
+| **Authorization** | `UpdateStatus` | `bookingID` (Path Param), `status` (Body) | Low | Ownership check is performed, but the allowed status transition logic is incomplete (e.g., confirming status transitions). |
+| **Input Validation** | `CreateBooking` | `req.ConsultantID` | Medium | Only checks if the consultant exists, but does not verify if the consultant is *active* or *authorized* to receive bookings. |
+| **Input Validation** | All Endpoints | Context/Locals retrieval | High | Critical reliance on type assertion `.(string)` for `c.Locals("user_id")` without sufficient Nil/existence checks leads to runtime panics or incorrect authorization if middleware fails. |
 
 ---
 
-### 🔴 General Security Observations (Code Quality & Best Practices)
+## 📝 Detailed Security Analysis
 
-* **Error Handling:** The current structure relies on database and external service calls which could fail. Comprehensive `try...catch` blocks should wrap all external calls to prevent server stack traces from leaking sensitive internal information (e.g., database connection strings).
-* **Input Validation:** All inputs (IDs, search terms, etc.) should be strictly validated against expected types and length at the boundary layer.
+### 1. `CreateBooking(c *fiber.Ctx)`
+
+**Vulnerability Focus:** Transaction integrity, Authorization bypass (time slot overlap).
+*   **Vulnerability:** The service calculates `endTime` by hardcoding `+60 minutes`. This is rigid and non-resilient.
+*   **Fix/Improvement:** The duration should be derived from the request body (e.g., service duration) or validated against the domain model.
+*   **Security Note:** The transaction handling (`h.DB.BeginTxx`, `defer tx.Rollback()`) is correctly structured for atomicity, mitigating data corruption risk.
+*   **Dependency Flow:** Requires robust user identification from middleware: `../middlerware/auth` (for `c.Locals("user_id")`).
+
+### 2. `GetMySchedule(c *fiber.Ctx)`
+
+**Vulnerability Focus:** Authorization (Self-Access Enforcement).
+*   **Vulnerability:** The authorization check (`profile.UserID != loggedInUserUUID`) is performed *after* fetching the profile, which is correct, but it only prevents viewing *other consultants'* profiles. It doesn't strictly verify if the booking owner is the consultant viewing their schedule (though the function name implies consultant viewing their own schedule).
+*   **Recommendation:** The middleware used to set `c.Locals("user_id")` must guarantee that the user accessing the endpoint is actually the owner of the `consultantID` provided in the path, or the API endpoint should be redesigned to enforce this pairing at the route level.
+
+### 3. `PublicGetConsultantSchedule(c *fiber.Ctx)`
+
+**Vulnerability Focus:** Exposure of Private Data, Lack of Scope Control.
+*   **Vulnerability:** This endpoint exposes the consultant's schedule without any access control or rate limiting. If this endpoint is hit repeatedly, it is susceptible to DoS or scraping sensitive schedule information.
+*   **Mitigation:** Implement strong rate limiting (e.g., Redis/Fiber rate limiter) and ensure that if the schedule data is confidential, it should require a specific, high-privilege scope (e.g., Admin scope).
+
+### 4. `GetUserTrips(c *fiber.Ctx)`
+
+**Vulnerability Focus:** Trusting Context Data.
+*   **Vulnerability:** This function assumes that `c.Locals("user_id")` is always present and correctly formatted. If the middleware fails or is bypassed, the function will crash or, worse, use a stale/invalid ID, leading to data access failures or misreporting.
+
+### 5. `DeleteBooking(c *fiber.Ctx)`
+
+**Vulnerability Focus:** **CRITICAL** Authorization Bypass (IDOR).
+*   **Vulnerability:** The function extracts `bookingID` from the path parameters but makes no effort to confirm that the currently logged-in user (`c.Locals("user_id")`) is either the owner of the booking or an administrator authorized to delete it. This is a textbook IDOR vulnerability.
+*   **Fix:** Must add a check similar to `h.BookingRepo.IsBookingOwner(c.Context(), bookingID, userID)` before executing `DeleteBooking`.
+
+### 6. `UpdateStatus(c *fiber.Ctx)`
+
+**Vulnerability Focus:** Business Logic/State Machine.
+*   **Vulnerability:** While ownership is checked, the status update logic only verifies if the status string is one of three known values (`pending`, `confirmed`, `cancelled`). It does not validate the *transition* (e.g., a booking cannot jump from `cancelled` directly to `confirmed` by the user; only the consultant or admin should do that).
+*   **Improvement:** Implement a state machine validation layer in the service or repository to enforce valid state transitions.
 
 ---
-***
-***Disclaimer:** This analysis is based on provided code snippets and architectural patterns. A full security assessment requires access to the entire codebase, database schema, and underlying infrastructure.*
+
+## 🛠️ Engineering Documentation & Technical Debt
+
+### Data Flow Visualization (Conceptual)
+
+```mermaid
+graph TD
+    A[Client Request] --> B{Handler Layer};
+    B --> |1. Auth Check (c.Locals("user_id"))| C(Middleware/Auth);
+    C --> D{Business Logic};
+    D --> E[Repository Layer];
+    E --> F(SQL Transaction/DB);
+    F --> |Result| E;
+    E --> |Data| D;
+    D --> G[HTTP Response];
+```
+
+### 💡 Notes and Technical Debt
+
+1.  **ID Handling Consistency:** The code mixes dependency on `Auth` context for authorization with direct string matching for status updates. Ensure all state changes follow a single source of truth (e.g., an enumeration or a dedicated domain object).
+2.  **Error Handling:** All functions lack explicit error handling for database failures or context misses. Consider using Go's standard `error` wrapping mechanisms for clearer debugging.
+3.  **Context Use:** Passing user IDs or roles explicitly into service layers, rather than relying solely on the `context.Context`, can make the code cleaner and easier to test.
+
+---
+***Security Warning***: The most critical vulnerability identified is the **lack of granular authorization checks** on resource access (e.g., ensuring User A can only update Booking A). While `UpdateBooking` is called, the context handling for ownership verification is not explicitly detailed here.

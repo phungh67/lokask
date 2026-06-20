@@ -1,90 +1,56 @@
+```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# ⚙️ Middleware Security Verification Report: WebSocket Interceptor
-
+# 🛡️ Security Verification Report: WebSocket Interceptor
 **File:** `middleware/websocket_interceptor.go`
-**Purpose:** Handles authentication and context setup specifically for WebSocket upgrade requests.
-**Knowledge Domain Focus:** Infrastructure Security, Session Management, Go Fiber Framework.
+**Purpose:** Middleware handling authentication and context setting for WebSocket connections using the Fiber framework.
 
 ---
 
-## 📑 Overview
+## 📋 Overview
+This middleware (`WebSocketInterceptor`) is responsible for intercepting incoming HTTP requests specifically targeting WebSocket upgrades. Its primary function is to check for the presence of a token and ensure a `user_id` is available in the request context (`c.Locals`). It acts as a gatekeeper, allowing the WebSocket connection to proceed only if the structural requirements (like having a token and a pre-set user ID) are met.
 
-This middleware intercepts requests to determine if the connection is attempting a WebSocket upgrade. If it is, it performs a rudimentary check for a token parameter in the query string (`?token=...`). Crucially, it relies on a previously executed middleware to populate the `user_id` into the request context (`c.Locals("user_id")`).
+## 🔍 Detail / Functionality Breakdown
 
-The primary security concern is the **dependency management** and **assumption of context state**. The implementation assumes a specific workflow (Token check $\rightarrow$ Context Population $\rightarrow$ Access). If the middleware execution order is changed, or if the context state is not guaranteed, the application will fail or bypass security checks silently.
+1.  **WebSocket Detection:** The function first checks if the incoming request requires a WebSocket upgrade using `websocket.IsWebSocketUpgrade(c)`. If not, it immediately fails with `fiber.ErrUpgradeRequired`.
+2.  **Token Retrieval:** If a WebSocket upgrade is detected, it attempts to extract a `tokenString` from the request query parameters (`c.Query("token")`).
+3.  **Token Validation (Partial):** It only checks if `tokenString` is empty. If empty, it returns a `401 Unauthorized` error.
+4.  **Context Dependency:** It relies on a preceding middleware having already populated the `user_id` into the request context via `c.Locals("user_id")`.
+5.  **Context Enhancement:** It overwrites or confirms the `user_id` in the context (`c.Locals("user_id", userID)`) before calling `c.Next()` to proceed with the WebSocket handshake.
 
----
+## 🚨 Security Vulnerability Analysis
 
-## 🔎 Security Vulnerability Analysis
+This section ranks potential vulnerabilities based on their exploitability and potential impact on system integrity.
 
-| Element | Vulnerability/Weakness | Priority | Description |
-| :--- | :--- | :--- | :--- |
-| **`c.Locals("user_id").(string)`** | Type Assertion Panic / Missing Context Data | **High** | The code performs a blind type assertion (`.(string)`). If `c.Locals("user_id")` is nil, or if it was set as an incorrect type (e.g., `int` instead of `string`), the application will panic, leading to a potential Denial of Service (DoS) or service crash. |
-| **Token Validation Logic** | Token Validation Bypass / Trust Assumption | **Medium** | The code checks for the existence of `token` but does not use it to validate or verify the `userID` obtained from `c.Locals()`. This creates an inconsistency: the middleware accepts a token but then relies entirely on the context state, making the explicit token check (`tokenString`) moot regarding security enforcement. |
-| **`c.Locals("user_id", userID)`** | Context Overwrite Risk | **Medium** | While generally acceptable practice, relying solely on `c.Locals()` for critical state passing can lead to race conditions or accidental overwrites if multiple, unrelated middleware components attempt to set the same key (`user_id`). |
-| **`return fiber.ErrUpgradeRequired`** | Incomplete Error Handling | **Low** | If the request is not a WebSocket upgrade and does not match the expected endpoint flow, returning `fiber.ErrUpgradeRequired` is technically correct but might not provide a user-friendly or developer-friendly message, making debugging harder. |
+| Element | Vulnerable Function/Object | Potential Vulnerability | Priority | Remediation Focus |
+| :--- | :--- | :--- | :--- | :--- |
+| **Authentication** | `c.Query("token")` | **Missing Token Validation:** The code only checks for token *existence* (empty string). It does not validate the token's structure, signature, expiration, or claims payload. An attacker could provide any valid-looking but revoked or expired token, and the middleware would pass it. | **HIGH** | Implement a robust JWT library check (e.g., checking signature, `exp` claim). |
+| **Context Handling** | `c.Locals("user_id")` | **Unsafe Type Assertion/Panic:** The line `userID := c.Locals("user_id").(string)` assumes that `c.Locals("user_id")` *must* exist and *must* be a string. If the middleware chain is broken or the preceding middleware fails silently, this will cause a runtime panic (Denial of Service). | **MEDIUM** | Implement explicit nil checks and type assertion error handling for context lookups. |
+| **Authorization Flow** | `c.Next()` call | **Implicit Trust Chain:** The entire security flow hinges on the assumption that a preceding middleware (which sets `c.Locals("user_id")`) has successfully authenticated the user. If that preceding middleware is compromised, the WebSocket flow will proceed with an unauthorized ID. | **HIGH** | The context setting middleware must be rigorously tested, and failure should cascade back to the interceptor layer to prevent access. |
+| **Input Handling** | `c.Query("token")` | **Lack of Sanitization/Normalization:** While less critical for JWTs, relying on raw query parameters can introduce risks if the token format is complex (e.g., handling special characters or URL encoding vulnerabilities). | **LOW** | Ensure the token retrieval uses proper input validation/normalization before passing it to the JWT library. |
 
----
+## 📝 Technical Notes & Suggestions
 
-## 📋 Detailed Analysis
+### 🔑 Critical Dependencies & Assumptions
+1.  **Preceding Middleware:** This middleware *critically* assumes that a preceding piece of middleware (likely authentication middleware) has run successfully and stored the user ID in `c.Locals("user_id")`. The structural integrity of the entire system relies on this undocumented flow.
+2.  **State Management:** The dependency on `c.Locals` is an internal framework mechanism. While functional, it makes the code highly coupled to the Fiber framework's specific context implementation.
 
-### Functions & Payloads
+### 🛠️ Recommended Improvements (Tech Debt)
+1.  **Error Handling:** Wrap the context access with `if val, ok := c.Locals("user_id").(string); ok { userID = val } else { return c.Status(fiber.StatusUnauthorized).SendString("Missing or invalid user context") }` to prevent panics.
+2.  **Token Flow:** The token retrieved from the query parameters (`tokenString`) should be passed to a dedicated JWT service/package for validation *before* proceeding. The current implementation is merely a structural check.
 
-1.  **`WebSocketInterceptor()` (Function):**
-    *   **Logic Flow:** Detects WebSocket upgrade $\rightarrow$ Attempts token check $\rightarrow$ Reads `user_id` from Locals $\rightarrow$ Calls `c.Next()`.
-    *   **Vulnerability:** The entire function is brittle due to the reliance on `c.Locals("user_id")` being present and correct.
-    *   **Recommendation:** The middleware must include robust nil/type checking for `user_id` and handle the error gracefully (e.g., returning 401 Unauthorized) instead of panicking.
+## ⚠️ Warnings & High Priority Items
 
-2.  **`tokenString := c.Query("token")` (Object Read):**
-    *   **Issue:** Simply checking for the token's presence is insufficient. This assumes that the `user_id` derived from the context is *only* valid if the token was also validly provided or processed.
-    *   **Improvement:** If the JWT is required for the upgrade, the middleware should attempt to decode and validate the token itself, rather than just reading it from the query.
+**1. Token Validation Gap (MUST FIX):**
+The absolute highest priority vulnerability is the lack of actual token validation. Passing a middleware that only checks for `tokenString != ""` bypasses all cryptographic security measures. The system must reject connections if the token is syntactically invalid or expired.
 
-3.  **`userID := c.Locals("user_id").(string)` (Object Read & Type Assertion):**
-    *   **Critical Risk:** This is the highest-risk point. If the execution order is wrong, or if the upstream handler fails to set `user_id` (or sets it incorrectly), the application will crash via panic.
+**2. Runtime Panic Risk:**
+Failure to handle the context assertion `c.Locals("user_id").(string)` will cause a catastrophic failure (panic) if the context key is missing or holds an incorrect data type. This must be wrapped in robust, defensive programming logic.
 
-### 💾 Context/State Management Review
+## 🔗 Related Files & Logic Flow
 
-*   **State Flow:** The intended flow is: Request arrives $\rightarrow$ Previous Middleware authenticates and sets `c.Locals("user_id")` $\rightarrow$ This WebSocket Interceptor reads `c.Locals("user_id")` $\rightarrow$ Request proceeds.
-*   **Dependency Note:** This code is severely coupled to the execution order of upstream middleware.
-
----
-
-## 📚 Remediation & Documentation Notes
-
-### 💡 Note (Best Practices)
-
-1.  **Defensive Programming:** Always validate context data before type casting. Wrap the `c.Locals("user_id")` extraction in a type assertion check that also verifies non-nil state.
-2.  **Dependency Management:** Instead of relying on `c.Locals()`, consider passing critical authentication state via a dedicated `context.Context` structure if multiple layers of middleware are involved, which is the idiomatic Go approach for context passing.
-
-### ⚠️ Warning (Action Required / Tech Debt)
-
-1.  **Missing Robust Error Handling:** The current code assumes that if the token check passes, the `user_id` must exist. If `c.Locals("user_id")` is missing, the middleware fails catastrophically. **This MUST be fixed.**
-2.  **Code Clarity:** The purpose of checking for `tokenString` and then ignoring it while using `c.Locals("user_id")` is confusing. The code needs clearer comments or structural changes to reflect *why* the token check happens if the ID is pulled from the context.
-
-### 🛠 Suggested Code Refinement (Self-Correction Example)
-
-To fix the panic risk, the extraction should look like this:
-
-```go
-userIDInterface, ok := c.Locals("user_id")
-if !ok {
-    return c.Status(fiber.StatusInternalServerError).SendString("User context ID missing")
-}
-
-userID, ok := userIDInterface.(string)
-if !ok {
-    return c.Status(fiber.StatusInternalServerError).SendString("User context ID invalid type")
-}
-// ... proceed with userID
+*   **Auth Context Middleware:** This middleware *must* exist and perform the primary authentication and context setting:
+    *   `[../middleware/auth_jwt_middleware]` - *Expected link:* This file should be responsible for validating the token and populating `c.Locals("user_id")`.
+*   **Fiber Context Usage:** This logic utilizes advanced context handling within Fiber's middleware chain. For detailed understanding, refer to the general Fiber context documentation.
+    *   `[../../README.md#context-handling]` - General context flow reference.
 ```
-
----
-
-## 🔗 Related Files and Code Flow
-
-This middleware critically depends on context variables set by prior layers, typically authentication handlers.
-
-*   **Auth Handler Logic:** `[../middleware/auth.go]` - *Must* be reviewed to ensure it reliably sets `user_id` as a `string` in the context locals.
-*   **WebSocket Routing:** `[../../routes/websocket_routes.go]` - Check that this middleware is applied *after* the core authentication middleware.
-*   **Context Handling Pattern:** `[../../pkg/context/context_utils.go]` - A dedicated utility package for safe context retrieval would mitigate repeated `c.Locals()` access.

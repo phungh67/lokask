@@ -1,102 +1,94 @@
-```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# Video Call Handling (`handler/video_call.go`)
+# 📺 Video Calling Handlers Analysis
 
-## 📜 Overview
+## 📄 Overview
 
-This module handles the WebSocket connection logic for a video call system. It maintains global state management for video rooms (`VideoHub`) and individual rooms (`VideoRoom`), mapping bookings IDs to sets of connected users. The primary function, `VideoCallHandler`, manages user joining, message broadcasting, and resource cleanup upon disconnection.
+This module handles real-time video call connectivity and message passing using WebSockets. It manages rooms based on a `bookingID` and allows multiple clients to join, read messages, and broadcast them to others in the same room. The core logic resides in `VideoCallHandler`.
 
-**Dependencies:**
-*   `github.com/gofiber/contrib/websocket`: Used for handling WebSocket connections.
-*   `sync`: Used for protecting shared map resources (mutexes).
+The design uses global maps (`CallHub.Rooms`) protected by mutexes (`sync.RWMutex`) to manage room state and client connections.
 
 ---
 
-## 🔎 Vulnerability Assessment
+## 🔍 Security Vulnerability Summary
 
-The current implementation exhibits several critical security and reliability flaws related to authentication, resource leakage, and concurrency management.
-
-### ⚠️ Warning (Tech Debt / Priority Focus)
-
-1.  **Global State Management:** Using global variables like `CallHub` is difficult to test, scale, and manage in a highly concurrent environment. A service struct or dependency injection pattern should be adopted.
-2.  **Lack of Room Cleanup:** When a room becomes empty (i.e., all users disconnect), the `VideoRoom` object remains permanently stored in `CallHub.Rooms`, leading to memory leaks and stale state.
-3.  **Error Handling:** The `log.Printf` statements are insufficient. Critical connection failures or improper data type assertions should trigger robust error handling, potentially disconnecting the user and alerting monitoring systems.
-
-### 🚨 High Priority Vulnerabilities (Must Fix)
-
-| Function/Object | Vulnerability | Description | Impact |
-| :--- | :--- | :--- | :--- |
-| `c.Locals("user_id")` | **Insecure/Missing Authentication Check (AuthN/AuthZ)** | The `userID` is retrieved directly from `c.Locals("user_id")` without validating the underlying JWT or session token. If the preceding middleware is bypassed or compromised, an attacker can impersonate any user. | **High.** Complete account impersonation; critical for all subsequent actions. |
-| `VideoCallHandler` (Cleanup) | **Resource Leak / Denial of Service (DoS)** | When the last user leaves a room, the `VideoRoom` object persists in `CallHub.Rooms`. This constitutes a memory leak and eventually causes the hub to fail when accessing the map. | **High.** System instability and memory exhaustion under high traffic. |
-| `VideoCallHandler` (Logic) | **Missing Authorization Check** | The code assumes any user with a valid `bookingID` can join. There is no check to ensure the user is *actually* authorized or paid for participation in that specific `bookingID`. | **High.** Unauthorized access to private/paid resources. |
-
-### 🟡 Medium Priority Vulnerabilities (Should Fix)
-
-| Function/Object | Vulnerability | Description | Impact |
-| :--- | :--- | :--- | :--- |
-| `VideoCallHandler` (Concurrency) | **Race Condition in Room Joining** | While mutexes are used, the sequence of checks (e.g., `if CallHub.Rooms[bookingID] == nil`) followed by operations is prone to race conditions if other handlers interact with `CallHub` simultaneously. | **Medium.** Intermittent connectivity issues or incorrect state reporting. |
-| `room.mu.Lock()` / `room.Clients` | **Broadcast Vulnerability** | The broadcasting logic uses `range room.Clients`. If another goroutine modifies `room.Clients` (e.g., another user connects/disconnects) while the loop is running, it could cause a panic or data race. | **Medium.** System crash (panic) under concurrent connection changes. |
-
-### 🟢 Low Priority Vulnerabilities (Nice to Fix)
-
-| Function/Object | Vulnerability | Description | Impact |
-| :--- | :--- | :--- | :--- |
-| `VideoCallHandler` | **Logging Detail** | The logging is basic. Incorporating structured logging (JSON) or adding context identifiers (e.g., request ID) would improve operational visibility. | **Low.** Maintainability and debugging effort. |
+| Resource/Function | Vulnerable Component | Vulnerable Payload/Object | Priority | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `VideoCallHandler` | Client Authentication/Authorization | `c.Locals("user_id")` | **HIGH** | Reliance on `c.Locals("user_id")` without explicit JWT validation means the `user_id` can be spoofed or manipulated, bypassing authentication checks. |
+| `VideoCallHandler` | Resource Management | `bookingID` (Query Param) | **MEDIUM** | Lack of input validation/sanitization on `bookingID` could lead to room enumeration or potential resource misuse if the ID format is predictable. |
+| `VideoCallHandler` | Concurrency/Data Safety | `room.Clients` map | **MEDIUM** | While mutexes are used, the sequence of locking/unlocking, especially around reading/writing/deleting connections, must be meticulously reviewed to prevent deadlocks or race conditions. |
+| `VideoCallHandler` | Message Handling | `msg` (ReadMessage payload) | **LOW** | Messages are broadcast without content validation (e.g., rate limiting, size limits, malicious content checking). |
 
 ---
 
-## 💡 Implementation Details & Flow Analysis
+## 🧩 Detailed Analysis
 
-### `VideoRoom` Struct
-*   `Clients`: Stores active connections (`map[string]*websocket.Conn`).
-*   `mu`: Read/Write mutex protecting access to the `Clients` map.
+### File: `handler/video_call_handler.go`
 
-### `VideoHub` Struct
-*   `Rooms`: Global map of active video rooms (`map[string]*VideoRoom`).
-*   `mu`: Read/Write mutex protecting access to the `Rooms` map.
+#### 🚀 Component Details
 
-### Key Function: `VideoCallHandler`
+1.  **`VideoRoom` Struct:** Manages connections (`Clients`) for a single call room, protected by `mu` (RWMutex).
+2.  **`VideoHub` Struct:** Manages all active rooms (`Rooms`), protected by `mu` (RWMutex).
+3.  **`CallHub`:** Global instance of `VideoHub`.
+4.  **`VideoCallHandler(c *websocket.Conn)`:** The main handler logic. It performs connection joining, message reading, message broadcasting, and eventual cleanup.
 
-1.  **Input Acquisition:** Extracts `userID` (from context/locals) and `bookingID` (from query params).
-2.  **Room Initialization (Critical Section):** Uses `CallHub.mu` lock to ensure thread-safe creation and retrieval of the `VideoRoom` object based on `bookingID`.
-3.  **User Joining:** Uses `room.mu` lock to safely add the new connection (`c`) to `room.Clients`.
-4.  **Message Loop:**
-    *   Reads incoming messages (`c.ReadMessage()`).
-    *   If successful: Locks `room.mu`, iterates over all other connections, and broadcasts the message (`otherConn.WriteMessage`).
-    *   If failure (`err != nil`): Logs disconnection and exits the loop.
-5.  **Cleanup (On Exit):** Locks `room.mu` to remove the user from `room.Clients`. **(NOTE: The room itself is NOT removed from `CallHub.Rooms`)**.
+#### 🗒️ Code Flow / Logic Walkthrough
+
+1.  **Authentication & Setup:** Extracts `user_id` from `c.Locals()` and `bookingID` from query params. **Crucial flaw:** Trusting `c.Locals()` without verification.
+2.  **Room Initialization:** Locks `CallHub`, checks if the room exists for the given `bookingID`, and initializes it if necessary.
+3.  **Client Join:** Locks `room` and adds `user_id` to `room.Clients`.
+4.  **Listening Loop (`for {}`):** Enters a continuous loop reading messages (`c.ReadMessage()`).
+5.  **Broadcast:** Acquires `room` lock. Iterates over all clients. If the sender is not the recipient, it writes the message to the other connection.
+6.  **Cleanup:** Upon connection error (break), it acquires `room` lock, removes the sender's ID from the room's client map.
+
+#### 💡 Implementation Notes
+
+*   **Concurrency:** The use of `sync.RWMutex` is appropriate for protecting shared maps (`Clients` and `Rooms`).
+*   **Error Handling:** The loop correctly breaks when `c.ReadMessage()` fails (indicating disconnection).
+*   **Global State:** Using a global variable (`CallHub`) makes testing difficult and increases the risk of unexpected state contamination in a multi-threaded environment if the initialization or shutdown is not handled properly.
+
+#### ⚠️ Warnings & Tech Debt
+
+1.  **Global State Management:** Relying on the global `CallHub` is poor practice. The application should implement a proper lifecycle manager (e.g., an `Init()` or `Shutdown()` method) to gracefully close connections and clean up all resources when the application exits.
+2.  **Lock Granularity:** While locks are used, the scope of the `room` lock during the broadcast loop (`room.mu.Lock()`/`room.mu.Unlock()`) is quite wide. If `WriteMessage` is blocking, it could potentially hold the lock longer than necessary, impacting concurrency for other clients joining or leaving the room.
+3.  **Type Assertions:** The line `userID := c.Locals("user_id").(string)` uses a dangerous type assertion. If `c.Locals("user_id")` is missing or holds a different type, the application will panic. Defensive programming (e.g., `v, ok := c.Locals("user_id").(string); if !ok { ... }`) is required.
+
+#### 🛡️ Security Vulnerabilities
+
+##### 🔴 High Priority: Authentication and Authorization Bypass
+*   **Vulnerability:** The `userID` is extracted from `c.Locals("user_id")` without any backend validation (like checking a secure JWT or session cookie attached to the request context).
+*   **Impact:** An attacker could potentially intercept or craft a WebSocket message that makes the server believe they are a different user, allowing them to impersonate others within the room, leading to privacy breaches or targeted harassment.
+*   **Mitigation:** The handler MUST require a robust middleware that validates the connection token (e.g., JWT) and securely injects the validated `user_id` into the connection context, ensuring that the context data cannot be manipulated.
+
+##### 🟡 Medium Priority: Input Validation (Room ID)
+*   **Vulnerability:** The `bookingID` (derived from `c.Query("booking_id")`) is used directly to key the room map. If the ID is not validated for format (e.g., UUID, alphanumeric constraints), or if there are rate limits on room creation, it could lead to resource exhaustion or enumeration.
+*   **Impact:** Minor resource drain or ability to test room IDs sequentially if they follow a predictable pattern.
+*   **Mitigation:** Implement strict validation on `bookingID` (e.g., regex matching) and possibly restrict the source of these IDs to an authenticated API endpoint rather than allowing them directly through query parameters.
+
+##### 🟡 Medium Priority: Concurrency Safety
+*   **Vulnerability:** The cleanup logic (`delete(room.Clients, userID)`) happens *after* the main function scope exits due to an error/disconnect. While guarded by locks, race conditions could occur if the room map structure is modified concurrently by other parts of the system (e.g., a dedicated "Room Manager" service).
+*   **Mitigation:** Ensure that the cleanup logic is atomic and that the entire resource teardown process (including notifying other clients that the user left) is managed by a dedicated, well-locked service layer, rather than relying solely on the handler exit scope.
 
 ---
 
-## 🔗 Internal Navigation Links
+### 🔗 Reference Links
 
-| Component | Link | Purpose |
-| :--- | :--- | :--- |
-| Video Call Logic Flow | [../middlerware/auth_middleware.go](../middlerware/auth_middleware.go) | *Check:* Ensure `c.Locals("user_id")` is reliably set by validating JWT tokens here. |
-| Global State Management | [../model/hub.go](../model/hub.go) | *Review:* Consider refactoring `CallHub` into a properly managed, injectable service instance rather than a global variable. |
-| Connection Management | [../util/websocket_manager.go](../util/websocket_manager.go) | *Refactor:* Implementing a dedicated `Room.AddClient()` and `Room.RemoveClient()` method that automatically checks for zero clients and signals the calling hub to perform cleanup. |
+*   **Authentication Flow:** Check for required middleware validation logic in `../middleware/auth.go` (Needs to ensure JWT validation).
+*   **Room Management Service:** Logic for room creation and destruction should be centralized in a dedicated package, e.g., `../../service/room_manager.go`.
 
----
+***
 
-## 📈 Conceptual Diagram: Call Hub Lifecycle
+## 📊 Conceptual Diagrams
 
-```mermaid
-graph TD
-    A[Client Connects WebSocket] --> B{VideoCallHandler};
-    B --> C{Auth Check & ID Extraction};
-    C -- Fail --> Z[Reject Connection];
-    C -- Success --> D{Lock CallHub.mu};
-    D --> E{Check/Create VideoRoom(bookingID)};
-    E --> F{Lock VideoRoom.mu};
-    F --> G[Add User ID to Clients Map];
-    G --> H[Start Message Loop];
-    H --> I{Read Message};
-    I -- Success --> J[Broadcast to All Other Clients];
-    I -- Fail (User Disconnects) --> K[Cleanup: Remove User From Clients];
-    K --> L{Is Room Empty?};
-    L -- Yes --> M[Cleanup CallHub: Delete Room from Global Map];
-    L -- No --> N[Wait for Next Message];
-```
-*Self-Correction:* The current code only handles step K (remove user) but skips step M (remove room from global map). This diagram highlights the necessary addition.
-```
+### Data Flow: WebSocket Connection & Message Broadcast
+
+*(A simple flow diagram would be highly beneficial here, illustrating the flow through `VideoCallHandler`)*
+
+1.  **(Client A)** sends message $\rightarrow$
+2.  **`VideoCallHandler`** reads message $\rightarrow$
+3.  **`VideoCallHandler`** acquires `room.mu` lock $\rightarrow$
+4.  **`VideoCallHandler`** iterates over `room.Clients` $\rightarrow$
+5.  **`VideoCallHandler`** writes message to all other clients $\rightarrow$
+6.  **`VideoCallHandler`** releases `room.mu` lock.
+
+*(This diagram would visually highlight the critical section protected by `room.mu`.)*

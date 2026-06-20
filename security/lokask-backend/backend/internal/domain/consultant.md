@@ -1,104 +1,91 @@
 [⬅ Return to Main Compendium](../../README.md)
 
-# 🛡️ Security Verification Report: `domain` Package
+# 🛡️ Documentation Security Verification Report: `domain/domain.go`
+
+## 📄 Overview
+
+This file defines core data structures (models/DTOs) used throughout the application domain, covering profiles, sessions, reviews, and catalog information. The primary security concern within a `domain` package is the **potential for excessive data exposure (over-fetching)** and the lack of inherent validation rules on complex data types. Several structs contain highly sensitive information (PII, billing details) that must be handled with extreme care in the service and handler layers.
 
 **File:** `domain/domain.go`
-**Date:** 2023-10-27
-**Author:** Documentation-Security Verification Engineer
+**Purpose:** Defines application-wide domain models for persistence and data transfer.
 
-## 📋 Overview
+---
 
-This file defines the core data structures (domain models) used throughout the application, including profiles, reviews, and billing sessions. Because this package defines the payload shape for the entire application, it is critical for enforcing security boundaries and ensuring data integrity (Type Safety, Input Validation, and Data Masking).
+## 🔎 Vulnerability Analysis
 
-The primary security concerns revolve around **Mass Assignment Vulnerabilities**, **Cross-Site Scripting (XSS)** in user-generated content, and **Insufficient Authorization Checks** when these models are read or updated.
+### ⚠️ Potential Attack Vectors and Payload Risk
 
-### 🚨 Vulnerability Summary Ranking
-
-| Priority | Area of Concern | Specific Payload/Object | Description |
+| Priority | Vulnerable Object/Field | Description of Vulnerability | Mitigation Requirement |
 | :--- | :--- | :--- | :--- |
-| **High** | **Injection/XSS** | `ConsultantProfile` (`Bio`, `Quote`, `Name`), `Review` (`Comment`) | User input strings must be sanitized on *both* input and display to prevent XSS attacks. |
-| **High** | **Authorization Bypass** | `ConsultantSession` | Status changes (`Status`, `PaidAt`) must be restricted by strict state machine logic and role-based checks. |
-| **Medium** | **Over-fetching/PII Exposure** | `ConsultantProfile` | Many sensitive fields (`UserID`, `HourlyRate`, `Languages`) are bundled. API endpoints must enforce selective fetching based on user roles (e.g., only client sees basic info; admin sees payout details). |
-| **Medium** | **Input Validation (Bounds)** | `Page`, `Limit`, `DurationHours` | Pagination parameters and time durations must be rigorously validated against business logic limits (e.g., limit > 0, duration must be integer). |
-| **Low** | **Payload Structure** | `PaginatedConsultants`, `PaginatedReviews` | Standard utility structs. Vulnerability mitigation is applied in the Service Layer validation. |
+| **High** | `ConsultantSession` | Contains financial and temporal data (`DurationHours`, `PaidAt`, `ExpiresAt`). If exposed or mutated improperly, it leads to billing fraud or unauthorized access to paid resources. | Strict API endpoint control. Authorization checks must confirm the calling user owns or is authorized to manage the session. |
+| **High** | `ConsultantProfile` | Contains multiple PII fields (`Name`, `City`, `Country`, `Bio`). Excessive data exposure can lead to user tracking or identity theft. | Implement DTO separation. Only necessary fields should be exposed to specific endpoints (e.g., 'public view' vs. 'admin view'). |
+| **Medium** | `Review.Comment` | The `Comment` field is a free-text input. If not sanitized or validated for XSS, a malicious user could inject scripts, leading to stored XSS attacks when displayed on the frontend. | Input validation and sanitization must occur at the Service layer before saving to the database. |
+| **Medium** | `PaginatedConsultants.Limit` / `PaginatedReviews.Limit` | Lack of server-side validation on pagination limits could allow attackers to request excessively large datasets, potentially causing Denial of Service (DoS) or resource exhaustion. | Enforce maximum limits (e.g., `Limit` max = 50) in the handler layer, irrespective of client input. |
 
-***
+---
 
-## 📘 Detailed Analysis
+## ✍️ Detailed Documentation
 
-### 📂 Struct: `ConsultantProfile`
-This is the most sensitive object due to the mixture of PII, financial, and user-generated content.
+### 🗺️ Structural Navigation
 
-*   **Vulnerability (High): XSS via String Fields.**
-    *   **Fields:** `Name`, `DisplayName`, `Bio`, `Quote`, `Comment` (if used here).
-    *   **Risk:** If these fields accept un-sanitized user input, malicious scripts can be stored and executed when rendered on the client side.
-    *   **Mitigation:** Client-side rendering must use framework-level escaping. Server-side (API input validation/Service layer) must enforce encoding or strip dangerous characters.
-*   **Vulnerability (Medium): Over-exposure of PII/Financial Data.**
-    *   **Fields:** `UserID`, `HourlyRate`, `Languages`, `IsHighlyTrusted`.
-    *   **Risk:** A standard client-facing API endpoint might accidentally return sensitive data (e.g., the internal `UserID` or exact `HourlyRate` before a contract is established).
-    *   **Mitigation:** Use specialized DTOs (Data Transfer Objects) for read operations that only include the minimum necessary fields, rather than returning the raw domain model.
-*   **Vulnerability (Medium): Mass Assignment.**
-    *   **Fields:** All mutable fields.
-    *   **Risk:** An attacker could attempt to update a user profile by setting fields they shouldn't control (e.g., setting `IsHighlyTrusted` to `true` or changing `HourlyRate`).
-    *   **Mitigation:** Implement strict whitelisting of fields allowed for updates in the API Handler and Service Layer.
+*   [Service/Handler Layer Usage](../handlers/user_handler.go) - *Reference for accessing profiles/sessions.*
+*   [Validation Logic](./utils/validators.go) - *Reference for necessary input sanitization and validation.*
 
-### 📂 Struct: `ConsultantSession`
-This model governs billing and status, making it high-risk for tampering.
+### ⚙️ Detailed Breakdown by Object
 
-*   **Vulnerability (High): State Tampering.**
-    *   **Fields:** `Status`, `PaidAt`, `DurationHours`.
-    *   **Risk:** The status must be managed by a defined state machine (e.g., Draft -> Active -> Paused -> Completed). If external inputs can arbitrarily set `Status` or modify `PaidAt`, billing integrity is lost.
-    *   **Mitigation:** The Update/Save logic in the repository/service must enforce state transitions only via approved methods (e.g., `EndSession(sessionID, reason)`).
-*   **Vulnerability (Medium): Temporal Validation.**
-    *   **Fields:** `StartedAt`, `ExpiresAt`, `PaidAt`.
-    *   **Risk:** Logic relying on time must be timezone-aware. Comparison failures could lead to billing inaccuracies.
-    *   **Mitigation:** Ensure all time fields are handled as UTC and include validation checks (e.g., `ExpiresAt` must be after `StartedAt`).
+#### 💼 `ConsultantProfile`
+*   **Risk:** High data exposure. Combining PII, financial, and status flags into one struct means any misuse of this object in a handler creates a potential leak.
+*   **Recommendation:** Create at least three distinct view models (DTOs) based on this core struct:
+    1.  `ProfilePublicView`: Minimal fields (Name, DisplayName, Avatar, Rating).
+    2.  `ProfileClientView`: Includes basic PII (City, Country, Bio) and status (IsHighlyTrusted).
+    3.  `ProfileAdminView`: Includes sensitive fields (HourlyRate, UserID, internal metadata).
+*   **Cross-Reference:** When handling profile updates, the update function must check if the user is authorized to modify the specific fields (e.g., only the owner can change `Bio`, only the Admin can change `HourlyRate`).
 
-### 📂 Struct: `Review`
-Standard content, but needs content validation.
+#### 💰 `ConsultantSession`
+*   **Risk:** Critical billing and temporal data exposure.
+*   **Recommendation:** This object should **never** be exposed directly via a general API endpoint. Access must be gated by a specific business function (e.g., `/session/{id}/status`). The service layer must verify:
+    1.  The session ID belongs to the authenticated user.
+    2.  The user has not already been charged or the session status is active.
 
-*   **Vulnerability (High): XSS via Comment/Name.**
-    *   **Fields:** `ReviewerName`, `Comment`.
-    *   **Risk:** Identical to `ConsultantProfile`—unfiltered user input.
-    *   **Mitigation:** Strict input sanitization is mandatory.
+#### 📝 `Review`
+*   **Risk:** Stored XSS.
+*   **Recommendation:** In the service method responsible for creating or updating a review, implement HTML sanitization (e.g., using a library like `bluemonday`) on the `Comment` field before persistence.
 
-***
+#### ✨ `PaginatedConsultants` / `PaginatedReviews`
+*   **Risk:** Denial of Service (DoS) via excessive pagination requests.
+*   **Recommendation:** Ensure the `Limit` parameter is capped on the backend to prevent resource exhaustion.
 
-## 🧪 Technical Notes and Recommendations
+### 📌 Security Notes
 
-### 🧩 Code Logic Flow & Layering
+*   **Input Trust:** These structures assume that data flowing into the service layer (from HTTP requests) has passed initial validation. This is unsafe. **All inputs must be treated as untrusted.**
+*   **Database Tags (`db:"..."`):** While these tags help mapping, they do not enforce security. Never use these fields directly in raw SQL queries. Always use parameterized queries through the ORM layer.
 
-This `domain` package acts as the contract between the API/Service Layer and the Repository/Database Layer.
+### 🚨 Warnings (Tech Debt / Incomplete Security Measures)
 
-1.  **Input Flow (API -> Service):** Incoming JSON payload $\rightarrow$ Validate fields $\rightarrow$ Create `domain` object $\rightarrow$ Pass to Service.
-2.  **Processing Flow (Service):** Service logic applies business rules (e.g., check permissions, calculate duration) $\rightarrow$ Calls Repository.
-3.  **Persistence Flow (Repository -> DB):** Repository maps `domain` object to `db` fields $\rightarrow$ Executes query.
+1.  **PII Masking:** There is no established mechanism for masking PII (like `AvatarURL` or `GalleryImages` contents) when they are displayed in a low-privilege view. This needs to be addressed at the API/Handler level.
+2.  **Time Zone Handling:** All `time.Time` fields rely on the database's time zone settings. It is critical to explicitly handle and validate time zones (e.g., always storing UTC) throughout the service layer to prevent temporal inconsistencies.
+3.  **Magic Strings:** Status fields (`ConsultantSession.Status`, `ConsultantProfile.IsHighlyTrusted`) rely on strings (e.g., "active", "pending"). These should be converted into enumerated types (Go `iota` constants) to ensure type safety and prevent runtime bugs from misspelled status strings.
 
-> **Link to related components:** For secure handling, the Service Layer (e.g., `internal/service/consultant_service.go`) must utilize robust validation middleware (e.g., `pkg/middleware/validation.go`) before creating the final domain object.
+---
 
-### ♻️ Suggested Improvement: Type Aliasing for Clarity
+## 📊 Summary Figure (Conceptual Flow)
 
-Consider using custom types (type aliases) for sensitive primitives to increase type safety and prevent mixing up fields that represent different domains, even if they are both strings or floats (e.g., `type PriceCents float64`).
-
-***
-
-## ⚠️ Security Warnings (Tech Debt / Action Items)
-
-1.  **Missing Input/Output Validation Layer:** The current file only defines the model. There is no explicit enforcement mechanism for *input* validation (e.g., maximum length of `Bio`, minimum `Rating`, or acceptable characters). **Action:** Implement a robust validation library (e.g., `go-playground/validator`) immediately in the API/Service layer.
-2.  **Lack of Clear DTOs:** The reuse of `ConsultantProfile` for both read and write operations violates the principle of least exposure. **Action:** Separate the `domain` layer into specific DTOs (e.g., `ClientViewProfile`, `AdminViewProfile`, `UpdateProfileRequest`) to enforce controlled data transfer.
-3.  **Dependency Management:** The use of `github.com/google/uuid` and `github.com/lib/pq` is standard, but all external dependencies must be pinned and regularly audited via tools like `govulncheck` or Dependabot to prevent supply chain attacks.
-
-### 📈 Figure: Data Flow and Security Boundaries
-
-*(Conceptual Diagram)*
 ```mermaid
-graph LR
-    A[Client Request (JSON Payload)] -->|Input| B(Middleware Layer: Validation);
-    B -->|Sanitized Data| C(Service Layer: Business Logic/Authorization);
-    C -->|Select Fields (DTO)| D(Domain Model: domain.go);
-    D -->|Query| E(Repository Layer);
-    E --> F[Database];
-    F --> G{Data Retrieved};
-    G -->|Secure Output| H[API Response];
+graph TD
+    A[Client Request (HTTP)] --> B(Handler Layer: Input Validation & Sanitization);
+    B --> C{Service Layer: Business Logic & Authorization};
+    C -- Reads/Writes Domain Objects --> D[domain/domain.go Structures];
+    D --> E(Database/Repository Layer: Parameterized Query);
+    E --> F(Validated Data Flow);
+
+    subgraph Security Focus Points
+        B --> B_Check{Input Sanitization (XSS, Rate Limit)};
+        C --> C_Check{Authorization Check (Scope, Ownership)};
+        C --> C_Check2{Data Minimization (DTO Selection)};
+    end
+
+    style B_Check fill:#f99,stroke:#333,stroke-width:2px
+    style C_Check fill:#f99,stroke:#333,stroke-width:2px
+    style C_Check2 fill:#f99,stroke:#333,stroke-width:2px
+
 ```
-**Note:** The security boundary check must occur at *every* step (B, C, G) to prevent unauthorized data manipulation or exposure.

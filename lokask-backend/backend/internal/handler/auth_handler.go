@@ -42,6 +42,10 @@ type RegisterRequest struct {
 	CityName string `json:"city"`
 }
 
+type LostPasswordRequest struct {
+	Email string `json:"email"`
+}
+
 var validCities = map[string]bool{
 	"Hanoi":            true,
 	"Ho Chi Minh City": true,
@@ -208,6 +212,33 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 	return c.Redirect("https://www.lokask.se/login?verified=true", fiber.StatusTemporaryRedirect)
 }
 
+// lost password logic
+
+// send the request
+func (h *AuthHandler) LostPassword(c *fiber.Ctx) error {
+	var req LostPasswordRequest
+	err := c.BodyParser(&req)
+	if err != nil {
+		return c.Status(200).JSON(fiber.Map{
+			"message": "null",
+		})
+	}
+
+	log.Printf("[ERROR][AUTH] Error in password reset, caused by: %v", err)
+
+	user, err := h.UserRepo.GetByEmail(req.Email)
+	if err != nil || user == nil || user.ID == "" {
+		return c.Status(200).JSON(fiber.Map{
+			"message": "Reset email sent, check the inbox",
+		})
+	}
+	log.Printf("[ERROR][AUTH] Invalid user, if this happened many times, considered brute attack: %v", err)
+
+	//resetToken := uuid.New().String()
+
+	return nil
+}
+
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// login logic function
 
@@ -223,8 +254,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	user, err := h.UserRepo.GetByEmail(req.Email)
 	if err != nil || user == nil || user.ID == "" {
 		return c.Status(401).JSON(fiber.Map{
-			"error":  "Invalid credentials",
-			"detail": err.Error(),
+			"error": "Invalid credentials",
 		})
 	}
 

@@ -1,58 +1,88 @@
-# 📚 Booking API Client Functions (`booking.ts`)
-
 [⬅ Return to Main Compendium](../../README.md)
 
-## 📝 Overview
+# 🛡️ API Client Functions: Booking Management (`booking.ts`)
 
-This module provides a comprehensive client layer for interacting with the booking management service. It encapsulates various API calls—including creating, viewing, updating, and deleting bookings—abstracting the HTTP interaction using `fetchJson`. The functions are critical components that manage core application state related to user travel and consultation schedules.
+## 📑 Overview
 
-## 🔐 Security Vulnerability Assessment
+This module (`booking.ts`) provides standardized client-side wrappers for interacting with the core booking API endpoints. It handles the serialization and transmission of requests (POST, PATCH, DELETE, GET) using a centralized `fetchJson` utility. The functions cover the full lifecycle of a booking: creation, viewing (mine, consultant's, public), updating status, and deletion.
 
-| Function / Payload | Vulnerability Type | Priority | Description |
-| :--- | :--- | :--- | :--- |
-| `getConsultantBookings(consultantId)` | IDOR / Authorization | **High** | The function accepts `consultantId` directly from the signature and uses it in the path. If the calling service does not rigorously validate that the requesting user is authorized to view the specified `consultantId`'s data, an attacker could enumerate and view private booking data (IDOR). |
-| `deleteBooking(id)` | Authorization / Input Validation | **High** | Deletes records based solely on `id`. There is no visible check to ensure the calling user is the owner of the booking or has administrative rights. A malicious actor could delete any booking if they guess a valid ID. |
-| `updateBookingStatus(id, status)` | Authorization / State Management | **High** | Modifies the state of a booking (`status`). Authorization must be enforced at the endpoint level: only the owner, or a dedicated admin role, should be permitted to call this function. |
-| All functions using path parameters (`id`, `consultantId`) | IDOR | **High** | All functions relying on path parameters (`/bookings/:id/status`, `/bookings/consultant/:id`) must enforce ownership and scope checks. The front-end logic or calling middleware must guarantee that the user is authorized for the resource being manipulated. |
-| `getMyTrips(userId)` | Logical Bug / Unused Parameter | **Medium** | The function accepts `userId` but does not appear to use it in the `fetchJson` call (which only sends `/bookings/my-trips`). This suggests the necessary context passing logic might be missing or implicitly handled by a downstream middleware, leading to potential confusion or failure. |
-| `createBooking(data)` | Input Validation | **Medium** | While the API call uses JSON serialization, the client layer does not enforce strict validation on the incoming `data: CreateBookingRequest`. Invalid or overly large payloads could lead to backend failures or unexpected processing. |
+The module structure is clean and directly maps to RESTful API interactions, which is good for maintainability but requires strict adherence to authorization context.
 
-***
+## ✨ Structural Flow & Logic
 
-### 🔍 Detailed Analysis & Technical Implementation Notes
+This file primarily acts as a clean API client layer. All business logic regarding authorization and data validation should reside in the middleware/handler layer (as suggested by the JSDoc comments), not here.
 
-#### **[High Priority] Authorization and Scoping Flaws**
-All functions involving resource identification (`id`, `consultantId`) present a risk of **Insecure Direct Object Reference (IDOR)**. While the underlying backend logic likely contains checks, the client layer assumes successful authorization. Middleware handling should be mandatory for all public-facing endpoints that accept IDs.
+### 🔗 Related Modules & Flow Links
 
-#### **[Medium Priority] Client Logic Consistency**
-The signature for `getMyTrips` is misleading given that `userId` is accepted but not passed to `fetchJson`. If the intent is to query *the user's own* trips, the function should either:
-1. Remove `userId` and rely solely on context middleware.
-2. Use `userId` in the API call path (e.g., `/bookings/my-trips/${userId}`), if the backend requires explicit IDs.
+| Function | Endpoint/Flow | Description |
+| :--- | :--- | :--- |
+| `createBooking` | `/bookings` | Initiates a new booking (Requires user authentication/context). |
+| `getMyTrips` | `/bookings/my-trips` | Retrieves bookings associated with the authenticated user. **(Requires User context)** |
+| `getConsultantBookings` | `/bookings/consultant/:id` | Retrieves the consultant's entire schedule. **(Requires high authorization)** |
+| `getPublicConsultantBookings` | `/public/${consultantId}` | View publicly available schedule. (Unauthenticated). |
+| `updateBookingStatus` | `/bookings/:id/status` | Modifies the status (Confirm/Cancel). **(Requires ownership/admin rights)** |
+| `deleteBooking` | `/bookings/:id` | Permanently deletes a booking record. **(Requires owner/admin rights)** |
 
-#### **[General Note] Error Handling**
-The module relies entirely on `fetchJson`. It is assumed that `fetchJson` handles network errors, 401/403 unauthorized responses, and 404 not found errors gracefully. Explicit try/catch blocks wrapping these calls in the calling component would improve client resilience.
+## 🔬 Security Verification Detail
 
-## ⚠️ Warning and Technical Debt
+The security analysis focuses on how parameters are handled, the potential for insecure direct object reference (IDOR), and the reliance on the surrounding system (middleware) for proper authorization.
 
-1. **Missing Authorization Middleware Links:** This module requires robust security context middleware. For example, the logic behind securing `getConsultantBookings` (ensuring the calling user *is* the consultant) should ideally be linked back to the middleware definition.
-    * **Required Linkage:** `getConsultantBookings` $\rightarrow$ `../middleware/auth.go` (Scope Check Logic).
-2. **Lack of Transactional Safety:** State-modifying functions (`updateBookingStatus`, `deleteBooking`) should be wrapped in a client-side or service layer transaction check to ensure atomicity (e.g., checking if a booking is active before attempting a cancellation).
-3. **Payload Typing:** While types are used (`Booking`, `CreateBookingRequest`), robust runtime validation (e.g., using Zod or Yup) should be applied to the `data` payload before calling `JSON.stringify(data)` to prevent unexpected API input formats.
+### 🔴 Vulnerability Analysis Summary
 
-## 🧠 Future Enhancements / Suggestions
+| Function | Vulnerable Object/Parameter | Potential Attack | Priority | Mitigation Required |
+| :--- | :--- | :--- | :--- | :--- |
+| `getConsultantBookings` | `consultantId` (Path Param) | IDOR, Unauthorized access to non-visible data. | **High** | Backend must enforce that the requester is authorized to view this specific consultant's data. |
+| `updateBookingStatus` | `id` (Path Param) | IDOR (Modifying another user's booking). | **High** | Backend must validate that the authenticated user is the owner of the booking ID. |
+| `deleteBooking` | `id` (Path Param) | IDOR, Unauthorized data deletion. | **High** | Backend must enforce ownership check before executing the DELETE request. |
+| `getMyTrips` | *(None)* | N/A | Low | Assumption: Middleware correctly sets `userId` to enforce scope. |
+| `createBooking` | `data` (Body) | Mass assignment, Input validation failure. | Medium | Input validation/Schema enforcement on the backend must be robust. |
 
-*   **Batch Operations:** Implement a function to fetch or update multiple bookings (e.g., `bulkUpdateBookingStatus`).
-*   **Input Validation:** Introduce a dedicated validation service utility to clean and validate all string inputs (`id`, `consultantId`) before they are passed to `fetchJson`.
+### 🛡️ Detailed Component Analysis
 
-***
+#### 1. `createBooking(data: CreateBookingRequest)`
+*   **Inputs:** `data` (Request Body).
+*   **Vulnerability:** If the backend fails to validate the input schema (e.g., allowing unexpected fields, incorrect data types, or overly large payloads), it could lead to data corruption or unexpected API behavior.
+*   **Security Concern:** Input validation and mass assignment vulnerabilities.
 
-### 💻 Code Flow Mapping (Internal Links)
+#### 2. `getConsultantBookings(consultantId: string)`
+*   **Inputs:** `consultantId` (Path Parameter).
+*   **Vulnerability:** **IDOR (Insecure Direct Object Reference).** This function relies solely on the path parameter `:id`. A malicious actor could change `consultantId` to view the schedule of a competitor or another consultant they are not authorized to see.
+*   **Severity:** High. This exposes sensitive business data (schedules).
 
-| Function | Purpose | Related Logic/Middleware | Suggested Link Reference |
-| :--- | :--- | :--- | :--- |
-| `createBooking` | Creates a new booking record. | Backend Validation/Schema Check (POST payload). | `../../api/middleware/schemaValidation` |
-| `getMyTrips` | Retrieves current user's bookings. | Authentication Context (User ID derived from JWT). | `../middleware/auth.go` (Role: User) |
-| `getConsultantBookings` | View bookings for a specific consultant. | Authorization Check (Admin/Scope validation required). | `../middleware/auth.go` (Scope: Consultant) |
-| `getPublicConsultantBookings`| View general availability. | None (Public Endpoint). | N/A |
-| `updateBookingStatus` | Modifies status (Confirm/Cancel). | Ownership Check + Role Check (Only owner or admin). | `../middleware/auth.go` (Action: Update) |
-| `deleteBooking` | Deletes a booking record. | Ownership Check + Role Check (Owner only). | `../middleware/auth.go` (Action: Delete) |
+#### 3. `updateBookingStatus(id: string, status: "confirmed" | "cancelled")`
+*   **Inputs:** `id` (Path Parameter), `status` (Body Parameter).
+*   **Vulnerability:** **IDOR and Authorization Bypass.** An attacker could pass a booking ID (`id`) belonging to a different user and potentially change the status (e.g., canceling a booking they did not make, or marking another user's booking as confirmed).
+*   **Severity:** High. Direct tampering with core business records.
+
+#### 4. `deleteBooking(id: string)`
+*   **Inputs:** `id` (Path Parameter).
+*   **Vulnerability:** **IDOR and Unauthorized Deletion.** Similar to status updates, passing a random valid booking ID allows unauthorized deletion of records, leading to data loss.
+*   **Severity:** High. Critical impact on data integrity.
+
+## 📝 Notes & Warnings
+
+### ⚠️ WARNING (Critical Implementation Gap)
+
+The security of this entire client module heavily depends on the associated backend middleware (e.g., `protected.Get`, `protected.Patch`). **If the backend does not implement robust ownership/authorization checks using the authenticated user's context (JWT/session), every single function using dynamic IDs (`id`, `consultantId`) is critically vulnerable to IDOR.**
+
+### 💡 Tech Debt / Improvement Suggestions
+
+1.  **Strong Typing for IDs:** While `id: string` is used, consider abstracting the ID type if the system uses UUIDs or specific formats to prevent accidental misuse.
+2.  **Error Handling Abstraction:** The `fetchJson` utility should ideally include standardized error handling that differentiates between HTTP 401 (Unauthorized), 403 (Forbidden), and 404 (Not Found) responses, rather than just generic JSON parsing errors.
+3.  **Role-Based Access Control (RBAC):** Instead of just passing ID strings, consider wrapping these functions with a high-level service function that checks the current user's role *before* making the API call, adding an extra layer of client-side safety check (though the backend must remain the ultimate gatekeeper).
+
+---
+
+## 📊 Security Vulnerability Ranking (Summary)
+
+### 🟢 High Priority (Requires Immediate Backend Remediation)
+*   **`getConsultantBookings(consultantId: string)`:** Critical IDOR risk. Must verify requester's rights to view this specific resource.
+*   **`updateBookingStatus(id: string, status: "confirmed" | "cancelled")`:** Critical IDOR/Authorization risk. Must verify ownership of the booking ID (`id`).
+*   **`deleteBooking(id: string)`:** Critical IDOR/Authorization risk. Must verify ownership of the booking ID (`id`).
+
+### 🟡 Medium Priority (Requires Validation Logic Review)
+*   **`createBooking(data: CreateBookingRequest)`:** Input validation risk. The backend must enforce strict schema validation to prevent mass assignment.
+
+### 🟢 Low Priority
+*   **`getMyTrips(userId: string)`:** Low risk, assuming middleware correctly enforces scope tied to the `userId`.
+*   **`getPublicConsultantBookings(consultantId: string)`:** Lowest risk, as it is explicitly defined as a public endpoint, reducing the likelihood of unauthorized access attempts through this specific endpoint.

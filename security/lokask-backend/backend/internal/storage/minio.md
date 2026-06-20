@@ -1,88 +1,93 @@
-```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# 🔒 Security Verification Report: `storage` Package (MinIO Client)
+# 💾 Storage Service Security Verification Report
 
-**Module:** `storage`
-**Functionality:** Handles all interactions with the MinIO object storage service (connecting, uploading, setting policies, deleting files).
-**Review Date:** 2023-11-01
-**Verification Engineer:** Documentation-Security Verification Team
+**File:** `storage/minio_client.go`
+**Service:** MinIO Object Storage Client
+**Reviewer:** Documentation-Security Verification Engineer
+**Date:** October 26, 2023
 
 ---
 
-## 📝 Overview
+## 📋 Overview
 
-The `storage` package implements a wrapper around the MinIO SDK client, providing methods to manage cloud storage operations (avatars, media files, blog covers). The connectivity and bucket creation logic are generally sound, utilizing environment variables for credentials.
+This module encapsulates the logic for connecting to and interacting with a MinIO object storage backend. It provides methods for uploading, deleting, and ensuring the existence of buckets. The service utilizes environment variables for configuration (endpoints, credentials, bucket names), which is good practice. However, several methods are exposed to user input (file headers, user IDs, object keys) without sufficient sanitization or input validation, posing risks related to path traversal, resource exhaustion, and insecure configuration.
 
-However, the implementation relies heavily on constructing object keys using potentially untrusted inputs (like `userID` and `ownerID`) and uses multiple fallbacks for configuration (e.g., hardcoded bucket names, public URLs). While the MinIO operations themselves are structured, the lack of robust input validation and the mixing of configuration sources pose moderate security risks.
+### 🔴 Security Summary
 
-### 📊 Vulnerability Summary
-
-| Vulnerability / Area | Vulnerable Component | Attack Payload Example | Priority | Description |
+| Function/Object | Vulnerable Payload/Input | Vulnerability Type | Priority | Mitigation Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **Trust Boundary Violation** | `UploadProfilePicture`, `UploadFile` | Malformed User ID (`../../../etc/passwd`) | **High** | Object key construction relies on input parameters (user/owner IDs) without canonicalization or validation, potentially leading to path manipulation if underlying systems are flawed. |
-| **Insecure Default Configuration** | `ConnectToMinioClient`, `UploadFile`, `UploadProfilePicture` | N/A | **Medium** | Hardcoded fallback values for bucket names (`lokask-media`) and public URLs (`http://localhost:9001`) bypass intended environment variable configurations, leading to environment-specific bugs or using insecure local URLs. |
-| **Over-Permissive Bucket Policy** | `ConnectToMinioClient`, `CreateIfNotExist` | N/A | **Medium** | The bucket policy `{"Effect": "Allow", "Principal": {"AWS": ["*"]}, "Action": ["s3:GetObject"], ...}` grants public read access (`s3:GetObject`) to all objects. This must be reviewed if private access is intended. |
-| **Data Leakage/Inconsistent Logging** | All methods | N/A | **Low** | Logging uses `log.Printf` which might capture sensitive information (file names, partial paths) if the calling context is not secured. Error handling is generally robust but could be cleaner regarding logging levels. |
+| `UploadProfilePicture` | `file.Filename`, `userID` | Insecure Object Naming / Path Traversal Risk | Medium | Sanitize filename and validate user IDs. |
+| `UploadFile` | `objectKey` (input), `file.Header` | Path Traversal / Cross-Site Scripting (via Content-Type) | High | Strictly validate `objectKey` structure and validate file MIME types. |
+| `UploadBlogCover` | `blogID`, `file.Filename` | Insecure Object Naming / Path Traversal Risk | Medium | Use UUIDs or strictly format `blogID` to prevent path manipulation. |
+| `DeleteFile` | `key` (input) | Path Traversal (if key is arbitrary) | High | Implement object key canonicalization and validation (e.g., regex) before deletion. |
+| `ConnectToMinioClient` | MinIO Configuration | Misconfiguration (Public Write Policy) | Medium | Policy setup assumes public read access (`s3:GetObject`) but does not restrict write operations, requiring careful IAM management. |
 
 ---
 
-## 📚 Detail Analysis
+## 🔍 Detail Analysis
 
-### 🥇 High Priority Vulnerability: Object Key Manipulation / Path Traversal Risk
+### 🛡️ Security Vulnerabilities and Risks
 
-**Affected Functions:** `UploadProfilePicture`, `UploadFile`, `UploadBlogCover`
-**Details:** The object keys (`objectName`, `objectKey`) are constructed using template strings involving user/owner-provided identifiers (`userID`, `ownerID`, `blogID`). While MinIO/S3 handles object keys (which are technically just strings) differently from traditional file systems, if these identifiers contain directory separators (`/`), they could potentially influence the object structure unexpectedly or bypass logical boundaries if subsequent code relies on the key prefix being clean.
+#### 1. Path Traversal Risk in Object Key Construction (High Priority)
+The functions `UploadFile` and `DeleteFile` take `objectKey` (or `key`) directly from function arguments, which often originate from user input or database identifiers. If these inputs are not rigorously sanitized, an attacker could inject path traversal sequences (e.g., `../../etc/passwd`) to target arbitrary objects within the bucket, potentially overwriting configuration files or deleting unrelated user data.
 
-**Example:** If `userID` is `../my_config/` or contains characters that confuse the underlying system (though less likely in MinIO), an attacker could attempt to write objects outside the intended owner path.
+*   **Affected Functions:** `UploadFile`, `DeleteFile`.
+*   **Payloads:** `objectKey`, `key`.
 
-**Recommendation:**
-1.  **Input Sanitization:** Before including `userID`, `ownerID`, or `blogID` in the object key, enforce rigorous sanitization. Remove any characters that resemble path separators (`/`, `\`, `..`).
-2.  **UUID Enforcement:** Ideally, these identifiers should be validated to ensure they adhere strictly to a format like UUID v4, which inherently prevents path traversal attempts.
+#### 2. Insecure Object Naming and Predictability (Medium Priority)
+In `UploadProfilePicture` and `UploadBlogCover`, the naming conventions rely on user-provided IDs (`userID`, `blogID`) and filenames.
+1.  Using `file.Filename` directly introduces the risk of an attacker uploading a file named `../../../etc/passwd` (though MinIO/S3 typically sanitize this on upload, it's best practice to strip file system characters).
+2.  If `userID` or `blogID` are not UUIDs but simple sequential IDs, it could lead to enumeration attacks.
 
-### 🥈 Medium Priority Vulnerability: Configuration and State Management
+#### 3. Reliance on Environment Variables for Critical Config (Medium Priority)
+The service relies heavily on `os.Getenv`. If the surrounding application fails to properly load or restrict these variables, it could lead to credentials being exposed or the client connecting to an unintended endpoint.
 
-**Affected Functions:** `ConnectToMinioClient`, `UploadFile`, `UploadProfilePicture`, `UploadBlogCover`
-**Details:** The code uses a mix of `os.Getenv()` and hardcoded fallbacks (e.g., `bucketName := "user-avatars"`, `publicURL := getEnv("MINIO_PUBLIC_URL", "http://localhost:9001")`). This makes the code brittle and non-portable.
+*   **Recommendation:** Use a dedicated configuration management system (e.g., Consul, Vault) instead of raw environment variables for production secrets.
 
-**Risks:**
-1.  **Insecure Defaults:** If the environment variable `MINIO_PUBLIC_URL` is unset, the application defaults to a hardcoded `http://localhost:9001`, which is typically only correct in a local development environment and is not suitable for production load balancers or CDN setups.
-2.  **Inconsistency:** Different upload functions hardcode different fallback bucket names (`lokask-media` vs `user-avatars`), leading to potential deployment errors if the deployment environment changes the intended bucket name.
+### ⚙️ Function-by-Function Review
 
-**Recommendation:**
-1.  **Centralize Configuration:** Use a dedicated configuration struct initialized at startup, ensuring all required parameters (bucket names, URLs) are loaded once and validated.
-2.  **Mandatory Environment Variables:** For critical settings (like `MINIO_PUBLIC_URL`), fail fast (return an error) if the environment variable is missing, rather than relying on a development-friendly fallback.
+#### `ConnectToMinioClient`
+*   **Detail:** Sets a public read policy (`s3:GetObject`) for the bucket.
+*   **Risk:** The policy structure seems to assume all objects must be public read. If sensitive data is stored, this policy might be too permissive. The `Secure: false` option hardcodes non-SSL communication, which is a major vulnerability in a production environment.
+*   **Improvement:** Force `Secure: true` (or ensure the endpoint requires HTTPS).
 
-### 🥉 Medium Priority Vulnerability: Public Access Policy (S3 Policy)
+#### `UploadProfilePicture(file *multipart.FileHeader, userID string)`
+*   **Detail:** Generates object key using `avatars/%s_%d%s`.
+*   **Risk:** The `file.Filename` is used to determine the extension (`ext`), but the function does not sanitize the file name. If the `userID` or `ext` could contain path delimiters (`/`), it could be exploited, although the use of `fmt.Sprintf` helps mitigate direct traversal here, it's not foolproof.
+*   **Mitigation:** Always sanitize `file.Filename` by stripping directory components and ensuring only safe characters are used.
 
-**Affected Functions:** `ConnectToMinioClient`, `CreateIfNotExist`
-**Details:** The generated bucket policy explicitly allows anonymous read access (`"Principal": {"AWS": ["*"]}, "Action": ["s3:GetObject"]`). While this might be the required functional design, it represents a significant security surface area.
+#### `UploadFile(file *multipart.FileHeader, ownerID string, objectKey string)`
+*   **Detail:** Generic upload function using user-supplied `objectKey`.
+*   **Critical Risk:** Directly accepting `objectKey` from external sources without strict canonicalization is the highest risk.
+*   **Improvement:** Before uploading, validate `objectKey` using a strict regex pattern (e.g., `^[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+$`) to ensure it contains no directory separators (`/` or `\`) unless they are part of the intended directory structure.
 
-**Risk:** If highly sensitive user data is stored in the `user-avatars` or `lokask-media` buckets, the current policy allows unauthorized reading of object content by *anyone* on the internet who knows the URL.
-
-**Recommendation:**
-1.  **Principle of Least Privilege (PoLP):** Re-evaluate the policy. If the service requires public read access, confirm that *all* data stored in these buckets is intended to be public.
-2.  **Alternative:** If the content should be protected, consider using pre-signed URLs instead of a public policy, requiring the user to authenticate or be authorized by the application logic to generate a time-limited access token.
-
----
-
-## 🧩 Technical Deep Dive
-
-### 🖼️ Function Analysis: `UploadProfilePicture`
-*   **Flow:** Takes `multipart.FileHeader` and `userID`. Generates object key: `avatars/{user_id}_{timestamp}.{ext}`.
-*   **Potential Issue:** The hardcoded `bucketName := "user-avatars"` bypasses the class member `m.Bucket` which was set during `ConnectToMinioClient`. This is inconsistent and risks failure if the initialization logic changes.
-*   **Linkage:** The generation of the file name/key relies directly on the input `user_id` and must be sanitized to prevent directory traversal attacks (though `file name` usage mitigates this, it’s critical to confirm no special characters are passed in the ID).
-
-### 🔑 Key Security Considerations
-
-1. **Input Validation:** All inputs (especially user IDs, file names, and filenames used in keys) must be rigorously validated and sanitized to prevent path traversal (`../../../etc/passwd`) or excessive length attacks.
-2. **Error Handling:** Ensure that failure to connect to the S3 endpoint or issues during object upload do not leak sensitive system details to the caller.
-3. **Contextual Authorization:** If this service is used in a multi-tenant environment, the caller must be authorized to write to the specific bucket/prefix associated with the uploaded resource.
-
-### 📐 Code Refinement Suggestions
-
-1. **Centralize Key Generation:** Create a dedicated utility function for constructing object keys to enforce consistent sanitization and structure across all upload endpoints.
-2. **Use Structured Logging:** Log the outcomes (success/failure) and the object key used for auditing purposes, without logging the raw file content.
+#### `DeleteFile(ctx context.Context, key string)`
+*   **Detail:** Deletes an object using a key derived from the environment or passed argument.
+*   **Critical Risk:** If the `key` parameter can be manipulated, it allows arbitrary object deletion, potentially leading to service denial (DoS) or data loss.
+*   **Mitigation:** Implement strong input validation on `key` to prevent traversal and ensure it refers only to expected resource types.
 
 ---
-***Disclaimer: This review assumes standard AWS S3 usage. If a different storage backend is used, the security advice pertaining to bucket/container configuration must be adjusted.***
+
+## 🚧 Notes (Things to Finish)
+
+1.  **Centralized Key Generation:** The object key construction logic is scattered (`avatars/`, `blog/`, `lokask-media/`). This should be abstracted into a dedicated helper function that enforces consistent naming conventions and sanitization rules.
+2.  **Error Handling Consistency:** Several functions log errors using `log.Printf` and then return the error, which is fine, but ensuring that MinIO client errors are wrapped with contextual information (e.g., which service/endpoint failed) would greatly improve debuggability.
+3.  **Role-Based Access Control (RBAC):** The current bucket policies grant public read access. The implementation needs to account for different access levels. Is a profile picture upload meant to be public? If so, the policy is okay, but write permissions should be strictly audited.
+
+## 🚨 Warnings (Most Important)
+
+### ⚠️ High Priority: Path Traversal and Input Validation
+Every function accepting an `objectKey` or `key` parameter **must** validate that the input contains only alphanumeric characters, hyphens, and underscores (`[a-zA-Z0-9\-_]`) and absolutely prohibits directory separators (`/`, `\`, `..`). Failure to do this is a critical data exposure/deletion risk.
+
+### ⚠️ Medium Priority: Security Configuration Hardcoding
+The `minio.New` call sets `Secure: false`. This must be changed to `Secure: true` (and the client setup must be confirmed to use HTTPS) to prevent man-in-the-middle eavesdropping.
+
+### 🔑 Key Recommendation
+Pass credentials/secrets (like bucket names) via environment variables or a secure vault (like Vault or AWS Secrets Manager) rather than hardcoding them, even if they are commented out.
+
+---
+*File structure documentation:*
+*   `storage/storage.go`: Contains core client initialization and high-level methods.
+*   `storage/upload.go`: Contains specific logic for file uploads and metadata tagging.
+*   `storage/delete.go`: Contains deletion logic.
