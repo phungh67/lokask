@@ -26,7 +26,6 @@ interface AuthPromptDialogProps {
   onFacebookAuth?: () => void;
 }
 
-// 🟢 Pre-defined list of supported cities
 const VIETNAM_CITIES = [
   "Hanoi",
   "Ho Chi Minh City",
@@ -52,6 +51,9 @@ const AuthPromptDialog = ({
   const [step, setStep] = useState<AuthStep>("initial");
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🟢 Added a dynamic role state so users can switch during signup
+  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(defaultRole || "traveller");
+
   // Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,8 +70,9 @@ const AuthPromptDialog = ({
       setFullName("");
       setCity("");
       setIsLoading(false);
+      setSelectedRole(defaultRole || "traveller"); // 🟢 Reset to whatever opened the dialog
     }
-  }, [open]);
+  }, [open, defaultRole]);
 
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -110,20 +113,20 @@ const AuthPromptDialog = ({
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    // 🟢 Extra validation to ensure city is selected for consultants
-    if (defaultRole === "consultant" && !city) {
+    if (selectedRole === "consultant" && !city) {
       toast.error("Please select a city from the list.");
       return;
     }
 
     setIsLoading(true);
     try {
-      if (defaultRole === "consultant") {
+      if (selectedRole === "consultant") {
         await registerConsultant({
           fullName,
           email,
           password,
           city,
+          role: "consultant", // 🟢 Explicitly attach the role
         });
         toast.success("Consultant account created! Please log in.");
       } else {
@@ -131,6 +134,7 @@ const AuthPromptDialog = ({
           fullName,
           email,
           password,
+          role: "traveller", // 🟢 Explicitly attach the role
         });
         toast.success("Traveller account created! Please log in.");
       }
@@ -280,11 +284,38 @@ const AuthPromptDialog = ({
     <>
       <DialogHeader className="text-left space-y-2">
         <DialogTitle className="text-2xl font-display font-semibold">
-          Join as {defaultRole === "consultant" ? "Consultant" : "Traveller"}
+          Create an account
         </DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSignup} className="mt-4 space-y-4">
+        
+        {/* 🟢 Interactive Role Toggle */}
+        <div className="flex bg-muted/60 p-1 rounded-xl mb-2">
+          <button
+            type="button"
+            onClick={() => setSelectedRole("traveller")}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              selectedRole === "traveller"
+                ? "bg-white shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Traveller
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedRole("consultant")}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              selectedRole === "consultant"
+                ? "bg-white shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Consultant
+          </button>
+        </div>
+
         <Input
           placeholder="Full Name"
           value={fullName}
@@ -301,8 +332,7 @@ const AuthPromptDialog = ({
           required
         />
 
-        {/* 🟢 Replaced standard input with styled dropdown */}
-        {defaultRole === "consultant" && (
+        {selectedRole === "consultant" && (
           <div className="relative">
             <select
               value={city}
