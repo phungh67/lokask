@@ -39,7 +39,7 @@ export async function registerTraveller(data: RegisterData) {
             full_name: data.fullName,
             email: data.email,
             password: data.password,
-            role: "traveler"          
+            role: "traveller"          
         }),
     });
 }

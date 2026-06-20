@@ -69,12 +69,11 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req RegisterRequest
 	err := c.BodyParser(&req)
 	if err != nil {
+		log.Printf("[ERROR][AUTH] Error in registration, caused by: %v", err)
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid input",
 		})
 	}
-
-	log.Printf("[ERROR][AUTH] Error in registration, caused by: %v", err)
 
 	// validate city
 	if !validCities[req.CityName] {
