@@ -126,7 +126,6 @@ const AuthPromptDialog = ({
           email,
           password,
           city,
-          role: "consultant", // 🟢 Explicitly attach the role
         });
         toast.success("Consultant account created! Please log in.");
       } else {
@@ -134,7 +133,6 @@ const AuthPromptDialog = ({
           fullName,
           email,
           password,
-          role: "traveller", // 🟢 Explicitly attach the role
         });
         toast.success("Traveller account created! Please log in.");
       }
