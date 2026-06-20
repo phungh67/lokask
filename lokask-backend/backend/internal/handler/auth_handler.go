@@ -75,13 +75,6 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// validate city
-	if !validCities[req.CityName] {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid or unsupported city selected.",
-		})
-	}
-
 	// mail guard here
 	if !helper.IsValidEmailDomain(req.Email) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -98,6 +91,13 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	if req.Role == "consultant" {
 		if req.CityName == "" {
 			return c.Status(400).JSON(fiber.Map{"error": "Consultants must provide a city name"})
+		}
+
+		// validate city
+		if !validCities[req.CityName] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid or unsupported city selected.",
+			})
 		}
 
 		// Look up the ID based on the name provided in the form
