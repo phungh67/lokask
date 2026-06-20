@@ -61,7 +61,7 @@ func main() {
 	// mail service
 	mailService := mailer.NewMailService(
 		getEnv("MAIL_API_KEY", "password"),
-		"noreply@lokask.com",
+		"noreply@lokask.se",
 	)
 
 	db, err := sqlx.Connect("postgres", connStr)
