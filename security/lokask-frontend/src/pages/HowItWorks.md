@@ -1,61 +1,86 @@
-```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# 🗺️ Component: HowItWorks
-* `Location:` src/components/HowItWorks.jsx
-* `Functionality:` Landing page section detailing the three-step user journey for the platform.
-* `Security Risk:` Low (Presentation Layer Only)
+# Component Documentation: HowItWorks
+
+## Overview
+
+This component (`HowItWorks`) is a client-side presentation component designed to explain the core functionality and user journey of the application (Lokask). It uses structured data (`steps` array) to render a three-step process guide, along with a main header and a primary Call-to-Action (CTA) button linking to the local explorer section.
+
+The component relies heavily on React hooks, external icon libraries (`lucide-react`), and client-side routing (`react-router-dom`).
+
+### Code Snippet Reference
+`./src/components/HowItWorks/HowItWorks.jsx`
 
 ---
 
-## 🛡️ Security Vulnerability Assessment
+## 📐 Detail Analysis
 
-This component is purely a client-side presentation layer. It does not handle user input submission, make API calls, or process any sensitive data, making the immediate security risk very low.
-
-| Target | Vulnerability/Flaw | Priority | Description |
-| :--- | :--- | :--- | :--- |
-| **Functions** | None | N/A | No complex logic or sensitive functions are present. |
-| **Objects** | N/A | N/A | Data (the `steps` array) is static and hardcoded, preventing dynamic injection risks (XSS). |
-| **Return Payload** | None | N/A | The component only returns JSX/UI, with no server-side payload processing capability to exploit. |
-
-**Summary:** The component is safe from common application-level attacks (like XSS or CSRF) because it utilizes static, hardcoded content and does not interact with any backend data or state management that requires validation.
-
----
-
-## 📝 Component Analysis
-
-### 💡 Overview
-
-The `HowItWorks` component visually represents the user's journey on the platform in three sequential steps: Search, Ask, and Travel. It serves as a critical marketing and onboarding element on the main landing page. The structure is clean and highly reusable.
-
-### 🔍 Detail
-
-#### Logic Flow
-1. **Initialization:** Defines a static array `steps` containing the icon component, title, and description for the three key stages.
-2. **Rendering:** Maps over the `steps` array to generate three identical, self-contained step cards (`grid-cols-1 md:grid-cols-3`).
-3. **Action:** Renders a prominent call-to-action button (`<Link to="/explore-locals">`) that guides the user to the core feature of the application.
-
-#### Key Components
-* **`steps` Array:** Object mapping for consistent data rendering.
-* **JSX Structure:** Uses Tailwind CSS for modern, responsive styling.
-* **`react-router-dom`:** Used correctly for client-side navigation (`<Link>`).
-
-### ⚠️ Warnings and Tech Debt
-
-* **No Dynamic Content:** While currently safe, if the steps data were ever pulled from an external source (e.g., an Admin CMS), *all* string data (titles, descriptions) would require robust sanitization (e.g., using a library like DOMPurify) to prevent Stored XSS vulnerabilities.
-* **Prop Drilling Potential:** If the number of steps increases drastically, the `steps` array definition might become cumbersome. Considering a dedicated `StepCard` subcomponent could improve clarity, although it's minor at this scale.
-
-### 📜 Notes and Improvements
-
-* **Code Cleanliness:** The explicit removal of the Navbar and Footer (`/* 🟢 Fix: Removed Navbar */`, `/* 🟢 Fix: Removed Footer */`) indicates good maintenance practices, simplifying the component's scope and reducing rendering complexity.
-* **Accessibility (A11y):** Ensure the heading structure (`<h1>`, `<h2>`) is correctly read by screen readers. The titles and descriptions are well-separated, which aids accessibility.
-* **Performance:** Since all content is static, performance is optimal.
-
----
-
-## 🔗 Structural Navigation
-
-* [Self-Link: HowItWorks Component File](../../HowItWorks.jsx)
-* [Related Link: Local Exploration Page](../pages/ExploreLocalsPage.jsx) - *This is the destination page linked by the CTA.*
-* [Conceptual Link: Global Layout/Shell](../../components/Layout/MainLayout.jsx) - *The component assumes it is placed within a main page container.*
+### Data Structure
+The core logic relies on the `steps` array:
+```javascript
+const steps = [
+  { icon: Search, title: "Find a local", description: "..." },
+  // ... 2 more steps
+];
 ```
+This array is clean and manages presentation data effectively.
+
+### Rendering Logic
+1.  **Header:** Displays the main title ("How Lokask works") and a descriptive subtitle.
+2.  **Steps Mapping:** Uses `steps.map` to iterate over the defined steps. For each step, it renders:
+    *   An icon container (using `step.icon`).
+    *   The step number, title, and description.
+3.  **CTA:** Renders a primary CTA using `Link` from `react-router-dom` pointing to `/explore-locals`.
+
+### Security Review Summary
+
+| Vulnerable Function/Object | Vulnerability Type | Priority | Description |
+| :--- | :--- | :--- | :--- |
+| **None** | XSS / CSRF / Business Logic | N/A | The component handles only presentation logic (UI rendering) using hardcoded strings and controlled data structures (`steps` array). There is no input handling, fetching, or direct use of unsanitized user input in the JSX. |
+
+---
+
+## 🚨 Security Verification & Vulnerability Report
+
+The component is largely **secure** as it does not interact with any backend API endpoints and uses fixed, display-only data.
+
+### Vulnerable Payloads/Objects
+*   **None identified.** All data rendered (titles, descriptions) are controlled by the component developer.
+
+### Risk Assessment
+*   **Client-Side Security:** Low risk. The component is purely presentational.
+*   **Cross-Site Scripting (XSS):** Low risk. React handles rendering, which generally mitigates XSS unless `dangerouslySetInnerHTML` is used (which is not the case here).
+
+### ⚠️ Warning (Security Concern)
+1. **Hardcoded Link Target:** While not a security vulnerability, the CTA uses a hardcoded path (`/explore-locals`). If this path changes, the entire component requires manual updating, which is prone to human error during maintenance.
+2. **Icon Dependency:** The use of `lucide-react` is generally safe, but any future dependency updates must be monitored for vulnerabilities (standard dependency management best practice).
+
+---
+
+## 🏗️ Tech Debt & Notes
+
+### ✨ Note (Best Practices)
+1. **Code Clarity:** The use of explicit class names (e.g., `text-foreground`, `bg-primary/10`) suggests adherence to a design system (like Tailwind CSS), which is excellent for maintainability.
+2. **Fix Flags:** The comments (`/* 🟢 Fix: Removed Navbar */`, `/* 🟢 Fix: Removed Footer */`) indicate manual clean-up or component history changes. These should be treated as comments for review only, and if the surrounding component (e.g., `PageLayout`) is responsible for handling these elements, the `HowItWorks` component should ideally not be responsible for removing them, promoting cleaner separation of concerns.
+
+### 🐛 Warning (Technical Debt / Refactoring Opportunity)
+1. **Magic Strings/Data:** The `steps` array structure is solid, but the text content (titles and descriptions) is hardcoded. For localization (`i18n`) or content management system (CMS) integration, this content should be externalized (e.g., fetched from a JSON data file or an API endpoint) to allow non-developer teams (Marketing, Content) to update the text without touching the component logic.
+
+### 🔗 Structural Navigation Links
+For related components and logic:
+
+*   **Main Entry Point:** Link back to the main layout/page component that utilizes this module.
+    *   `../containers/HomePage` (Assumes this component is used on the home page).
+*   **Navigation:** The CTA points to `/explore-locals`. Ensure the `LocalExplorer` component handles routing and state correctly.
+    *   `../components/LocalExplorer`
+
+---
+
+## 📝 Summary Table
+
+| Aspect | Detail | Priority | Suggested Action |
+| :--- | :--- | :--- | :--- |
+| **Vulnerabilities** | None detected. | N/A | N/A |
+| **Data Integrity** | Hardcoded content. | Medium | Abstract content into a localized JSON data source or API payload. |
+| **Maintainability** | Hardcoded routing path (`/explore-locals`). | Low | Consider making the target path configurable via props if it might change across environments. |
+| **Technical Debt** | Excessive comments detailing component removal (`/* 🟢 Fix: ... */`). | Low | Clean up commented-out code/sections to improve readability. |

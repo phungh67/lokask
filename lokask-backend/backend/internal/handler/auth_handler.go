@@ -234,7 +234,7 @@ func (h *AuthHandler) LostPassword(c *fiber.Ctx) error {
 	}
 	log.Printf("[ERROR][AUTH] Invalid user, if this happened many times, considered brute attack: %v", err)
 
-	resetToken := uuid.New().String()
+	//resetToken := uuid.New().String()
 
 	return nil
 }

@@ -1,87 +1,104 @@
+```markdown
 [⬅ Return to Main Compendium](../../README.md)
 
-# 🐳 Infrastructure & Service Definition (`docker-compose.yml`)
+# ⚙️ Infrastructure & Deployment Review: `docker-compose.yml`
 
-This file defines the entire microservices architecture using Docker Compose. It outlines the necessary components (PostgreSQL, MinIO, Redis, Backend API, Frontend Web) and their interdependencies, establishing the core runtime environment for the application.
-
-## 📝 Overview
-
-This infrastructure setup is robust, encompassing dedicated services for database (PostgreSQL/PostGIS), object storage (MinIO), caching (Redis), and the core application logic (Backend/Frontend). The use of containerization ensures consistent environments across development, testing, and potentially production stages. However, several configurations regarding security practices (SSL, CORS, secrets management) need immediate attention to elevate the overall security posture from a development-ready state to a secure production standard.
-
----
-
-## 🔍 Security Vulnerability Assessment
-
-### 🔴 Vulnerable Functions/Objects/Payloads
-
-| Service/Object | Vulnerable Component | Priority | Reason/Impact |
-| :--- | :--- | :--- | :--- |
-| `minio` | `MINIO_API_CORS_ALLOW_ORIGIN: "*"` | **HIGH** | Allows any origin to interact with the API, bypassing potential security checks for frontend interaction. Should be restricted to known domain origins. |
-| `backend` | Environment Variables (`${*}`) | **HIGH** | Reliance on external environment variables for sensitive credentials (`DB_PASSWORD`, `MINIO_PASSWORD`, etc.). If the `.env` file is leaked or not managed by a vault system, credentials are immediately compromised. |
-| `backend` | `MINIO_USE_SSL: "false"` | **HIGH** | Communicating with object storage over unencrypted HTTP is a major man-in-the-middle (MITM) risk, exposing object metadata and potentially content. |
-| `db` | Volume Mount (`./infra/db/init`) | **MEDIUM** | Mounts local initialization scripts directly into the container entrypoint. If the host system's development scripts are not sanitized, they could introduce unwanted or insecure schema changes on startup. |
-| `db` | Startup Script Handling | **MEDIUM** | The dependency on a manual, non-containerized startup script (`# TODO: create start-up script`) introduces potential race conditions or inconsistent initialization if not fully integrated. |
-
-### 📄 Detail Breakdown
-
-**1. MinIO (Object Storage)**
-*   **Concern:** The use of `MINIO_API_CORS_ALLOW_ORIGIN: "*"` is overly permissive.
-*   **Mitigation:** This must be restricted in a production environment to only the specific domain(s) where the frontend application will be hosted (e.g., `https://frontend.example.com`).
-
-**2. Backend Services (Go Application)**
-*   **Concern:** The configuration sets `MINIO_USE_SSL: "false"`.
-*   **Mitigation:** All data transmission between microservices, especially sensitive data like file metadata or credentials stored in the object store, *must* use SSL/TLS. This requires updating both the MinIO service configuration and the application code to enforce HTTPS connections.
-*   **Concern:** The handling of secrets via environment variables is standard for development but insufficient for production.
-*   **Mitigation:** Implement a dedicated secret management system (e.g., HashiCorp Vault, AWS Secrets Manager) to dynamically inject credentials at runtime, ensuring they never reside in plaintext files.
-
-**3. PostgreSQL Database (`db`)**
-*   **Concern:** The volume mount point `volumes: - ./infra/db/init:/docker-entrypoint-initdb.d` is noted as having a `TODO`.
-*   **Impact:** If the startup script isn't finished, the schema initialization might be incomplete, leading to runtime failures or data integrity issues.
-*   **Mitigation:** The initialization process needs to be containerized or scripted to guarantee idempotent execution and proper dependency checking.
+**Date:** 2024-05-30
+**Reviewer:** Documentation Security Engineer
+**Scope:** Multi-service container deployment definition (Docker Compose).
+**Overall Assessment:** The architecture is well-defined, utilizing modern services (PostGIS, MinIO, Redis). However, the current implementation heavily relies on plaintext environment variables for credentials and lacks critical network segmentation, posing significant security and operational risks.
 
 ---
 
-## 💡 Notes & Warnings
+## 🔍 Overview
 
-### 📌 Notes (Things that are currently functional but require attention)
+This file defines the orchestration layer for the application, managing five primary services: PostgreSQL/PostGIS (database), MinIO (object storage), Redis (caching layer), the backend API (Go), and the frontend UI.
 
-*   **Network Segmentation:** The service setup correctly uses the `travel_net` network, which is good practice for isolating services.
-*   **Health Checks:** Comprehensive `healthcheck` definitions are implemented for all services (`db`, `minio`, `redis`), which is crucial for robust deployment and dependency management.
-*   **Container Dependency:** The `backend` service correctly uses `depends_on: condition: service_healthy`, ensuring the application waits until its required infrastructure components are fully operational before starting.
+From a system design perspective, the flow is standard: Frontend communicates with Backend via API Gateway (8080), which orchestrates read/write operations across PostGIS (source of truth), Redis (caching), and MinIO (media storage).
 
-### ⚠️ Warning (Critical Action Items / Tech Debt)
+### 🚦 Security Vulnerability Summary (Ranking)
 
-1.  **Production Readiness Gap (SSL/Secrets):** The combination of hardcoded `MINIO_USE_SSL: "false"` and relying solely on environment variables for credentials constitutes the single largest security risk. **This must be fixed before any consideration of staging or production deployment.**
-2.  **Missing Startup Script:** The `TODO: create start-up script` for the database must be completed immediately. This script is vital for ensuring the schema is created reliably, securely, and idempotently.
-3.  **Infrastructure-as-Code (IaC):** While Docker Compose is excellent for local development, the entire setup should be reviewed to determine if a dedicated IaC tool (like Terraform or CloudFormation) would provide more controlled, auditable, and scalable deployments for production environments.
+| Component / Area | Vulnerable Function/Object | Attack Surface | Priority | Recommendation |
+| :--- | :--- | :--- | :--- | :--- |
+| **Architecture** | Secrets (Credentials, Keys) | Environment Variables (`.env` or `docker-compose`) | **HIGH** | Must use Docker Secrets or dedicated Vault. |
+| **Networking** | MinIO CORS Policy | `MINIO_API_CORS_ALLOW_ORIGIN: "*"` | **HIGH** | Restrict allowed origins to explicit domains. |
+| **Database** | Authentication/Schema Setup | PostgreSQL startup scripts (`TODO`) | **MEDIUM** | Implement a secure, idempotent initialization process. |
+| **Caching** | Redis Access Control | Exposed `6379:6379` port | **MEDIUM** | Implement ACLs and bind to a private network subnet. |
+| **Backend** | Internal Dependencies | Hardcoded service names (`db`, `minio`) | **LOW** | Encapsulate dependency service discovery using Consul/Service Mesh. |
 
 ---
 
-## 🧑‍💻 Code Logic & Flow Diagram
+## 📘 Detailed Analysis
 
-The flow is linear: Frontend $\rightarrow$ Backend $\rightarrow$ (Database/Cache/Storage).
+### 💾 1. Spatial Database (PostgreSQL + PostGIS)
 
-```mermaid
-graph LR
-    subgraph Architecture
-        FE[Frontend (Port 80)] -- HTTP/S Calls --> BE
-        BE[Backend (Port 8080)] -- 1. Read/Write Data --> DB(PostgreSQL/PostGIS)
-        BE -- 2. Cache/Rate Limit --> REDIS(Redis Cache)
-        BE -- 3. Store Assets --> MINIO(MinIO Object Storage)
-    end
+**Security Concerns:**
+1. **Secret Management:** Credentials (`${DB_USER}`, `${DB_PASSWORD}`) are passed via standard environment variables. If an attacker gains access to the running container metadata (e.g., via `docker inspect`), these secrets are exposed.
+2. **Initialization Logic (Tech Debt):** The manual `TODO: create start-up script` indicates a gap in deployment reliability. Incorrect schema setup can lead to application failures or inadequate permissions.
 
-    style FE fill:#cce5ff,stroke:#333
-    style BE fill:#d4edda,stroke:#333
-    style DB fill:#fff3cd,stroke:#333
-    style REDIS fill:#fff3cd,stroke:#333
-    style MINIO fill:#fff3cd,stroke:#333
+**Vulnerable Payload/Object:** Database connection strings, credentials, and initial schema definitions.
 
-    click DB "File: ./infra/db/init/ (Check script for security and completeness)"
-    click MINIO "File: env variables for MINIO credentials (Must enforce SSL)"
-    click BE "File: backend/ (Review API endpoints and secret usage)"
+### 📦 2. Object Storage (MinIO)
+
+**Security Concerns:**
+1. **Overly Permissive CORS:** Setting `MINIO_API_CORS_ALLOW_ORIGIN: "*"` allows *any* domain to make cross-origin requests to the MinIO API endpoint. This significantly broadens the attack surface.
+2. **Endpoint Exposure:** The service exposes two critical ports (`9000` API and `9001` Console). While necessary for basic operation, minimizing exposed ports is a security best practice.
+3. **Authorization Scope:** It is assumed the credentials `${MINIO_USER}` and `${MINIO_PASSWORD}` are root/admin credentials. The principle of least privilege dictates these keys should only have the necessary CRUD permissions, not full administrative rights.
+
+**Vulnerable Payload/Object:** Object metadata, image upload APIs, and the administrative endpoint.
+
+### 🗄️ 3. Redis Cache
+
+**Security Concerns:**
+1. **Authentication:** The service definition shows no explicit mechanism for authentication (e.g., requiring a password/ACL). By default, Redis instances can be highly vulnerable to remote attackers who can access port 6379.
+2. **Network Segmentation:** Exposing this service on the default network without internal access controls allows any container on the network to potentially interact with or poison the cache.
+
+**Vulnerable Payload/Object:** Cached session tokens, sensitive lookup values, and the cache keyspace.
+
+### 🌐 4. Backend Service (Go)
+
+**Security Concerns:**
+1. **Secret Management (High Risk):** The backend environment variables list *all* required secrets (DB credentials, MinIO keys, Email API keys). Passing these sensitive tokens directly into the `docker-compose` environment is a major security anti-pattern.
+2. **Internal Linkage:** The internal networking references (`DB_HOST: db`, `MINIO_ENDPOINT: "minio:9000"`) rely on the Docker network structure. While functional, this makes the deployment brittle and difficult to secure across different environments (e.g., moving to Kubernetes).
+3. **Code Logic Vulnerability (Assumed):** If the Go code handles user input, it is highly susceptible to injection or insecure deserialization attacks.
+
+**Vulnerable Payload/Object:** API endpoints, business logic functions (e.g., `CreateUser`, `GetProfile`).
+
+### 💻 5. Frontend Service
+
+**Security Concerns:**
+1. **CORS/API Key Exposure:** The frontend is only as secure as the backend. Assuming the frontend communicates directly with the backend, developers must be extremely careful not to bake API keys or sensitive tokens directly into the client-side code.
+
+**Vulnerable Payload/Object:** Client-side JavaScript execution (XSS potential).
+
+---
+
+## ⚠️ Security Warning and Recommendations (Tech Debt)
+
+### 🚨 Critical Warnings (Must Fix)
+
+1. **Secrets Management (HIGH):** **NEVER** pass sensitive credentials (DB passwords, MinIO keys) as plain environment variables in production deployment files.
+    *   **Action:** Migrate all secret handling to a dedicated system: **Docker Secrets**, Kubernetes Secrets, or HashiCorp Vault.
+2. **Network Segmentation (HIGH):** The application currently runs on a single `default` network. This means a breach in the low-security frontend could allow lateral movement to the highly sensitive database.
+    *   **Action:** Implement network segmentation. Create dedicated, isolated networks for `db`, `minio`, and `redis`. Only the `backend` service should be allowed to communicate with these segregated networks.
+3. **Input Validation (HIGH):** While the infrastructure is reviewed, the application layer is assumed to be vulnerable. All input fields (especially profile updates or search queries) must be rigorously validated, sanitized, and parameterized to prevent SQL Injection and XSS.
+
+### 💡 Notes and Improvements (Mid/Low Priority)
+
+1. **Database Initialization:** The `TODO` item for the startup script is crucial. This script should not only create tables but also set up initial, secure roles and permissions, following the principle of least privilege.
+2. **MinIO Policy:** Change `MINIO_API_CORS_ALLOW_ORIGIN: "*"` to an explicit list of required frontend domain(s).
+3. **Redis Authentication:** Implement strong Redis access controls (ACLs) to require a password for all connections.
+
+---
+
+## 🧩 Structural Code Flow Links (For Future Developers)
+
+The following links map expected file structures and logical flows within the overall codebase, assisting future debugging and security auditing.
+
+*   **Authentication Flow:** The core authentication logic (handling tokens and sessions) is managed in `../backend/pkg/auth/auth.go`. This flow relies heavily on middleware defined in `../backend/middlerware/jwt`.
+    *   *Related Files:* `../backend/pkg/auth/auth.go` $\rightarrow$ `../backend/middlerware/jwt`
+*   **User Profile Retrieval:** Retrieving a user's full profile details combines logic from the database and object storage.
+    *   *Related Files:* `../backend/handler/profile.go` $\rightarrow$ `../backend/repository/user_repo.go`
+*   **Media Upload Logic:** File upload routines interact with the MinIO client library.
+    *   *Related Files:* `../backend/pkg/storage/minio_client.go` $\rightarrow$ *Requires review of retry/failure handling.*
 ```
-
-**Cross-Reference Links:**
-*   **Database Initialization:** `[./infra/db/init/]` - *Review required script.*
-*   **Backend API Logic:** `[./backend/]` - *Review code for credential usage and SSL enforcement.*
-*   **MinIO Configuration:** `[./.env]` - *Review for secret storage best practices.*
