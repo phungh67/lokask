@@ -20,6 +20,7 @@ interface AuthPromptDialogProps {
   onOpenChange: (open: boolean) => void;
   message?: string;
   defaultRole?: "traveller" | "consultant";
+  defaultStep?: "initial" | "login" | "signup";
   onLogin?: () => void;
   onSignup?: () => void;
   onGoogleAuth?: () => void;
@@ -44,6 +45,7 @@ const AuthPromptDialog = ({
   onOpenChange,
   message = "Log in or sign up",
   defaultRole = "traveller",
+  defaultStep = "initial",
   onLogin,
   onSignup,
 }: AuthPromptDialogProps) => {
@@ -64,15 +66,15 @@ const AuthPromptDialog = ({
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setStep("initial");
+      setStep(defaultStep);
       setEmail("");
       setPassword("");
       setFullName("");
       setCity("");
       setIsLoading(false);
-      setSelectedRole(defaultRole || "traveller"); // 🟢 Reset to whatever opened the dialog
+      setSelectedRole(defaultRole || "traveller");
     }
-  }, [open, defaultRole]);
+  }, [open, defaultRole, defaultStep]);
 
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

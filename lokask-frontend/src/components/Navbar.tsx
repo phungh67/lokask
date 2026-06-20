@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, Search, Heart, User, Briefcase, LayoutDashboard } from "lucide-react";
+import {
+  Menu,
+  X,
+  Search,
+  Heart,
+  User,
+  Briefcase,
+  LayoutDashboard,
+} from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -20,18 +28,27 @@ const Navbar = () => {
 
   // Dialog State
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [authRole, setAuthRole] = useState<"traveller" | "consultant">("traveller");
+  const [authRole, setAuthRole] = useState<"traveller" | "consultant">(
+    "traveller",
+  );
   const [authMessage, setAuthMessage] = useState("");
+  const [authStep, setAuthStep] = useState<"initial" | "login" | "signup">(
+    "initial",
+  );
 
-  const handleOpenAuth = (role: "traveller" | "consultant", message: string) => {
+  const handleOpenAuth = (
+    role: "traveller" | "consultant",
+    message: string,
+    step: "initial" | "login" | "signup" = "initial",
+  ) => {
     setAuthRole(role);
     setAuthMessage(message);
+    setAuthStep(step);
     setShowAuthDialog(true);
   };
 
   useEffect(() => {
     const checkAuth = async () => {
-
       // check local storage for stored credential
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
@@ -71,7 +88,7 @@ const Navbar = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("auth-changed", checkAuth);
-    }
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -96,7 +113,9 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
             <span className="text-2xl font-black font-body tracking-tight">
-              <span className="text-foreground font-extrabold text-4xl">Lok</span>
+              <span className="text-foreground font-extrabold text-4xl">
+                Lok
+              </span>
               <span className="text-primary text-4xl">ask</span>
             </span>
           </Link>
@@ -117,7 +136,10 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6 shrink-0">
-            <Link to="/wishlist" className="flex flex-col items-center text-foreground/80 hover:text-foreground">
+            <Link
+              to="/wishlist"
+              className="flex flex-col items-center text-foreground/80 hover:text-foreground"
+            >
               <Heart className="w-5 h-5" />
               <span className="text-xs mt-0.5">Wishlist</span>
             </Link>
@@ -130,11 +152,14 @@ const Navbar = () => {
                 <div className="flex items-center gap-3">
                   <div className="btn-outline-pill border-none bg-primary/10 cursor-default px-4 py-2">
                     <span className="text-sm font-bold text-foreground">
-                      Hello, {user.full_name?.split(' ')[0] || 'User'}
+                      Hello, {user.full_name?.split(" ")[0] || "User"}
                     </span>
                   </div>
 
-                  <Link to="/dashboard" className="btn-outline-pill hover:bg-muted flex items-center gap-2">
+                  <Link
+                    to="/dashboard"
+                    className="btn-outline-pill hover:bg-muted flex items-center gap-2"
+                  >
                     <LayoutDashboard size={14} />
                     <span>Dashboard</span>
                   </Link>
@@ -158,7 +183,13 @@ const Navbar = () => {
                 /* Guest View */
                 <>
                   <button
-                    onClick={() => handleOpenAuth("traveller", "Welcome back! Please log in.")}
+                    onClick={() =>
+                      handleOpenAuth(
+                        "traveller",
+                        "Welcome back! Please log in.",
+                        "login",
+                      )
+                    }
                     className="btn-outline-pill"
                   >
                     Log in
@@ -169,13 +200,33 @@ const Navbar = () => {
                       <button className="btn-outline-pill">Sign up</button>
                     </HoverCardTrigger>
                     <HoverCardContent align="end" className="w-64 p-4">
-                      <h3 className="font-bold text-lg mb-3 font-display">Sign up</h3>
+                      <h3 className="font-bold text-lg mb-3 font-display">
+                        Sign up
+                      </h3>
                       <div className="space-y-1">
-                        <button onClick={() => handleOpenAuth("traveller", "Join as a Traveller")} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left">
+                        <button
+                          onClick={() =>
+                            handleOpenAuth(
+                              "traveller",
+                              "Join as a Traveller",
+                              "signup",
+                            )
+                          }
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left"
+                        >
                           <User className="w-5 h-5 text-primary" />
                           <span className="font-medium">As Traveller</span>
                         </button>
-                        <button onClick={() => handleOpenAuth("consultant", "Join as a Consultant")} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left">
+                        <button
+                          onClick={() =>
+                            handleOpenAuth(
+                              "consultant",
+                              "Join as a Consultant",
+                              "signup",
+                            )
+                          }
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left"
+                        >
                           <Briefcase className="w-5 h-5 text-primary" />
                           <span className="font-medium">As Consultant</span>
                         </button>
@@ -197,6 +248,7 @@ const Navbar = () => {
           open={showAuthDialog}
           onOpenChange={setShowAuthDialog}
           defaultRole={authRole}
+          defaultStep={authStep}
           message={authMessage}
         />
       </div>
