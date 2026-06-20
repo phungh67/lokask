@@ -589,6 +589,8 @@ const ConsultantPage = () => {
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
+        defaultStep="signup"
+        defaultRole="traveller"
       />
 
       {/* 🟢 FULLSCREEN LIGHTBOX COMPONENT */}
