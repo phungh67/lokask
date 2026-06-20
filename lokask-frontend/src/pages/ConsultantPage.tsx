@@ -108,9 +108,10 @@ const ConsultantPage = () => {
   // 4. Gallery Logic
   const fetchedImages = consultant.galleryImages || [];
   const fallbackImg = consultant.coverUrl || "https://placehold.co/600x400";
-  
+
   // The actual array used for the full lightbox
-  const actualGallery = fetchedImages.length > 0 ? fetchedImages : [fallbackImg];
+  const actualGallery =
+    fetchedImages.length > 0 ? fetchedImages : [fallbackImg];
 
   const galleryDisplay = [
     fetchedImages[0] || fallbackImg,
@@ -122,7 +123,7 @@ const ConsultantPage = () => {
 
   // 🟢 Lightbox Handlers
   const openGallery = (index: number) => {
-    if (index === 0 || (fetchedImages.length > index)) {
+    if (index === 0 || fetchedImages.length > index) {
       setCurrentImageIndex(index);
       setIsGalleryOpen(true);
     }
@@ -133,7 +134,9 @@ const ConsultantPage = () => {
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? actualGallery.length - 1 : prev - 1));
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? actualGallery.length - 1 : prev - 1,
+    );
   };
 
   return (
@@ -152,7 +155,6 @@ const ConsultantPage = () => {
 
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 relative">
-          
           {/* LEFT COLUMN: Profile Card */}
           <div className="lg:col-span-4 relative">
             <div className="bg-white rounded-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-zinc-200 p-8 flex flex-col items-center sticky top-24">
@@ -213,33 +215,46 @@ const ConsultantPage = () => {
 
           {/* RIGHT COLUMN: Details & Gallery */}
           <div className="lg:col-span-8 flex flex-col pt-4">
-            
             {/* Header Stats Row */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
               <div className="flex items-center gap-4">
                 <span className="text-3xl">🏆</span>
                 <div className="flex flex-col">
-                  <span className="text-[#EF4343] font-bold text-lg leading-tight">Local</span>
-                  <span className="text-[#E11D48] font-bold text-lg leading-tight">Favorite</span>
+                  <span className="text-[#EF4343] font-bold text-lg leading-tight">
+                    Local
+                  </span>
+                  <span className="text-[#E11D48] font-bold text-lg leading-tight">
+                    Favorite
+                  </span>
                 </div>
                 <div className="h-10 w-px bg-zinc-300 mx-2" />
                 <p className="text-sm font-bold text-zinc-500 max-w-[220px] leading-snug">
-                  One of the most loved locals on LokaAsk, according to travelers
+                  One of the most loved locals on LokaAsk, according to
+                  travelers
                 </p>
               </div>
 
               <div className="flex items-center gap-6">
                 <div className="flex flex-col items-center">
-                  <span className="text-2xl font-bold text-zinc-900">{consultant.rating || "4.9"}</span>
+                  <span className="text-2xl font-bold text-zinc-900">
+                    {consultant.rating || "4.9"}
+                  </span>
                   <div className="flex text-[#FBBF24]">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill={i < 4 ? "currentColor" : "none"} className={i === 4 ? "text-zinc-300" : ""} />
+                      <Star
+                        key={i}
+                        size={14}
+                        fill={i < 4 ? "currentColor" : "none"}
+                        className={i === 4 ? "text-zinc-300" : ""}
+                      />
                     ))}
                   </div>
                 </div>
                 <div className="h-10 w-px bg-zinc-300" />
                 <div className="flex flex-col items-center">
-                  <span className="text-2xl font-bold text-zinc-900">{consultant.helpedCount || "5"}</span>
+                  <span className="text-2xl font-bold text-zinc-900">
+                    {consultant.helpedCount || "5"}
+                  </span>
                   <span className="text-sm text-zinc-500">Reviews</span>
                 </div>
               </div>
@@ -259,16 +274,20 @@ const ConsultantPage = () => {
                 }
                 className="flex items-center gap-2 text-zinc-900 font-bold text-sm hover:opacity-70 transition-opacity"
               >
-                <Heart size={16} className={isWishlisted ? "fill-red-500 text-red-500" : "text-zinc-900"} />
+                <Heart
+                  size={16}
+                  className={
+                    isWishlisted ? "fill-red-500 text-red-500" : "text-zinc-900"
+                  }
+                />
                 <span className="underline">Add to wishlist</span>
               </button>
             </div>
 
             {/* 🟢 INTERACTIVE Gallery Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-12">
-              
               {/* Main Image */}
-              <div 
+              <div
                 className="md:col-span-2 relative h-full bg-zinc-100 cursor-pointer group overflow-hidden"
                 onClick={() => openGallery(0)}
               >
@@ -282,35 +301,36 @@ const ConsultantPage = () => {
 
               {/* Side Images */}
               <div className="hidden md:grid grid-rows-2 gap-3 h-full">
-                
-                <div 
-                  className={`relative w-full h-full bg-zinc-100 overflow-hidden ${fetchedImages.length > 1 ? 'cursor-pointer group' : ''}`}
+                <div
+                  className={`relative w-full h-full bg-zinc-100 overflow-hidden ${fetchedImages.length > 1 ? "cursor-pointer group" : ""}`}
                   onClick={() => openGallery(1)}
                 >
                   <img
                     src={galleryDisplay[1]}
-                    className={`w-full h-full object-cover transition-transform duration-500 ${fetchedImages.length > 1 ? 'group-hover:scale-105' : ''}`}
+                    className={`w-full h-full object-cover transition-transform duration-500 ${fetchedImages.length > 1 ? "group-hover:scale-105" : ""}`}
                     alt="Gallery 2"
                   />
-                  {fetchedImages.length > 1 && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />}
+                  {fetchedImages.length > 1 && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  )}
                 </div>
 
-                <div 
-                  className={`relative w-full h-full bg-zinc-100 overflow-hidden ${fetchedImages.length > 2 ? 'cursor-pointer group' : ''}`}
+                <div
+                  className={`relative w-full h-full bg-zinc-100 overflow-hidden ${fetchedImages.length > 2 ? "cursor-pointer group" : ""}`}
                   onClick={() => openGallery(2)}
                 >
                   <img
                     src={galleryDisplay[2]}
-                    className={`w-full h-full object-cover transition-transform duration-500 ${fetchedImages.length > 2 ? 'group-hover:scale-105' : ''}`}
+                    className={`w-full h-full object-cover transition-transform duration-500 ${fetchedImages.length > 2 ? "group-hover:scale-105" : ""}`}
                     alt="Gallery 3"
                   />
-                  {fetchedImages.length > 2 && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />}
+                  {fetchedImages.length > 2 && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  )}
 
                   {/* 🟢 Clickable overlay for remaining images */}
                   {remainingImagesCount > 0 && (
-                    <div 
-                      className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px] transition-colors hover:bg-black/50"
-                    >
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px] transition-colors hover:bg-black/50">
                       <div className="bg-white/95 text-zinc-900 px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
                         <Images size={16} />
                         See all {fetchedImages.length} photos
@@ -326,15 +346,21 @@ const ConsultantPage = () => {
               <div className="flex gap-4">
                 <Calendar className="w-6 h-6 text-zinc-500 shrink-0" />
                 <div>
-                  <h4 className="font-bold text-zinc-900 mb-1">3+ years on LokaAsk</h4>
-                  <p className="text-sm text-zinc-500">Member since 2022. Experienced local guide.</p>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    3+ years on LokaAsk
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Member since 2022. Experienced local guide.
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
                 <Clock className="w-6 h-6 text-zinc-500 shrink-0" />
                 <div>
-                  <h4 className="font-bold text-zinc-900 mb-1">Quick Responder</h4>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Quick Responder
+                  </h4>
                   <p className="text-sm text-zinc-500">Usually within 1 hour</p>
                 </div>
               </div>
@@ -342,24 +368,36 @@ const ConsultantPage = () => {
               <div className="flex gap-4">
                 <Award className="w-6 h-6 text-[#C56A49] shrink-0" />
                 <div>
-                  <h4 className="font-bold text-zinc-900 mb-1">Certified Local Expert</h4>
-                  <p className="text-sm text-zinc-500">Verified expertise in local history & culture</p>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Certified Local Expert
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Verified expertise in local history & culture
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
                 <Trophy className="w-6 h-6 text-[#F59E0B] shrink-0" />
                 <div>
-                  <h4 className="font-bold text-zinc-900 mb-1">Top Rated Local</h4>
-                  <p className="text-sm text-zinc-500">Highly ranked based on ratings and reliability.</p>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Top Rated Local
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Highly ranked based on ratings and reliability.
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
                 <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
                 <div>
-                  <h4 className="font-bold text-zinc-900 mb-1">Identity verified</h4>
-                  <p className="text-sm text-zinc-500">Personal info confirmed. You're in safe hands.</p>
+                  <h4 className="font-bold text-zinc-900 mb-1">
+                    Identity verified
+                  </h4>
+                  <p className="text-sm text-zinc-500">
+                    Personal info confirmed. You're in safe hands.
+                  </p>
                 </div>
               </div>
 
@@ -367,7 +405,10 @@ const ConsultantPage = () => {
                 <MessageCircle className="w-6 h-6 text-zinc-500 shrink-0" />
                 <div>
                   <h4 className="font-bold text-zinc-900 mb-1">Most Asked</h4>
-                  <p className="text-sm text-zinc-500">Helped {consultant.helpedCount || "160"}+ travelers with local insights.</p>
+                  <p className="text-sm text-zinc-500">
+                    Helped {consultant.helpedCount || "160"}+ travelers with
+                    local insights.
+                  </p>
                 </div>
               </div>
             </div>
@@ -375,8 +416,14 @@ const ConsultantPage = () => {
             {/* Tags & Trust Footer */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-zinc-200 pt-8 mt-4 gap-6">
               <div className="flex flex-wrap gap-2">
-                {(consultant.tags?.length ? consultant.tags : ["Art", "Museums"]).map((tag) => (
-                  <span key={tag} className="px-3 py-1 bg-[#EBE6E0] text-zinc-700 text-xs font-medium rounded-full">
+                {(consultant.tags?.length
+                  ? consultant.tags
+                  : ["Art", "Museums"]
+                ).map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-[#EBE6E0] text-zinc-700 text-xs font-medium rounded-full"
+                  >
                     #{tag}
                   </span>
                 ))}
@@ -410,7 +457,8 @@ const ConsultantPage = () => {
           </div>
 
           <p className="text-[#737373] text-[18px] leading-[29px] mb-8 max-w-[1206px]">
-            Travellers consistently describe {consultant.displayName || consultant.name} as friendly, patient,
+            Travellers consistently describe{" "}
+            {consultant.displayName || consultant.name} as friendly, patient,
             and easy to talk to. Many reviews highlight her deep local
             knowledge, especially when it comes to food spots and lesser-known
             neighborhoods. Guests often mention that her recommendations feel
@@ -541,21 +589,18 @@ const ConsultantPage = () => {
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
-        onLogin={() => navigate("/login")}
-        onSignup={() => navigate("/signup")}
       />
 
       {/* 🟢 FULLSCREEN LIGHTBOX COMPONENT */}
       {isGalleryOpen && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
-          
           {/* Top Bar Navigation */}
           <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center text-white z-10">
             <span className="text-sm font-medium tracking-widest uppercase">
               {currentImageIndex + 1} / {actualGallery.length}
             </span>
-            <button 
-              onClick={() => setIsGalleryOpen(false)} 
+            <button
+              onClick={() => setIsGalleryOpen(false)}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
             >
               <X size={28} />
@@ -565,7 +610,10 @@ const ConsultantPage = () => {
           {/* Previous Arrow */}
           {actualGallery.length > 1 && (
             <button
-              onClick={(e) => { e.stopPropagation(); prevImage(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
               className="absolute left-4 md:left-8 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
             >
               <ChevronLeft size={40} />
@@ -584,7 +632,10 @@ const ConsultantPage = () => {
           {/* Next Arrow */}
           {actualGallery.length > 1 && (
             <button
-              onClick={(e) => { e.stopPropagation(); nextImage(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
               className="absolute right-4 md:right-8 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
             >
               <ChevronRight size={40} />
@@ -592,9 +643,9 @@ const ConsultantPage = () => {
           )}
 
           {/* Invisible click-away background listener */}
-          <div 
-            className="absolute inset-0 z-[-1]" 
-            onClick={() => setIsGalleryOpen(false)} 
+          <div
+            className="absolute inset-0 z-[-1]"
+            onClick={() => setIsGalleryOpen(false)}
           />
         </div>
       )}
