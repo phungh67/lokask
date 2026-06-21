@@ -8,40 +8,38 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-// 🟢 Define hardcoded destinations locally to replace mockData imports
 const DESTINATIONS = [
   {
-    name: "Thailand",
-    slug: "thailand",
-    imageUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
+    name: "Hanoi",
+    slug: "hanoi",
+    imageUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&auto=format&fit=crop",
   },
   {
-    name: "Paris",
-    slug: "paris",
-    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
+    name: "Ho Chi Minh City",
+    slug: "ho-chi-minh-city",
+    imageUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&auto=format&fit=crop",
   },
   {
-    name: "Rome",
-    slug: "rome",
-    imageUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&auto=format&fit=crop",
+    name: "Hoi An",
+    slug: "hoi-an",
+    imageUrl: "https://images.unsplash.com/photo-1555921015-c26206080356?w=800&auto=format&fit=crop",
   },
   {
-    name: "Tokyo",
-    slug: "tokyo",
-    imageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+    name: "Da Nang",
+    slug: "da-nang",
+    imageUrl: "https://images.unsplash.com/photo-1559508551-44bff1de756b?w=800&auto=format&fit=crop",
   },
   {
-    name: "Bali",
-    slug: "bali",
-    imageUrl: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop",
+    name: "Quang Binh",
+    slug: "quang-binh",
+    imageUrl: "https://images.unsplash.com/photo-1528127269322-539801943592?w=800&auto=format&fit=crop",
   },
   {
-    name: "London",
-    slug: "london",
-    imageUrl: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&auto=format&fit=crop",
+    name: "Sapa",
+    slug: "sapa",
+    imageUrl: "https://images.unsplash.com/photo-1542012836-e82eb0b4b2c1?w=800&auto=format&fit=crop",
   },
 ];
-
 const DestinationGrid = () => {
   return (
     <section className="py-16 lg:py-24">

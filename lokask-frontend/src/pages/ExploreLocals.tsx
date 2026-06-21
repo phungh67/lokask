@@ -1,10 +1,10 @@
-// src/pages/ExploreLocals.tsx
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
 import { getConsultants } from "@/lib/consultants";
 import { ExploreSidebar, FilterState } from "@/components/ExploreSidebar";
+import BlogQuickViewDialog from "@/components/BlogQuickViewDialog";
 import { Loader2, SlidersHorizontal, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +24,12 @@ const ExploreLocals = () => {
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
+  const [selectedBlog, setSelectedBlog] = useState<any | null>(null);
+
   const [sidebarFilters, setSidebarFilters] = useState<FilterState>({
     location: searchParams.get("city") || "",
     niches: searchParams.get("niche") ? [searchParams.get("niche")!] : [],
-    priceRange: [0, 100], // Currently ignoring index 0 since backend usually just filters 'max_price'
+    priceRange: [0, 100], 
     minRating: null,
     languages: [],
   });
@@ -46,7 +48,7 @@ const ExploreLocals = () => {
         city: sidebarFilters.location,
         niche: sidebarFilters.niches,
         languages: sidebarFilters.languages,
-        maxPrice: sidebarFilters.priceRange[1], // Pass the max slider value
+        maxPrice: sidebarFilters.priceRange[1], 
         minRating: sidebarFilters.minRating || undefined,
       }),
   });
@@ -98,18 +100,27 @@ const ExploreLocals = () => {
                 </p>
               </div>
 
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 h-9 bg-white border-[#D1D5DC] text-[#364153]"
-              >
-                {showFilters ? (
-                  <EyeOff size={16} />
-                ) : (
-                  <SlidersHorizontal size={16} />
-                )}
-                {showFilters ? "Hide Filters" : "Show Filters"}
-              </Button>
+              {/* 🟢 Added Explore Articles Button next to Filters */}
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+                <Link to="/articles">
+                  <Button className="h-9 bg-[#C56A49] hover:bg-[#A3553A] text-white transition-colors">
+                    Explore Articles
+                  </Button>
+                </Link>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2 h-9 bg-white border-[#D1D5DC] text-[#364153]"
+                >
+                  {showFilters ? (
+                    <EyeOff size={16} />
+                  ) : (
+                    <SlidersHorizontal size={16} />
+                  )}
+                  {showFilters ? "Hide Filters" : "Show Filters"}
+                </Button>
+              </div>
             </div>
 
             <div className="mb-6 text-sm text-[#4A5565]">
@@ -135,7 +146,7 @@ const ExploreLocals = () => {
                 <div
                   className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 transition-opacity ${isFetching ? "opacity-50" : "opacity-100"}`}
                 >
-                  {consultants.map((c) => (
+                  {consultants.map((c: any) => (
                     <ConsultantCardCompact key={c.id} consultant={c} />
                   ))}
                 </div>
@@ -227,6 +238,14 @@ const ExploreLocals = () => {
           </div>
         </div>
       </div>
+
+      <BlogQuickViewDialog 
+        blog={selectedBlog} 
+        open={!!selectedBlog} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setSelectedBlog(null);
+        }} 
+      />
     </div>
   );
 };
