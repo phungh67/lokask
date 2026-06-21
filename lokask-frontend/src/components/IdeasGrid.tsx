@@ -4,6 +4,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { useQuery } from "@tanstack/react-query";
 import { Blog } from "@/types/blog"; 
 
+const BUCKET_URL = "https://deun1-general-purpose-bucket.s3.eu-north-1.amazonaws.com/"; 
+
 const IdeasGrid = () => {
   const { data: blogs = [], isLoading } = useQuery({
     queryKey: ["blogs", "featured"],
@@ -13,7 +15,7 @@ const IdeasGrid = () => {
         category: "Hanoi",
         title: "Hanoi’s Alleyway Coffee Culture: A Secret World",
         summary: "A quick look into how local students navigate the hidden, narrow alleyways of Vietnam's capital to find the absolute best egg coffee on a budget.",
-        coverImageUrl: "/blog/135d4476-b280-4074-893a-dfddd45a0674/cover.jpg",
+        coverImageUrl: "blog/135d4476-b280-4074-893a-dfddd45a0674/cover.jpg", 
         authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
         content: "", 
         createdAt: "2026-06-12T22:17:34.899Z"
@@ -23,7 +25,7 @@ const IdeasGrid = () => {
         category: "Hanoi",
         title: "The Art of the Hanoi Sidewalk: Bun Cha on Plastic Stools",
         summary: "A realistic look at Hanoi's legendary street food scene, where world-class culinary art is served on low plastic stools right next to rushing traffic.",
-        coverImageUrl: "/blog/a560ec08-9ebf-4b8d-93d1-ad8c3a555504/cover.jpg",
+        coverImageUrl: "blog/a560ec08-9ebf-4b8d-93d1-ad8c3a555504/cover.jpg",
         authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
         content: "", 
         createdAt: "2026-06-13T17:02:11.105Z"
@@ -33,13 +35,23 @@ const IdeasGrid = () => {
         category: "Hanoi",
         title: "Nhà Tập Thể: The Fading Soul of Hanoi's Soviet Apartments",
         summary: "An exploration of Hanoi's old-school collective housing blocks, examining how a style of architecture from a bygone era still holds the city's tightest communities.",
-        coverImageUrl: "/blog/610e7a40-a223-4a14-8de6-1f5d89f3fa6b/cover.jpg",
+        coverImageUrl: "blog/610e7a40-a223-4a14-8de6-1f5d89f3fa6b/cover.jpg",
         authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
         content: "", 
         createdAt: "2026-06-13T17:03:20.750Z"
       }
     ] as Blog[],
   });
+
+  const getImageUrl = (path: string) => {
+    if (!path) return "https://placehold.co/600x800";
+    if (path.startsWith("http")) return path;
+    
+    const cleanBucketUrl = BUCKET_URL.endsWith("/") ? BUCKET_URL : `${BUCKET_URL}/`;
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    
+    return `${cleanBucketUrl}${cleanPath}`;
+  };
 
   return (
     <section className="py-10 lg:py-14 bg-secondary/30">
@@ -74,7 +86,7 @@ const IdeasGrid = () => {
                     >
                       <article className="relative aspect-[3/4] rounded-2xl overflow-hidden">
                         <img 
-                          src={blog.coverImageUrl || "https://placehold.co/600x800"} 
+                          src={getImageUrl(blog.coverImageUrl)} 
                           alt={blog.title} 
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                         />
