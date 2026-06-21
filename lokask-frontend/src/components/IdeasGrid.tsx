@@ -3,42 +3,40 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { useQuery } from "@tanstack/react-query";
 import { Blog } from "@/types/blog"; 
+
 const IdeasGrid = () => {
   const { data: blogs = [], isLoading } = useQuery({
     queryKey: ["blogs", "featured"],
-    
     queryFn: async () => [
       {
-        id: "1",
-        category: "Thailand",
-        title: "Bangkok Street Food Tour",
-        summary: "Discover the best hidden street food stalls in Bangkok with a local expert.",
-        coverImageUrl: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop",
-        authorId: "a1", content: "", createdAt: ""
+        id: "135d4476-b280-4074-893a-dfddd45a0674",
+        category: "Hanoi",
+        title: "Hanoi’s Alleyway Coffee Culture: A Secret World",
+        summary: "A quick look into how local students navigate the hidden, narrow alleyways of Vietnam's capital to find the absolute best egg coffee on a budget.",
+        coverImageUrl: "/blog/135d4476-b280-4074-893a-dfddd45a0674/cover.jpg",
+        authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
+        content: "", 
+        createdAt: "2026-06-12T22:17:34.899Z"
       },
       {
-        id: "2",
-        category: "Paris",
-        title: "Hidden Arcades of Paris",
-        summary: "Explore the beautiful 19th-century covered passages away from the crowds.",
-        coverImageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
-        authorId: "a2", content: "", createdAt: ""
+        id: "a560ec08-9ebf-4b8d-93d1-ad8c3a555504",
+        category: "Hanoi",
+        title: "The Art of the Hanoi Sidewalk: Bun Cha on Plastic Stools",
+        summary: "A realistic look at Hanoi's legendary street food scene, where world-class culinary art is served on low plastic stools right next to rushing traffic.",
+        coverImageUrl: "/blog/a560ec08-9ebf-4b8d-93d1-ad8c3a555504/cover.jpg",
+        authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
+        content: "", 
+        createdAt: "2026-06-13T17:02:11.105Z"
       },
       {
-        id: "3",
-        category: "Rome",
-        title: "Testaccio Market Visit",
-        summary: "Experience the authentic Roman food scene in the heart of Testaccio.",
-        coverImageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
-        authorId: "a3", content: "", createdAt: ""
-      },
-      {
-        id: "4",
-        category: "Tokyo",
-        title: "Traditional Tea Ceremony",
-        summary: "Learn the art of Matcha in a historic tea house in Kyoto or Tokyo.",
-        coverImageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
-        authorId: "a4", content: "", createdAt: ""
+        id: "610e7a40-a223-4a14-8de6-1f5d89f3fa6b",
+        category: "Hanoi",
+        title: "Nhà Tập Thể: The Fading Soul of Hanoi's Soviet Apartments",
+        summary: "An exploration of Hanoi's old-school collective housing blocks, examining how a style of architecture from a bygone era still holds the city's tightest communities.",
+        coverImageUrl: "/blog/610e7a40-a223-4a14-8de6-1f5d89f3fa6b/cover.jpg",
+        authorId: "e1ce3de0-c923-4cd3-973f-532eb6c11004", 
+        content: "", 
+        createdAt: "2026-06-13T17:03:20.750Z"
       }
     ] as Blog[],
   });
@@ -50,7 +48,6 @@ const IdeasGrid = () => {
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
             Ideas locals often recommend
           </h2>
-          {/* Updated link to the global blog route */}
           <Link to="/blog" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap">
             See more
             <ArrowRight size={16} />
@@ -68,10 +65,8 @@ const IdeasGrid = () => {
               loop: true
             }} className="w-full">
               <CarouselContent className="-ml-4">
-                {/* mapping from the dynamic blogs array */}
                 {blogs.map((blog, index) => (
                   <CarouselItem key={blog.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
-                    {/* Navigates to individual blog page using blog.id */}
                     <Link 
                       to={`/blog/${blog.id}`} 
                       className="group block animate-fade-in" 
@@ -86,7 +81,6 @@ const IdeasGrid = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-4">
                           
-                          {/* render the blog category if it exists */}
                           {blog.category && (
                             <span className="bg-primary/90 text-primary-foreground text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
                               {blog.category}
