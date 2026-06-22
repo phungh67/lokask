@@ -9,7 +9,6 @@ import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import BlogPanel from "@/components/dashboard/BlogPanel";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-// 🟢 Added layout icons for the mobile navigation bar
 import { AlertCircle, MessageSquare, Calendar, User, FileText, ArrowLeft } from "lucide-react";
 import {
   getInbox,
@@ -92,7 +91,6 @@ const ConsultantDashboard = () => {
     }
   };
 
-  // Lazily initialize state from localStorage to persist between refreshes
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
   >(() => {
@@ -106,7 +104,6 @@ const ConsultantDashboard = () => {
     string | null
   >(null);
   
-  // 🟢 State to manage Mobile Chat View sliding over the inbox
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   
   const [conversations, setConversations] = useState<any[]>([]);
@@ -114,7 +111,6 @@ const ConsultantDashboard = () => {
 
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Store both id, consultant ID and user ID
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
   const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
     null,
@@ -123,17 +119,14 @@ const ConsultantDashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync activeSection changes to localStorage
   useEffect(() => {
     localStorage.setItem("dashboard_active_section", activeSection);
   }, [activeSection]);
 
-  // Handles jumping to existing chats OR creating new ones
   useEffect(() => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;
 
-      // If no intent, or profiles are still loading, do nothing
       if (
         !state ||
         (!state.targetId && !state.openChatWith) ||
@@ -144,7 +137,6 @@ const ConsultantDashboard = () => {
       const targetConsultantId = state.targetId || state.openChatWith;
 
       if (state.intent === "startChat" || targetConsultantId) {
-        // 1. Check if we already have an active conversation with this consultant
         const existingConv = conversations.find(
           (c) =>
             c.consultantId === targetConsultantId ||
@@ -152,31 +144,24 @@ const ConsultantDashboard = () => {
         );
 
         if (existingConv) {
-          // If it exists, just open it
           setActiveConversationId(existingConv.id);
           setActiveSection("inbox");
-          setIsMobileChatOpen(true); // 🟢 Auto-open full chat on mobile
+          setIsMobileChatOpen(true); 
 
-          // Clear the router state so it doesn't re-trigger on refresh
           window.history.replaceState({}, document.title);
         } else if (targetConsultantId && accountUserId) {
-          // 2. If it DOES NOT exist, we must create a new chat via the API
           try {
             const newConvApi = await startChat(targetConsultantId);
-
-            // Map the newly created backend conversation to our frontend UI format
             const mappedNewConv = mapConversationToDashboard(newConvApi);
 
-            // Inject it into the top of our inbox list and switch to it
             setConversations((prev) => {
               if (prev.some((c) => c.id === mappedNewConv.id)) return prev;
               return [mappedNewConv, ...prev];
             });
             setActiveConversationId(mappedNewConv.id);
             setActiveSection("inbox");
-            setIsMobileChatOpen(true); // 🟢 Auto-open full chat on mobile
+            setIsMobileChatOpen(true); 
 
-            // Clear the router state
             window.history.replaceState({}, document.title);
           } catch (error) {
             console.error("Failed to start new chat:", error);
@@ -190,7 +175,6 @@ const ConsultantDashboard = () => {
       }
     };
 
-    // We only want to run this once the initial conversations list has loaded
     handleIncomingChatIntent();
   }, [
     location.state,
@@ -200,7 +184,6 @@ const ConsultantDashboard = () => {
     consultantProfile,
   ]);
 
-  // 1. Check the stored ID pair (Updated Traveler Fallback)
   useEffect(() => {
     const loadIdentity = async () => {
       const storedUser = localStorage.getItem("user");
@@ -214,7 +197,7 @@ const ConsultantDashboard = () => {
       try {
         const user = JSON.parse(storedUser);
         setUserRole(user.role);
-        setAccountUserId(user.id); // userID
+        setAccountUserId(user.id); 
 
         if (user.role === "consultant") {
           const response = await fetch(`/api/v1/users/${user.id}/consultant`, {
@@ -223,7 +206,7 @@ const ConsultantDashboard = () => {
 
           if (response.ok) {
             const consultantData = await response.json();
-            setConsultantProfile(consultantData); // consultantID
+            setConsultantProfile(consultantData); 
           } else {
             setConsultantProfile({
               ...fallbackProfile,
@@ -233,7 +216,6 @@ const ConsultantDashboard = () => {
             });
           }
         } else {
-          // Clean state for travelers (empty ID instead of duplicated User ID)
           setConsultantProfile({
             ...fallbackProfile,
             id: "",
@@ -252,7 +234,6 @@ const ConsultantDashboard = () => {
     loadIdentity();
   }, [navigate]);
 
-  // 2. Load inbox
   useEffect(() => {
     const loadInbox = async () => {
       if (!accountUserId || !consultantProfile || isProfileLoading) return;
@@ -261,7 +242,6 @@ const ConsultantDashboard = () => {
         const data = await getInbox();
         const safeData = data ?? [];
 
-        // Pass BOTH IDs to correctly map the "Other User"
         const mapped = safeData.map((apiConv: any) =>
           mapConversationToDashboard(apiConv),
         );
@@ -288,7 +268,6 @@ const ConsultantDashboard = () => {
     activeConversationId,
   ]);
 
-  // 3. Poll message
   useEffect(() => {
     if (
       !activeConversationId ||
@@ -313,7 +292,7 @@ const ConsultantDashboard = () => {
           return {
             id: (m.id || Date.now()).toString(),
             content: m.content,
-            sender: isMe ? "user" : "other", // "user" guarantees right-side alignment
+            sender: isMe ? "user" : "other", 
             timestamp: new Date(m.created_at || m.createdAt || Date.now()),
             type: m.type || "text",
           };
@@ -337,7 +316,6 @@ const ConsultantDashboard = () => {
     isProfileLoading,
   ]);
 
-  // 4. Handle Send Message
   const handleSendMessage = async (content: string) => {
     if (!activeConversationId || !accountUserId) {
       toast({ title: "Error", description: "Missing active chat or profile." });
@@ -445,20 +423,18 @@ const ConsultantDashboard = () => {
           
           {activeSection === "inbox" && (
             <div className="flex-1 flex w-full h-full relative">
-              {/* Inbox List Panel */}
               <div className={`w-full md:w-[350px] md:border-r md:flex flex-col h-full bg-white ${isMobileChatOpen ? 'hidden' : 'flex'}`}>
                 <InboxPanel
                   conversations={conversations}
                   activeConversationId={activeConversationId}
                   onSelectConversation={(id) => {
                     setActiveConversationId(id);
-                    setIsMobileChatOpen(true); // Open the chat sliding overlay on mobile
+                    setIsMobileChatOpen(true);
                   }}
                 />
               </div>
 
-              {/* Chat Interface Panel */}
-              <div className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? 'flex w-full absolute inset-0 z-20' : 'hidden'}`}>
+              <div className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? 'flex w-full absolute md:relative inset-0 md:inset-auto z-20 md:z-auto' : 'hidden'}`}>
                 <div className="md:hidden flex items-center p-3 border-b border-border/50 bg-white shadow-sm shrink-0">
                   <button 
                     onClick={() => setIsMobileChatOpen(false)} 
@@ -491,7 +467,7 @@ const ConsultantDashboard = () => {
           )}
 
           {activeSection === "bookings" && (
-             <div className="flex-1 w-full overflow-y-auto">
+             <div className="flex-1 flex w-full h-full overflow-hidden">
                <BookingsPanel
                  consultantId={consultantProfile.id}
                  userId={accountUserId}
@@ -547,7 +523,6 @@ const ConsultantDashboard = () => {
             <span className="text-[10px] font-semibold tracking-wide">Profile</span>
           </button>
           
-          {/* Only show articles if the user is a consultant, else this takes up unnecessary space */}
           {userRole === "consultant" && (
             <button 
               onClick={() => setActiveSection("articles")} 
@@ -560,7 +535,6 @@ const ConsultantDashboard = () => {
         </nav>
       )}
 
-      {/* Purchase / Top Up Dialog */}
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
         <DialogContent className="max-w-md rounded-2xl p-6 w-[95vw] md:w-full">
           <div className="text-center space-y-4">
