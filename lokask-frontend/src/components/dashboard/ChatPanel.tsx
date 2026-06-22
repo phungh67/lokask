@@ -5,10 +5,10 @@ import ChatPanelComposer from "./ChatPanelComposer";
 import FloatingAISummary from "./FloatingAISummary";
 import ConsultantScheduleSidebar from "../chat/ConsultantScheduleSidebar";
 import { cn } from "@/lib/utils";
-import { format, isAfter, addHours } from "date-fns";
+import { format } from "date-fns";
 
 interface ChatPanelProps {
-  conversation: any | null; // Uses the mapped backend data
+  conversation: any | null; 
   onSendMessage: (message: string) => void;
   onScheduleCall: (callData: any) => void;
   onCancelCall?: (callId: string) => void;
@@ -22,16 +22,13 @@ const ChatPanel = ({
   onSendMessage,
   onScheduleCall,
   onCancelCall,
-
   session,
   userRole,
   onTriggerPurchase
 }: ChatPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector(
@@ -45,7 +42,7 @@ const ChatPanel = ({
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-secondary/20">
+      <div className="flex-1 flex items-center justify-center bg-secondary/20 h-full">
         <div className="text-center text-muted-foreground">
           <p className="text-lg font-medium">Select a conversation</p>
           <p className="text-sm">Choose from your inbox to start chatting</p>
@@ -64,20 +61,19 @@ const ChatPanel = ({
       >
         <div
           className={cn(
-            "max-w-[70%] rounded-2xl px-4 py-2.5",
+            "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5",
             isMe
               ? "bg-primary text-primary-foreground rounded-br-md"
               : "bg-card border border-border rounded-bl-md",
           )}
         >
-          <p className="text-sm">{message.content}</p>
+          <p className="text-sm break-words">{message.content}</p>
           <p
             className={cn(
               "text-xs mt-1",
               isMe ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
-            {/** two number for timestamp - match with data type */}
             {message.timestamp ? format(message.timestamp, "hh:mm a") : ""}
           </p>
         </div>
@@ -93,9 +89,7 @@ const ChatPanel = ({
     "";
 
   return (
-    // 🟢 1. NEW WRAPPER: This creates the row layout
     <div className="flex-1 flex flex-row overflow-hidden w-full h-full">
-      {/* 🟢 2. YOUR EXISTING CHAT AREA (Notice the min-w-0 prevents flexbox blowout) */}
       <div className="flex-1 flex flex-col bg-secondary/20 relative min-w-0">
         <ChatPanelHeader
           consultantId={resolvedConsultantId}
@@ -127,11 +121,14 @@ const ChatPanel = ({
 
         <div className="flex-1 relative overflow-hidden">
           <ScrollArea className="h-full" ref={scrollRef}>
-            <div className="p-4 pr-80 space-y-4">
+            {/* 🟢 Fix: Added md: prefix to pr-80 so mobile uses normal p-4 padding */}
+            <div className="p-4 md:pr-80 space-y-4 pb-6">
               {conversation.messages?.map(renderMessage)}
             </div>
           </ScrollArea>
-          <div className="absolute right-4 top-4">
+          
+          {/* 🟢 Fix: Hidden the floating summary on mobile to prevent text overlapping */}
+          <div className="hidden md:block absolute right-4 top-4 z-10">
             <FloatingAISummary summary={conversation.summary} />
           </div>
         </div>
@@ -139,7 +136,6 @@ const ChatPanel = ({
         <ChatPanelComposer onSendMessage={onSendMessage} />
       </div>
 
-      {/* 🟢 3. THE NEW SIDEBAR (Sits neatly to the right of the chat area) */}
       <ConsultantScheduleSidebar
         isOpen={isScheduleOpen}
         onClose={() => setIsScheduleOpen(false)}
