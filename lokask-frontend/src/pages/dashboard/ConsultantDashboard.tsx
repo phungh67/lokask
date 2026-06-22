@@ -422,20 +422,16 @@ const ConsultantDashboard = () => {
     ? { ...foundConversation, messages: currentMessages }
     : null;
 
-  // 🟢 Helper to determine if we should show the bottom navbar
   const showMobileBottomNav = !isMobileChatOpen || activeSection !== "inbox";
 
   return (
-    // 🟢 Changed from h-screen to h-[100dvh] for better mobile browser support
     <div className="h-[100dvh] flex flex-col bg-[#F5F2EE] overflow-hidden">
       
-      {/* 🟢 Hide the top header on mobile if a chat is actively open to maximize screen space */}
       <div className={isMobileChatOpen && activeSection === "inbox" ? "hidden md:block" : "block"}>
         <DashboardHeader onLogout={handleLogout} />
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* 🟢 Desktop Sidebar (Hidden on Mobile) */}
         <div className="hidden md:flex">
           <DashboardSidebar
             consultant={consultantProfile}
@@ -445,7 +441,6 @@ const ConsultantDashboard = () => {
           />
         </div>
 
-        {/* 🟢 Main Panel Wrapper - Add padding bottom on mobile to accommodate the fixed navigation bar */}
         <main className={`flex-1 flex overflow-hidden bg-white relative ${showMobileBottomNav ? 'pb-[64px] md:pb-0' : ''}`}>
           
           {activeSection === "inbox" && (
@@ -464,7 +459,6 @@ const ConsultantDashboard = () => {
 
               {/* Chat Interface Panel */}
               <div className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? 'flex w-full absolute inset-0 z-20' : 'hidden'}`}>
-                {/* 🟢 Mobile "Back to Inbox" Header */}
                 <div className="md:hidden flex items-center p-3 border-b border-border/50 bg-white shadow-sm shrink-0">
                   <button 
                     onClick={() => setIsMobileChatOpen(false)} 
@@ -527,7 +521,6 @@ const ConsultantDashboard = () => {
         </main>
       </div>
 
-      {/* 🟢 Mobile Bottom Navigation Bar */}
       {showMobileBottomNav && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-[64px] pb-safe z-50">
           <button 

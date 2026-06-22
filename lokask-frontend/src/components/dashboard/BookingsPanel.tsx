@@ -5,6 +5,7 @@ import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
 import { Booking } from "@/types/booking";
+import { ArrowLeft } from "lucide-react"; 
 import {
   getConsultantBookings,
   updateBookingStatus,
@@ -22,21 +23,17 @@ const BookingsPanel = ({
   userId,
   userRole,
 }: BookingsPanelProps) => {
-  // debug
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeStatus, setActiveStatus] =
-    useState<BookingStatusFilter>("upcoming");
+  const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Fetch initial data
   const loadBookings = async () => {
     try {
       setIsLoading(true);
       // const data = await getConsultantBookings(consultantId);
       let data;
-
       setBookings(data || []);
     } catch (error) {
       toast({
@@ -53,14 +50,13 @@ const BookingsPanel = ({
     loadBookings();
   }, [consultantId]);
 
-  // 2. Filter logic updated for flat keys
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
 
     if (activeStatus === "upcoming") {
       result = result.filter((b) => {
         const isPendingOrConfirmed = b.status === "confirmed" || b.status === "pending";
-        const bookingDate = new Date (b.start_time);
+        const bookingDate = new Date(b.start_time);
         const now = new Date();
 
         const isFutureOrToday = bookingDate > now || isSameDay(bookingDate, now);
@@ -83,15 +79,12 @@ const BookingsPanel = ({
     return result;
   }, [bookings, activeStatus, searchQuery]);
 
-  // 3. API-driven Action Handlers
   const handleStatusUpdate = async (newStatus: "confirmed" | "cancelled") => {
     if (!selectedBooking) return;
 
     try {
-      // 🟢 Call backend PATCH endpoint
       await updateBookingStatus(selectedBooking.id, newStatus);
 
-      // Refresh local state
       setBookings((prev) =>
         prev.map((b) =>
           b.id === selectedBooking.id ? { ...b, status: newStatus } : b,
@@ -115,36 +108,57 @@ const BookingsPanel = ({
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <BookingList
-        consultantId={consultantId}
-        bookings={filteredBookings}
-        selectedId={selectedBooking?.id || null}
-        onSelect={setSelectedBooking}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        activeStatus={activeStatus}
-        onStatusChange={setActiveStatus}
-        isLoading={isLoading}
-      />
-
-      {selectedBooking ? (
-        <BookingDetail
-          booking={selectedBooking}
-          onConfirm={() => handleStatusUpdate("confirmed")}
-          onCancel={() => handleStatusUpdate("cancelled")}
-          onReschedule={() =>
-            toast({ title: "Info", description: "Feature coming soon." })
-          }
-          onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
+    <div className="flex-1 flex overflow-hidden w-full h-full relative">
+      
+      <div className={`w-full md:w-[350px] lg:w-[400px] shrink-0 md:border-r h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}>
+        <BookingList
+          consultantId={consultantId}
+          bookings={filteredBookings}
+          selectedId={selectedBooking?.id || null}
+          onSelect={setSelectedBooking}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeStatus={activeStatus}
+          onStatusChange={setActiveStatus}
+          isLoading={isLoading}
         />
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground bg-white">
-          <p>Select a booking to view details</p>
-        </div>
-      )}
+      </div>
 
-      <div className="w-[280px] shrink-0 border-l border-border bg-card">
+      <div className={`flex-1 h-full flex flex-col bg-secondary/10 relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}>
+        
+        {/* Mobile "Back" Button */}
+        {selectedBooking && (
+          <div className="md:hidden p-3 bg-white border-b flex items-center shrink-0">
+            <button 
+              onClick={() => setSelectedBooking(null)} 
+              className="flex items-center text-sm font-medium text-[#4A5565] hover:text-[#101828]"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" /> 
+              Back to Bookings
+            </button>
+          </div>
+        )}
+
+        {selectedBooking ? (
+          <div className="flex-1 overflow-y-auto">
+            <BookingDetail
+              booking={selectedBooking}
+              onConfirm={() => handleStatusUpdate("confirmed")}
+              onCancel={() => handleStatusUpdate("cancelled")}
+              onReschedule={() =>
+                toast({ title: "Info", description: "Feature coming soon." })
+              }
+              onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-white">
+            <p>Select a booking to view details</p>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden xl:block w-[280px] shrink-0 border-l border-border bg-card">
         <BookingMiniCalendar
           selectedDate={
             selectedBooking ? new Date(selectedBooking.start_time) : undefined

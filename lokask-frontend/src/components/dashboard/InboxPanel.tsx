@@ -5,10 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import ConversationCard from "./ConversationCard";
 
-// 🟢 Removed import of DashboardConversation and getConversationCounts from mock data
-
 interface InboxPanelProps {
-  // 🟢 Updated type to use the mapped conversation structure from your dashboard
   conversations: any[]; 
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
@@ -20,11 +17,10 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🟢 Dynamically calculate counts instead of using mock data
   const counts = {
     all: conversations.length,
-    new: conversations.filter(c => c.unread > 0).length, // Example logic for 'new'
-    booked: 0, // Hardcoded for now until status exists in API
+    new: conversations.filter(c => c.unread > 0).length, 
+    booked: 0, 
   };
 
   const tabs: { id: FilterTab; label: string; count?: number }[] = [
@@ -34,18 +30,14 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
     { id: "archived", label: "Archived" },
   ];
 
-  // Filter conversations
   const filteredConversations = conversations.filter((conv) => {
-    // 🟢 Filter by tab - Updated to handle potential missing 'status' field from API
     if (activeTab !== "all" && conv.status !== activeTab) {
       return false;
     }
 
-    // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        // 🟢 Access nested traveller name as defined in your dashboard mapping
         conv.traveller?.name.toLowerCase().includes(query) ||
         conv.lastMessage?.toLowerCase().includes(query)
       );
@@ -55,19 +47,20 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
   });
 
   return (
-    <div className="w-[360px] bg-card border-r border-border flex flex-col h-full">
+    // 🟢 Fix: Replaced hardcoded w-[360px] with responsive w-full md:w-[360px]
+    <div className="w-full md:w-[360px] bg-card border-r border-border flex flex-col h-full shrink-0">
       {/* Header */}
       <div className="p-4 shrink-0">
         <h1 className="text-xl font-semibold mb-4">Inbox</h1>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-4">
+        <div className="flex gap-1 mb-4 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap",
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-secondary"
