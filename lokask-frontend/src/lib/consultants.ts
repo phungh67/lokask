@@ -7,6 +7,7 @@ interface ConsultantFilters {
     page?: number;
     limit?: number;
     city?: string;
+    country?: string;
     niche?: string[];
     languages?: string[];
     maxPrice?: number;
@@ -104,6 +105,13 @@ const getAvatar = (url: string, name: string) => {
 // return /consultant/uuid (with respective filter options)
 export async function getConsultants(filters?: ConsultantFilters): Promise<PaginatedConsultants> {
     const params = new URLSearchParams();
+
+    if (filters?.country) {
+        params.append("country", filters.country);
+    } else {
+        params.append("country", "VN");
+    }
+
     if (filters?.city) params.append("city", filters.city);
     if (filters?.niche?.length) params.append("niche", filters.niche.join(","));
     if (filters?.languages?.length) params.append("languages", filters.languages.join(","));
@@ -187,8 +195,6 @@ export async function createBlog(data: {
         formData.append("cover_image", data.coverImage);
     }
 
-    // Assuming your custom fetch wrapper from core.ts handles FormData correctly
-    // (which we verified earlier that it does!)
     return fetchJson<any>("/blogs", {
         method: "POST",
         body: formData,
