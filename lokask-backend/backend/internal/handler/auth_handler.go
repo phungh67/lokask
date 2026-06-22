@@ -93,18 +93,21 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{"error": "Consultants must provide a city name"})
 		}
 
-		// validate city
-		if !validCities[req.CityName] {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Invalid or unsupported city selected.",
-			})
-		}
-
 		// Look up the ID based on the name provided in the form
 		err := h.DB.Get(&req.CityID, "SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1", req.CityName)
+
 		if err == sql.ErrNoRows {
-			return c.Status(400).JSON(fiber.Map{"error": "City not supported yet. Please choose a supported city."})
+			insertErr := h.DB.QueryRow(
+				"INSERT INTO cities (name) VALUES ($1) RETURNING id",
+				req.CityName,
+			).Scan(&req.CityID)
+
+			if insertErr != nil {
+				log.Printf("[ERROR][AUTH] Failed to insert new city: %v", insertErr)
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to register new city"})
+			}
 		} else if err != nil {
+			log.Printf("[ERROR][AUTH] Database error checking city: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Database error checking city"})
 		}
 	}
