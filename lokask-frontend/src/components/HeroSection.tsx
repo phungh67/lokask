@@ -14,25 +14,25 @@ import heroVietnamPoster from "@/assets/hero-vietnam-poster.png"
 const SLIDES = [
   {
     video: "index/hero-hanoi.mp4",
-    poster: heroDesertPoster,
+    poster: heroVietnamPoster,
     location: "Hanoi, Vietnam",
     description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius.",
   },
   {
     video: "index/hero-ho-chi-minh-city.mp4",
-    poster: heroDesertPoster,
+    poster: heroVietnamPoster,
     location: "Ho Chi Minh City, Vietnam",
     description: "Where cliffside villages cascade down to the sparkling Mediterranean.",
   },
   {
     video: "index/hero-hoian.mp4",
-    poster: heroDesertPoster,
+    poster: heroVietnamPoster,
     location: "Hoian, Vietnam",
     description: "Ancient temples whisper stories among bamboo groves and cherry blossoms.",
   },
   {
     video: "index/hero-sapa.mp4",
-    poster: heroDesertPoster,
+    poster: heroVietnamPoster,
     location: "Sapa, Vietnam",
     description: "Whitewashed villages perched above the deep blue Aegean Sea.",
   },
