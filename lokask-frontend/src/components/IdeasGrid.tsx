@@ -11,44 +11,32 @@ import { useQuery } from "@tanstack/react-query";
 import { getFeaturedBlogs } from "@/lib/consultants";
 import { getBucketImageUrl } from "@/lib/utils";
 
-const BUCKET_URL =
-  "https://deun1-general-purpose-bucket.s3.eu-north-1.amazonaws.com/";
-
 const IdeasGrid = () => {
   const { data: blogs = [], isLoading } = useQuery({
     queryKey: ["blogs", "featured"],
     queryFn: () => getFeaturedBlogs(8),
   });
 
-  const getImageUrl = (path: string) => {
-    if (!path) return "https://placehold.co/600x800";
-    if (path.startsWith("http")) return path;
-
-    const cleanBucketUrl = BUCKET_URL.endsWith("/")
-      ? BUCKET_URL
-      : `${BUCKET_URL}/`;
-    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-
-    return `${cleanBucketUrl}${cleanPath}`;
-  };
-
   return (
-    <section className="py-10 lg:py-14 bg-secondary/30">
-      <div className="container mx-auto px-6">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
+    // 🟢 Added overflow-hidden to prevent horizontal page scrolling
+    <section className="py-10 lg:py-14 bg-secondary/30 w-full overflow-hidden">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="flex justify-between items-center mb-6 md:mb-8">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-sans">
             Ideas locals often recommend
           </h2>
+          {/* 🟢 Hidden top link on mobile, visible on desktop */}
           <Link
             to="/blog"
-            className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
+            className="hidden md:inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
           >
             See more
             <ArrowRight size={16} />
           </Link>
         </div>
 
-        <div className="relative px-12">
+        {/* 🟢 Removed px-12 on mobile */}
+        <div className="relative px-0 md:px-12">
           {isLoading ? (
             <div className="flex justify-center py-20">
               <Loader2 className="animate-spin text-primary w-8 h-8" />
@@ -65,7 +53,8 @@ const IdeasGrid = () => {
                 {blogs.map((blog, index) => (
                   <CarouselItem
                     key={blog.id}
-                    className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4"
+                    // 🟢 Set to basis-[80%] so the next card peeks slightly
+                    className="pl-4 basis-[80%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4"
                   >
                     <Link
                       to={`/blog/${blog.id}`}
@@ -98,10 +87,19 @@ const IdeasGrid = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="left-0" />
-              <CarouselNext className="right-0" />
+              {/* 🟢 Hide arrows on mobile */}
+              <CarouselPrevious className="hidden md:flex left-0" />
+              <CarouselNext className="hidden md:flex right-0" />
             </Carousel>
           )}
+        </div>
+
+        {/* 🟢 Mobile-friendly "See more" button centered at the bottom */}
+        <div className="mt-8 flex justify-center md:hidden">
+          <Link to="/blog" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline">
+            See more ideas
+            <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
     </section>

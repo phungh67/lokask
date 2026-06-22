@@ -44,22 +44,22 @@ const DESTINATIONS = [
 
 const DestinationGrid = () => {
   return (
-    <section className="py-16 lg:py-24">
-      <div className="container mx-auto px-6">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-sans">
+    <section className="py-16 lg:py-24 w-full overflow-hidden">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="flex justify-between items-center mb-6 md:mb-8">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-sans">
             Popular places travellers ask about
           </h2>
           <Link
             to="/explore-locals"
-            className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
+            className="hidden md:inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
           >
             See more
             <ArrowRight size={16} />
           </Link>
         </div>
 
-        <div className="relative px-12">
+        <div className="relative px-0 md:px-12">
           <Carousel
             opts={{
               align: "start",
@@ -71,7 +71,7 @@ const DestinationGrid = () => {
               {DESTINATIONS.map((destination, index) => (
                 <CarouselItem
                   key={destination.slug}
-                  className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/6"
+                  className="pl-4 basis-[60%] sm:basis-1/2 md:basis-1/3 lg:basis-1/6"
                 >
                   <Link
                     to={`/explore-locals?city=${encodeURIComponent(destination.name)}`}
@@ -84,8 +84,8 @@ const DestinationGrid = () => {
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3">
-                      <span className="bg-gray-900/90 text-white text-sm font-semibold px-3 py-1.5 rounded-lg inline-block">
+                    <div className="absolute bottom-3 left-3 pr-3">
+                      <span className="bg-gray-900/90 text-white text-sm font-semibold px-3 py-1.5 rounded-lg inline-block break-words">
                         {destination.name}
                       </span>
                     </div>
@@ -93,9 +93,16 @@ const DestinationGrid = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-0" />
-            <CarouselNext className="right-0" />
+            <CarouselPrevious className="hidden md:flex left-0" />
+            <CarouselNext className="hidden md:flex right-0" />
           </Carousel>
+        </div>
+
+        <div className="mt-8 flex justify-center md:hidden">
+          <Link to="/explore-locals" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline">
+            See more places
+            <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
     </section>
