@@ -353,7 +353,7 @@ const AuthPromptDialog = ({
               required
             >
               <SelectTrigger className="h-12 rounded-xl border-2 px-4 w-full">
-                <SelectValue placeholder="Which city do you live in?" />
+                <SelectValue placeholder="Which city do you want to consult?" />
               </SelectTrigger>
               <SelectContent>
                 {availableCities.map((c) => (

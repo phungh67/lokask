@@ -12,19 +12,19 @@ import { CityOption } from "@/lib/consultants";
 interface ProfileBasicInfoProps {
   fullName: string;
   displayName: string;
-  cityName: string;
+  cityId: number | ""; // 🟢 Strictly an ID (number)
   quote: string;
   availableCities: CityOption[];
   onFullNameChange: (value: string) => void;
   onDisplayNameChange: (value: string) => void;
-  onCityChange: (cityName: string) => void;
+  onCityChange: (cityId: number) => void; // 🟢 Strictly returns a number
   onQuoteChange: (value: string) => void;
 }
 
 const ProfileBasicInfo = ({
   fullName,
   displayName,
-  cityName,
+  cityId,
   quote,
   availableCities,
   onFullNameChange,
@@ -78,47 +78,7 @@ const ProfileBasicInfo = ({
         />
       </div>
 
-      {/* City (consultants.city_id) */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <Label
-            htmlFor="fullName"
-            className="text-sm font-medium text-muted-foreground"
-          >
-            Full Legal Name
-          </Label>
-          <span className="text-xs text-muted-foreground">
-            Private (Not shown to travelers)
-          </span>
-        </div>
-        <Input
-          id="fullName"
-          value={fullName}
-          onChange={(e) => onFullNameChange(e.target.value)}
-          placeholder="Your full legal name"
-          className="rounded-xl"
-          maxLength={100}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label
-          htmlFor="displayName"
-          className="text-sm font-medium text-muted-foreground"
-        >
-          Public Display Name
-        </Label>
-        <Input
-          id="displayName"
-          value={displayName}
-          onChange={(e) => onDisplayNameChange(e.target.value)}
-          placeholder="How travelers will see you"
-          className="rounded-xl"
-          maxLength={50}
-        />
-      </div>
-
-      {/* 🟢 Updated City Input */}
+      {/* 🟢 Strictly typed City Dropdown */}
       <div className="space-y-2 relative">
         <Label
           htmlFor="city"
@@ -126,23 +86,26 @@ const ProfileBasicInfo = ({
         >
           Location
         </Label>
-        <Input
-          id="city"
-          list="db-cities"
-          type="text"
-          value={cityName}
-          onChange={(e) => onCityChange(e.target.value)}
-          placeholder="Type your city (e.g. Hanoi)"
-          className="rounded-xl w-full"
-        />
-        {/* Datalist populated by real DB data */}
-        <datalist id="db-cities">
-          {(availableCities || []).map((option) => (
-            <option key={option.id} value={option.name}>
-              {option.country}
-            </option>
-          ))}
-        </datalist>
+        <Select
+          // Select requires a string, so we convert the number to string here
+          value={cityId ? cityId.toString() : ""}
+          onValueChange={(value) => {
+            // Parse back to integer before sending up to the parent component
+            onCityChange(parseInt(value, 10));
+          }}
+        >
+          <SelectTrigger className="rounded-xl w-full">
+            <SelectValue placeholder="Select your city" />
+          </SelectTrigger>
+          <SelectContent>
+            {/* Map over the real DB cities fetched by the parent component */}
+            {(availableCities || []).map((option) => (
+              <SelectItem key={option.id} value={option.id.toString()}>
+                {option.name}, {option.country}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Quote */}

@@ -62,6 +62,7 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
     fullName: consultant.name || (consultant as any).full_name || "",
     displayName: consultant.displayName || (consultant as any).display_name || "",
     
+    // Fallback to numeric IDs if the frontend types happen to pass them
     cityId: (consultant as any).cityId || (consultant as any).city_id || "",
     mainNicheId: (consultant as any).mainNicheId || (consultant as any).main_niche_id || "",
     
@@ -101,6 +102,19 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
     loadDropdownData();
   }, [toast]);
 
+  // 🟢 Automatic City ID Resolver
+  // If the consultant prop only provided a string `city` (e.g., "Hanoi") and no ID, 
+  // this matches the string against the fetched database cities to find the correct integer ID.
+  useEffect(() => {
+    if (formData.cityId === "" && consultant.city && availableCities.length > 0) {
+      const foundCity = availableCities.find((c) => c.name === consultant.city);
+      if (foundCity) {
+        setFormData((prev) => ({ ...prev, cityId: foundCity.id }));
+        setInitialData((prev) => ({ ...prev, cityId: foundCity.id }));
+      }
+    }
+  }, [availableCities, consultant.city, formData.cityId]);
+
   useEffect(() => {
     const changed = JSON.stringify(formData) !== JSON.stringify(initialData);
     setHasChanges(changed);
@@ -128,6 +142,7 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
     if (formData.bio !== initialData.bio) payload.bio = formData.bio;
 
     if (formData.cityId !== initialData.cityId) {
+      // 🟢 Enforces the strict integer constraint for the Go payload
       payload.city_id = formData.cityId === "" ? null : formData.cityId;
     }
 
@@ -168,8 +183,11 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
           bio: formData.bio,
           tags: formData.tags,
           languages: formData.languages,
+          // You can also resolve the updated city name to pass back up if needed
+          city: availableCities.find((c) => c.id === formData.cityId)?.name || consultant.city,
         });
       }
+      if (onSaveSuccess) onSaveSuccess();
     } catch (error: any) {
       console.error("Save failed:", error);
       toast({
@@ -253,7 +271,6 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
 
     try {
       await deleteConsultantMedia(imageToRemove);
-      // Optional: Trigger a small success toast here!
       toast({
         title: "Image deleted",
         description: "Your gallery has been successfully updated.",
@@ -261,10 +278,9 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
     } catch (error) {
       console.error("Failed to delete image from backend:", error);
 
-
       setFormData((prev) => {
         const restoredImages = [...prev.galleryImages];
-        restoredImages.splice(index, 0, imageToRemove); // Insert it back at the exact same index
+        restoredImages.splice(index, 0, imageToRemove); 
         return {
           ...prev,
           galleryImages: restoredImages,
@@ -327,6 +343,7 @@ const ProfilePanel = ({ consultant, onSave, onSaveSuccess }: ProfilePanelProps) 
                 onDisplayNameChange={(displayName) =>
                   setFormData((prev) => ({ ...prev, displayName }))
                 }
+                // 🟢 Cleanly passes the numeric state to ProfileBasicInfo
                 onCityChange={(cityId) =>
                   setFormData((prev) => ({ ...prev, cityId }))
                 }
