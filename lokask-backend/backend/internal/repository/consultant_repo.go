@@ -28,7 +28,6 @@ type UpdateProfilePayload struct {
 	FullName    *string  `json:"full_name"`
 	DisplayName *string  `json:"display_name"`
 	CityID      *int     `json:"city_id"`
-	CityName    *string  `json:"city_name"`
 	Quote       *string  `json:"quote"`
 	Bio         *string  `json:"bio"`
 	MainNicheID *int     `json:"main_niche_id"`
@@ -404,34 +403,7 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 		return fmt.Errorf("failed to update users table: %w", err)
 	}
 
-	// check city if valid
-	finalCityID := data.CityID
-
-	if data.CityName != nil && strings.TrimSpace(*data.CityName) != "" {
-		cityName := strings.TrimSpace(*data.CityName)
-		var resolvedCityID int
-
-		// city name first
-		err = tx.GetContext(ctx, &resolvedCityID, "SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1", cityName)
-
-		if err == sql.ErrNoRows {
-			err = tx.QueryRowContext(ctx, `
-                INSERT INTO cities (name) 
-                VALUES ($1) 
-                RETURNING id
-            `, cityName).Scan(&resolvedCityID)
-
-			if err != nil {
-				return fmt.Errorf("failed to create new city '%s': %w", cityName, err)
-			}
-		} else if err != nil {
-			return fmt.Errorf("failed to lookup city '%s': %w", cityName, err)
-		}
-
-		finalCityID = &resolvedCityID
-	}
-
-	// update city, bio, language
+	// update city, bio, language strictly using the validated integer ID
 	consultantQuery := `
         UPDATE consultants 
         SET city_id = COALESCE($1, city_id), 
@@ -440,7 +412,7 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
             languages = COALESCE($4, languages)
         WHERE user_id = $5
     `
-	_, err = tx.ExecContext(ctx, consultantQuery, finalCityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
+	_, err = tx.ExecContext(ctx, consultantQuery, data.CityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
 	if err != nil {
 		return fmt.Errorf("failed to update consultants table: %w", err)
 	}
