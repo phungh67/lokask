@@ -16,25 +16,25 @@ const SLIDES = [
     video: "index/hero-hanoi.mp4",
     poster: heroVietnamPoster,
     location: "Hanoi, Vietnam",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius.",
+    description: "1000 years old city, a mixture between modern and traditional. Heart of Viet Nam.",
   },
   {
     video: "index/hero-ho-chi-minh-city.mp4",
     poster: heroVietnamPoster,
     location: "Ho Chi Minh City, Vietnam",
-    description: "Where cliffside villages cascade down to the sparkling Mediterranean.",
+    description: "Sleepless city, an innovation hub but also where nightlife is its signature.",
   },
   {
     video: "index/hero-hoian.mp4",
     poster: heroVietnamPoster,
     location: "Hoian, Vietnam",
-    description: "Ancient temples whisper stories among bamboo groves and cherry blossoms.",
+    description: "Ancient trade hub, flourished many centuries ago, where natural meets modern breath.",
   },
   {
     video: "index/hero-sapa.mp4",
     poster: heroVietnamPoster,
     location: "Sapa, Vietnam",
-    description: "Whitewashed villages perched above the deep blue Aegean Sea.",
+    description: "Highland region, with the rooftop of ASEAN - Fansipan mountain.",
   },
 ];
 
