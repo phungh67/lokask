@@ -30,15 +30,27 @@ const BookingsPanel = ({
   const [isLoading, setIsLoading] = useState(true);
 
   const loadBookings = async () => {
+    if (!userId || consultantId === "loading") return;
+
     try {
       setIsLoading(true);
-      // const data = await getConsultantBookings(consultantId);
-      let data;
-      setBookings(data || []);
+      let data: any;
+
+      // 1. Fetch Consultant bookings OR Traveller Trips
+      if (userRole === "consultant" && consultantId) {
+        data = await getConsultantBookings(consultantId);
+      } else {
+        data = await getMyTrips(userId);
+      }
+
+      // 2. Defensively ensure we are setting an array (in case backend wraps in {data: []})
+      const bookingsArray = Array.isArray(data) ? data : data?.data || [];
+      setBookings(bookingsArray);
+
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load bookings",
+        description: "Failed to load bookings from server.",
         variant: "destructive",
       });
     } finally {
@@ -48,7 +60,7 @@ const BookingsPanel = ({
 
   useEffect(() => {
     loadBookings();
-  }, [consultantId]);
+  }, [consultantId, userId, userRole]);
 
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
@@ -110,6 +122,7 @@ const BookingsPanel = ({
   return (
     <div className="flex-1 flex overflow-hidden w-full h-full relative">
       
+      {/* Mobile Toggle: Hidden on mobile when a booking is selected */}
       <div className={`w-full md:w-[350px] lg:w-[400px] shrink-0 md:border-r h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}>
         <BookingList
           consultantId={consultantId}
@@ -124,6 +137,7 @@ const BookingsPanel = ({
         />
       </div>
 
+      {/* Details Panel: Full width on mobile, fills remaining space on desktop */}
       <div className={`flex-1 h-full flex flex-col bg-secondary/10 relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}>
         
         {/* Mobile "Back" Button */}
@@ -158,6 +172,7 @@ const BookingsPanel = ({
         )}
       </div>
 
+      {/* Mini Calendar: Hidden on smaller screens to prevent squeezing */}
       <div className="hidden xl:block w-[280px] shrink-0 border-l border-border bg-card">
         <BookingMiniCalendar
           selectedDate={

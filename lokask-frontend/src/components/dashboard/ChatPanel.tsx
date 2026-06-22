@@ -121,13 +121,11 @@ const ChatPanel = ({
 
         <div className="flex-1 relative overflow-hidden">
           <ScrollArea className="h-full" ref={scrollRef}>
-            {/* 🟢 Fix: Added md: prefix to pr-80 so mobile uses normal p-4 padding */}
             <div className="p-4 md:pr-80 space-y-4 pb-6">
               {conversation.messages?.map(renderMessage)}
             </div>
           </ScrollArea>
           
-          {/* 🟢 Fix: Hidden the floating summary on mobile to prevent text overlapping */}
           <div className="hidden md:block absolute right-4 top-4 z-10">
             <FloatingAISummary summary={conversation.summary} />
           </div>

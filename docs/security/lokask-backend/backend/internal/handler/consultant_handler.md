@@ -1,59 +1,86 @@
 [⬅ Return to Main Compendium](../../../../../../README.md)
 
-## Security Analysis Report: `handler/consultant_handler.go`
+## Security Code Review: ConsultantHandler
 
-**Analyst:** Senior Security Officer
-**Expertise Focus:** Cloud Security, Architect Security, Programming Language Security (Go)
-**Code Scope:** ConsultantHandler methods (`GetProfile`, `UpdateProfile`, `List`, `GetConsultantByUserID`, `GetNiches`, `GetLanguages`, `GetCities`, `UploadMedia`, `DeleteGalleryMedia`)
+**Reviewer:** Senior Security Officer (Cloud, Architecture, Language Expert)
+**Target File:** `handler/consultant_handler.go`
+**Overall Assessment:** The code structure is generally clean, utilizing standard Go practices and the Fiber framework. However, several functions handle external inputs (paths, queries, bodies, files) that introduce potential vulnerabilities related to data validation, resource handling, and injection, particularly when interacting with file systems (S3/storage) or databases.
 
 ---
 
-### Summary of Findings
+### 🔍 Vulnerability Analysis
 
-The code is generally structured well, following standard Go patterns and leveraging the Fiber framework. However, several areas—particularly involving file handling, string manipulation from external sources, and database key construction—present risks related to **Injection, Path Traversal, and Insecure Direct Object Reference (IDOR)**.
+#### 1. `GetProfile(c *fiber.Ctx)`
+*   **Input:** `idStr` (UUID from URL parameters).
+*   **Risk:** Low to Medium (Input validation, data leakage).
+*   **Analysis:**
+    *   The use of `uuid.Parse(idStr)` provides strong type checking for the ID, mitigating general injection risks related to ID format.
+    *   **Architectural Concern:** The error handling returns a generic 500 error with a message (`"details": "Check backend terminal for full trace"`) while exposing the underlying error (`err.Error()`) in the response body. While the detail message is good practice, logging the full stack trace and returning the raw error string to the client increases the information disclosure surface area.
+*   **Recommendations:**
+    *   **Information Disclosure:** When an internal 500 error occurs, do not pass the underlying database/system error message to the client. Use a generic, non-descriptive error message (e.g., "Internal server error. Please try again later.") and rely solely on structured logging for debugging.
 
-The most critical risks are in `UploadMedia` and `DeleteGalleryMedia`.
+#### 2. `UpdateProfile(c *fiber.Ctx)`
+*   **Input:** `tokenUserID` (from `c.Locals`), `payload` (JSON body).
+*   **Risk:** Low (Authentication/Authorization flow, serialization).
+*   **Analysis:**
+    *   **Auth/Authz:** The function relies on `c.Locals("user_id")` being correctly set by middleware. Assuming this middleware performs robust validation (e.g., checking token validity and scope), the risk is mitigated. However, the function only checks if the token is a valid UUID, not if the user associated with the ID is authorized to update the profile (e.g., is it owned by them?).
+    *   **Data Validation:** The code relies on `c.BodyParser()` to handle serialization. If the `repository.UpdateProfilePayload` struct does not include validation tags (e.g., `validate:"required,max=50"`), the system could accept excessively long or improperly formatted data, potentially leading to database constraints or unintended logic paths.
+*   **Recommendations:**
+    *   **Stronger Authorization:** Explicitly verify that the `userID` retrieved from the token *matches* the user profile being updated, if applicable (though here it seems they are updating *their own* profile).
+    *   **Input Validation:** Implement struct validation using libraries like `go-playground/validator` on the `payload` struct to enforce business constraints (max length, format, allowed values) before calling the repository layer.
 
-### 🔍 Detailed Vulnerability Assessment
+#### 3. `List(c *fiber.Ctx)`
+*   **Input:** `cityFilter`, `countryFilter`, `nicheFilter` (Query parameters), `page` (Query parameter).
+*   **Risk:** Medium (SQL Injection, Injection via filter parameters).
+*   **Analysis:**
+    *   **SQL Injection (Primary Concern):** The query parameters (`cityFilter`, `countryFilter`, `nicheFilter`) are passed directly to the repository layer (`h.Repo.ListConsultants`). If the repository implementation constructs SQL queries using string concatenation or unsafe methods, a malicious user could inject SQL commands (e.g., passing `' OR 1=1 --` as a filter value).
+    *   **Type Coercion:** The page number uses `strconv.Atoi`, which is robust for type conversion.
+*   **Recommendations:**
+    *   **Mandatory Parameterization:** Ensure that the `repository.ListConsultants` function *exclusively* uses parameterized queries (prepared statements) for all inputs derived from the HTTP request (`cityFilter`, `countryFilter`, `nicheFilter`). Never concatenate user-supplied strings directly into the SQL query.
+    *   **Input Sanitization:** For filter inputs, consider whitelisting acceptable character sets or ensuring that filters are treated as full-text search parameters rather than raw SQL fragments.
 
-#### 1. `GetProfile` (GET /api/v1/consultants/:id)
+#### 4. `GetConsultantByUserID(c *fiber.Ctx)`
+*   **Input:** `userIDParam` (UUID from URL parameters).
+*   **Risk:** Low, as it only reads a UUID-formatted string. The primary risk is if the underlying database query implementation is vulnerable to improper type handling, but generally, UUID passing is safe.
 
-*   **Vulnerability:** **Insecure Direct Object Reference (IDOR) Potential.**
-    *   **Description:** The handler accepts a UUID from the URL parameter (`c.Params("id")`) and uses it directly to fetch data (`h.Repo.GetProfileByID`). There is no check to ensure that the authenticated user (whose ID is presumably available via `c.Locals("user_id")`) is authorized to view the profile of the specified `id`.
-    *   **Impact:** An attacker can query the profiles of other consultants (or users, if the ID space overlaps) simply by changing the UUID in the URL, leading to unauthorized data disclosure.
-    *   **Mitigation:** Implement an ownership check. The repository layer (or the handler) must validate that the `id` requested matches the ID of the user associated with the current session/token, unless the endpoint is explicitly designed for public viewing (which should still enforce rate limiting).
+#### 5. `DeleteGalleryMedia` (Implied Functionality)
+*No specific endpoint/function was provided for deletion, but if such a function exists, it must use proper transaction handling and implement comprehensive authorization checks (Is the user deleting their own content?).*
 
-#### 2. `List` (GET /api/v1/consultants)
+#### 6. `UploadGalleryMedia` (Implied Functionality)
+*Similarly, file uploads require stringent content-type validation, size restrictions, and secure storage mechanisms.*
 
-*   **Vulnerability:** **No explicit sanitization/validation on query parameters (Query Parameter Injection/Mass Assignment).**
-    *   **Description:** Parameters like `cityFilter`, `countryFilter`, and `nicheFilter` are passed directly to the repository layer (`h.Repo.ListConsultants`). While the underlying database layer (e.g., using parameterized queries) might protect against classical SQL Injection, the handler lacks validation to ensure these fields contain expected, clean data (e.g., checking if `cityFilter` only contains alphanumeric characters).
-    *   **Impact:** Depending on how `ListConsultants` constructs its query (if it concatenates inputs instead of using parameterized queries), it could lead to SQL Injection. More commonly, it could lead to logical bugs or massive performance degradation (DOS) if malicious, empty, or highly complex input strings are provided.
-    *   **Mitigation:** Implement strict validation and sanitization for all query parameters. For geographical or structured fields, use enumerated lists or predefined lookup tables instead of raw string inputs.
+---
 
-#### 3. `UploadMedia` (POST /api/v1/consultants/upload)
+### Critical Security & Logic Review (Focusing on File Handling)
 
-*   **Vulnerability:** **Path Traversal and Object Key Confusion (CRITICAL).**
-    *   **Description:** The code constructs the object key using `objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)` or `objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)`. The `userID` is extracted from `c.Locals("user_id")`. If the `userID` passed in the token or context is compromised or mutable, an attacker could overwrite keys belonging to other users. More critically, if the `userID` is not properly sanitized (e.g., `userID` being `../` or `../../`), it could lead to path traversal in the object key, allowing files to be stored in unintended directory structures within the storage bucket.
-    *   **Impact:** Unauthorized file overwriting or storage namespace violation.
-    *   **Mitigation:**
-        1. **Sanitize User ID:** Ensure `userID` is strictly sanitized to only contain valid UUID characters (`[0-9a-fA-F-]`) before inclusion in the path structure.
-        2. **Use Unique IDs:** The object key generation should ideally use a mechanism guaranteed to be unique and non-guessable, decoupling the object from the user's explicit ID structure.
+The most sensitive operations involve file upload and deletion (implied by the context of "GalleryMedia").
 
-*   **General Flaw in `UploadMedia`:** The code structure relies on `c.Locals` for identifying the user/owner. While the intent is clear, relying solely on header/context data without robust backend authentication validation makes the system vulnerable to ID spoofing.
+1.  **File Upload (`UploadGalleryMedia`):**
+    *   **Validation:** Must validate file extensions against an allow-list (e.g., `.jpg`, `.png`, `.webp`). **Never** rely solely on the MIME type provided by the client, as this is trivially spoofable.
+    *   **Sanitization:** If the image is passed through a library (e.g., Pillow in Python) for processing, ensure that the library strips all metadata (EXIF data) and re-encodes the image to prevent XSS or script execution payloads embedded in image headers.
+    *   **Storage:** Store files in a secure, non-publicly accessible directory, and serve them only through a controlled, authenticated endpoint.
 
-#### 4. `DeleteGalleryMedia` (Implicit functionality, related to Media management)
+2.  **File Deletion (`DeleteGalleryMedia`):**
+    *   **Authorization:** Must check if the authenticated user has the right to delete the resource (e.g., ownership check).
+    *   **Atomic Operation:** Deletion should be atomic: if the metadata deletion succeeds but the file system deletion fails, or vice versa, a rollback or clear error must occur.
 
-*   **Potential Flaw:** The function relies on `mediaID` and `userOwnerID`. If the authorization check (ensuring the authenticated user is the owner of the media) is missing or incomplete, an attacker could delete another user's data.
-    * *Recommendation:* Always validate that the authenticated user's ID matches the `userOwnerID` associated with the `mediaID` before proceeding with deletion or modification.
+---
 
-***
+### Deep Dive: `UploadGalleryMedia` (Focus on Robustness)
 
-### Summary of Recommendations & Remediation
+If this function interacts with the file system, the following best practices must be followed:
 
-| Function / Area | Vulnerability | Severity | Recommended Fix |
+*   **Path Traversal Prevention:** When constructing the storage path from user input (e.g., `user_id/media/{filename}`), strictly sanitize the filename to prevent path traversal attacks (`../../../etc/passwd`). Only allow alphanumeric characters, dashes, and underscores.
+*   **Unique Naming:** Generate a cryptographic random filename (e.g., UUID) upon upload, and only use the provided filename for metadata indexing. This prevents malicious users from guessing paths or overwriting critical system files.
+
+---
+
+### Summary of Actionable Recommendations
+
+| Area | Vulnerability/Weakness | Recommendation | Priority |
 | :--- | :--- | :--- | :--- |
-| **All Endpoint Logic** | **Broken Object Level Authorization (BOLA)** | High | Implement mandatory, comprehensive authorization checks: *Is the authenticated user permitted to act on this resource (e.g., does the authenticated ID match the resource owner ID)?* |
-| **`UploadMedia`** | **Insecure Object Storage Key Generation** | High | Sanitize all directory components used in object key construction to prevent path traversal attacks. Never trust external input as part of the file path structure. |
-| **`UploadMedia`** | **ID Spoofing Potential** | High | Ensure that the source of the `userOwnerID` is validated against the secure session token/authentication context, not just from request parameters. |
-| **All Inputs** | **Insufficient Input Sanitization** | Medium | Treat all user-provided inputs (especially path components, filenames, and IDs) as untrusted and sanitize/validate their format rigorously. |
-| **`DeleteGalleryMedia`** | **Authorization Bypass** | High | Ensure the deletion logic requires explicit ownership confirmation. |
+| **Input Handling** | Path Traversal (Implied file ops) | **Always** sanitize file names/paths; use UUIDs for stored file names. | Critical |
+| **File Upload** | Client-side MIME spoofing, XSS payload in metadata. | Implement strict server-side file type validation (allow-list extensions) and metadata stripping during re-encoding. | Critical |
+| **Authorization** | Missing ownership checks (Implied deletion). | Implement rigorous checks on every write/delete endpoint to ensure the user owns the resource. | Critical |
+| **Error Handling** | Exposed internal details on failure. | Implement generic, user-friendly error messages for failed transactions (e.g., "Operation failed. Please try again."). | High |
+| **Data Integrity** | Inconsistent state on failure. | Use database transactions for multi-step operations (e.g., save metadata $\rightarrow$ save file $\rightarrow$ update index). | High |

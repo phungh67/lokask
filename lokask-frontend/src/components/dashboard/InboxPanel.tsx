@@ -47,7 +47,6 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
   });
 
   return (
-    // 🟢 Fix: Replaced hardcoded w-[360px] with responsive w-full md:w-[360px]
     <div className="w-full md:w-[360px] bg-card border-r border-border flex flex-col h-full shrink-0">
       {/* Header */}
       <div className="p-4 shrink-0">
