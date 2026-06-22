@@ -172,3 +172,5 @@ const ProfileBasicInfo = ({
     </div>
   );
 };
+
+export default ProfileBasicInfo;
