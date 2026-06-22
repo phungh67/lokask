@@ -242,9 +242,12 @@ const AuthPromptDialog = ({
             Account Email
           </label>
           <Input
+            type="text"
             value={email}
-            placeholder="your.email@example.com"
-            className="bg-muted text-muted-foreground h-12 rounded-xl px-4 font-medium border-border/60 select-none cursor-not-allowed"
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email or username"
+            className="h-12 rounded-xl px-4 font-medium text-base border-2"
+            required
           />
         </div>
         <div className="relative">
