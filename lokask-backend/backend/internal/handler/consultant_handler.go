@@ -72,6 +72,7 @@ func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
 
 	var payload repository.UpdateProfilePayload
 	if err := c.BodyParser(&payload); err != nil {
+		log.Printf("[ERROR][UPDATE] Error catched: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body format",
 		})
@@ -79,10 +80,9 @@ func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
 
 	err = h.Repo.UpdateProfile(c.Context(), userID, payload)
 	if err != nil {
-		fmt.Printf("[Error] UpdateProfile failed: %v\n", err)
+		log.Printf("[ERROR][UPDATE] UpdateProfile failed: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":  "Failed to update profile",
-			"detail": err.Error(),
+			"error": "Failed to update profile",
 		})
 	}
 
