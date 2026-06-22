@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/sheet";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getConsultantBookings, getPublicConsultantBookings } from "@/lib/bookings";
+import { getPublicConsultantBookings } from "@/lib/bookings";
 import { Booking } from "@/types/booking";
-import BookingMiniCalendar from "../dashboard/bookings/BookingMiniCalendar"; // Adjust import path if needed
+import BookingMiniCalendar from "../dashboard/bookings/BookingMiniCalendar";
 
 interface ConsultantScheduleSidebarProps {
   isOpen: boolean;
@@ -33,18 +33,21 @@ const ConsultantScheduleSidebar = ({
 
   useEffect(() => {
     // Only fetch if the sidebar is open and we have a valid ID
-    if (!isOpen || !consultantId) return;
+    if (!isOpen || !consultantId || consultantId === "loading") return;
 
     const fetchSchedule = async () => {
       setIsLoading(true);
       try {
         const data = await getPublicConsultantBookings(consultantId);
+        
+        // Defensively ensure it's an array
+        const bookingsArray = Array.isArray(data) ? data : (data as any)?.data || [];
 
-        const confirmedPublicBookings = (data || [])
+        const confirmedPublicBookings = bookingsArray
           .filter((b: Booking) => b.status === "confirmed")
           .map((b: Booking) => ({
             ...b,
-            traveller_name: "Busy", // Safely overwrite
+            traveller_name: "Busy", // Safely overwrite privacy data
             notes: "",
           }));
 

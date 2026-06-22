@@ -1,58 +1,92 @@
 [⬅ Return to Main Compendium](../../../../../../README.md)
 
-## Security Architecture and Code Review Analysis (Go Repository)
+## Security Code Review: Booking Repository (`repository` package)
 
-**Role:** Senior Security Officer
-**Expertise:** Cloud Security, Architect Security, Programming Language Security (Go)
-**Objective:** Analyze the provided database repository code for security vulnerabilities, architectural weaknesses, and potential data leakage paths.
+**Reviewer:** Senior Security Officer
+**Expertise:** Cloud Security, Architect Security, Programming Language Security
+**Target:** Data persistence and API interaction layer (SQLX/Go)
 
----
+### Executive Summary
 
-### 📄 File: `repository/booking_repository.go`
+The provided repository layer demonstrates generally good practices, particularly the consistent use of parameterized queries (`$1`, `$2`, etc.) across all database interactions, which successfully mitigates the most common and severe class of vulnerability: **SQL Injection (SQLi)**. The code adheres to standard relational database patterns using transactions and context management.
 
-### 🔍 Executive Summary
-
-The repository generally adheres to best practices by utilizing parameterized queries (`sqlx` and `database/sql`), which effectively mitigates the risk of classic SQL Injection attacks. The use of `context.Context` for cancellation and timeout management is commendable.
-
-However, there are three primary areas of concern:
-
-1.  **Input Validation and Type Safety (High Risk):** The `UpdateBookingStatus` function accepts a `status` as a raw string without whitelisting, leading to potential misuse or database integrity issues if the status string is malicious or malformed.
-2.  **Authorization Logic (Medium Risk):** While `IsBookingOwner` correctly checks ownership, the mixing of data types for IDs (UUID in the signature vs. `string` in the body) suggests a potential architectural inconsistency and a risk of improper comparison if the ID types diverge.
-3.  **Data Schema Management (Low Risk/Architectural):** The view structs (`ConsultantBookingView`, `UserBookingView`) rely on the `domain.BookingEntry` structure, which could lead to accidental data exposure if underlying domain models contain sensitive, unneeded data.
+However, several architectural and logical flaws were identified related to **Authorization/Access Control (BOLA - Broken Object Level Authorization)**, **Input Validation**, and potential **Data Leakage** through method signatures.
 
 ---
 
-### 🎯 Detailed Vulnerability Analysis
+### 🔍 Detailed Vulnerability Analysis
 
-#### 1. Functions & Methods Analysis
+#### 1. Object Definition & Data Leakage (Info Disclosure)
 
-| Function Signature | Vulnerability Type | Severity | Description | Remediation/Mitigation |
-| :--- | :--- | :--- | :--- | :--- |
-| `UpdateBookingStatus(ctx context.Context, id uuid.UUID, status string) error` | **Input Validation/Business Logic** | **MEDIUM** | The `status` parameter is taken as a raw `string`. While parameterized, if the backend business logic allows arbitrary status strings (e.g., `'DRAFT' OR 1=1 --`), it could compromise data integrity or trigger unhandled application logic. | Implement **whitelisting (ENUM)** for the `status` field at the service layer. The repository function should only accept a pre-validated, known list of allowed statuses (e.g., "CONFIRMED", "CANCELED", "PENDING"). |
-| `IsBookingOwner(ctx context.Context, bookingID uuid.UUID, userID string) (bool, error)` | **Type Safety/Architectural Flaw** | **LOW-MEDIUM** | The function accepts `bookingID` as `uuid.UUID` but `userID` as `string`. This inconsistency is a major red flag. If the underlying database `c.user_id` column is a UUID, passing a `string` here will likely fail or trigger implicit type casting which could lead to incorrect comparisons or errors in complex setups. | **Consistency is key.** The `userID` parameter *must* be updated to `uuid.UUID` to match the expected type usage within the system. The function signature should be: `IsBookingOwner(ctx context.Context, bookingID uuid.UUID, userID uuid.UUID) (bool, error)`. |
-| `GetConsultantBookings(ctx context.Context, consultantID uuid.UUID)` | **N/A (Secure)** | **LOW** | Safe. Uses parameterized query and correct type handling (`uuid.UUID`). | None required. |
-| `GetUserBookings(ctx context.Context, userID uuid.UUID)` | **N/A (Secure)** | **LOW** | Safe. Uses parameterized query and correct type handling (`uuid.UUID`). | None required. |
-| `CreateBookingTx(tx *sqlx.Tx, b *domain.BookingEntry)` | **N/A (Secure)** | **LOW** | Safe. Operates within a transaction context, and all parameters are bound securely. | None required. |
+*   **Affected Objects:** `ConsultantBookingView`, `UserBookingView`
+*   **Vulnerability Type:** Information Disclosure / Schema Tight Coupling
+*   **Root Cause:** The structs directly embed large amounts of data retrieved via `SELECT *` or explicit joins (`b.*`). This creates a strong coupling to the database schema. If the underlying database schema changes (e.g., `bookings` table adds a `secret_debug_field`), these structs and the associated queries might unintentionally expose this new field, or conversely, may fail if the selection logic becomes outdated.
+*   **Impact:** Low to Medium. Could lead to unintended exposure of internal system details or sensitive user/consultant metadata if the underlying schema expands.
+*   **Mitigation/Recommendation:**
+    1.  **Use Specific Selects:** Instead of relying on `b.*` (as seen in both `GetConsultantBookings` and `GetUserBookings`), explicitly list every column required. This protects against accidental schema changes from leaking data.
+    2.  **Data Transfer Objects (DTOs):** If the repository needs to return complex views, wrap them in dedicated DTOs that only contain the *business* data needed by the service layer, abstracting the underlying database column names.
 
-#### 2. Objects & Payloads Analysis
+#### 2. `GetConsultantBookings` and `GetUserBookings` (Architectural/Authorization Flaw)
 
-**A. Data Structures (Views):**
-*   **Objects:** `ConsultantBookingView`, `UserBookingView`
-*   **Vulnerability:** **Data Over-fetching / Leakage.** These view structs inherit `domain.BookingEntry`. If `domain.BookingEntry` includes sensitive operational data (e.g., internal timestamps, unmasked payment IDs, internal pricing models) that the consuming service layer does not need, this structure facilitates accidental data leakage.
-*   **Mitigation:** Adopt a principle of **least disclosure**. When defining view structs, only include fields absolutely necessary for the API consumer. If `domain.BookingEntry` is large, consider creating dedicated, lightweight view models (DTOs) specifically for the API output layer that only include non-sensitive fields.
+*   **Affected Functions:** `GetConsultantBookings`, `GetUserBookings`
+*   **Vulnerability Type:** Missing Authorization Check (Broken Function/Object Level Access Control)
+*   **Root Cause:** These functions perform read operations based solely on the provided UUID (`consultantID` or `userID`). The assumption is that the calling service layer handles authorization, but the repository layer itself does not validate if the *calling user* (the principal) is actually authorized to view the data for the given ID.
+*   **Impact:** High. An attacker who knows a valid `consultantID` or `userID` could potentially enumerate and view another user's booking data, assuming the service layer is compromised or bypassed.
+*   **Mitigation/Recommendation:**
+    1.  **Inject Current User Context:** The repository functions should accept a `context.Context` that is guaranteed to contain the authenticated user's ID (e.g., `context.Context` should hold `ContextKeyUserID`).
+    2.  **Enforce Ownership at Repository Level:** Modify the queries to enforce ownership. For example, in `GetConsultantBookings`, the query should *always* include `AND b.owner_user_id = $3` (where `$3` is the ID of the authenticated calling user), ensuring the user can only retrieve data they are permitted to see.
 
-**B. Function Payloads:**
-*   **Payloads:** `status` (from `UpdateBookingStatus`)
-*   **Vulnerability:** **Lack of Validation/Sanitization.** As noted above, using a raw string payload for a status field is dangerous.
-*   **Mitigation:** All string-based parameters that represent constrained states (like status, service type, etc.) must be treated as enumerations. Implement validation logic at the service layer to check the input against a known, safe set of values before passing them to the repository.
+#### 3. `DeleteBooking` (Authorization Flaw)
+
+*   **Affected Function:** `DeleteBooking`
+*   **Vulnerability Type:** Missing Authorization Check (Broken Object Level Authorization - BOLA)
+*   **Root Cause:** The function only checks if the booking ID exists. It does not check if the authenticated user (the caller) is the owner of the booking or has administrative privileges to delete it.
+*   **Impact:** High. A non-owner user can potentially delete any booking slot simply by knowing the UUID.
+*   **Mitigation/Recommendation:**
+    1.  **Require Ownership Check:** Before executing the `DELETE`, the repository must verify ownership using the calling user's ID.
+    2.  **Secure Query Modification:** Update the query to:
+        ```sql
+        DELETE FROM bookings WHERE id = $1 AND owner_user_id = $2
+        ```
+        (Where `$2` is the ID of the authenticated user retrieved from the context).
+    3.  **Error Handling:** If the execution affects 0 rows, the function should return a specific authorization error, not just a generic "not found."
+
+#### 4. `UpdateBookingStatus` (Input Validation / Security Constraint)
+
+*   **Affected Function:** `UpdateBookingStatus`
+*   **Vulnerability Type:** Lack of Input Validation / Business Logic Flaw
+*   **Root Cause:** The `status` parameter is passed as a raw string (`status string`). If the business logic only allows statuses like "CONFIRMED", "CANCELLED", or "PENDING", accepting any arbitrary string allows for potential state-exhaustion attacks or invalid database states.
+*   **Impact:** Medium. Corrupting the integrity of the booking data.
+*   **Mitigation/Recommendation:**
+    1.  **Enumerated Types:** The `status` field should be validated against an internal constant set (an `enum` type in Go, mirroring an enum type in the database).
+    2.  **Type Enforcement:** The signature of this function should ideally take a known type (e.g., `domain.BookingStatus`) rather than a generic `string`.
+
+#### 5. `IsBookingOwner` (Logical Flaw/Design)
+
+*   **Affected Function:** `IsBookingOwner`
+*   **Vulnerability Type:** Incorrect/Confusing Authorization Logic
+*   **Root Cause:** The function attempts to verify ownership by joining `bookings` -> `consultants` -> `users`.
+    *   The parameters are `(bookingID uuid.UUID, userID string)`. If `userID` is a string and `bookingID` is a UUID, there is a type mismatch or confusion about *whose* ownership is being checked.
+    *   The logic checks if the `booking.id` matches and if the associated consultant's `user_id` matches the provided `userID`. This only checks if the *consultant* owns the booking, but it ignores the *user* who made the booking (the `user_id` column).
+*   **Impact:** High. This function is brittle and likely incorrect for general ownership checks, leading to security assumptions being made based on faulty logic.
+*   **Mitigation/Recommendation:**
+    1.  **Redefine Purpose:** Clarify if "owner" means the person who *booked* the slot (`user_id`) or the person *providing* the service (`consultant_id`).
+    2.  **Simplify Logic (If Checking Booker):** If checking the booker's ownership, the query must verify the `user_id` column in the `bookings` table:
+        ```sql
+        SELECT EXISTS (
+            SELECT 1 FROM bookings WHERE id = $1 AND user_id = $2
+        )
+        ```
 
 ---
 
-### 🚀 Architectural Recommendations (Cloud/Architecture Security)
+### 🛠️ Summary of Critical Security Recommendations
 
-1.  **Service Layer Enforcement:** The repository layer is currently performing business validation (e.g., ownership check). It is critical that the *Service Layer* is responsible for enforcing the transaction boundaries, input validation (whitelisting statuses, checking non-null UUIDs), and authorization checks. The repository should assume that all inputs provided by the service layer are already valid and sanitized.
-2.  **Database Schema Review (Principle of Least Privilege):** Review the database permissions for the application connection. The credentials used by the service should only have `SELECT`, `INSERT`, `UPDATE`, and `DELETE` permissions on the required columns of the specific tables (`bookings`, `users`, etc.). Avoid granting overly broad permissions like `DROP TABLE` or excessive `UPDATE` rights.
-3.  **Context Propagation:** While `context.Context` is used, ensure that connection timeouts and dead-letter queuing logic (if applicable in cloud environments) are handled upstream and correctly propagated, preventing resource exhaustion or indefinite query hangs.
+| Priority | Vulnerability | Affected Area | Mitigation Strategy |
+| :--- | :--- | :--- | :--- |
+| **CRITICAL** | Missing Object/Function Access Control (BOLA) | `DeleteBooking`, `Get*Bookings` | Modify all modification and retrieval queries to explicitly filter by the authenticated caller's ID (from the context). |
+| **HIGH** | Input Validation/State Tampering | `UpdateBookingStatus` | Enforce status changes using internal constants/enums, not raw strings. |
+| **MEDIUM** | Information Disclosure / Schema Coupling | All View Structs | Use explicit column selection (`SELECT b.id, b.start_time, ...`) instead of `*` to prevent accidental data leakage during schema evolution. |
+| **LOW** | Logic Flaw | `IsBookingOwner` | Correctly implement the ownership check based on the actual business requirement (`user_id` vs `consultant_id`). |
 
----
 *this content was created by AI, but the coding and underlying logic are not.*

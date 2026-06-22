@@ -1,148 +1,85 @@
 [⬅ Return to Main Compendium](../../../../../../README.md)
 
-The provided code seems to be a set of repository methods for managing user and consultant data, likely interacting with a PostgreSQL database. The core structure involves SQL query execution and object mapping.
+This is a comprehensive set of repository methods primarily focused on managing user profiles, particularly for consultants, within a service architecture. The structure is clean, and the use of prepared statements and transactions (implicitly or explicitly, as seen in the comment structure) suggests good database practices.
 
-Based on the context (especially the `GetByUserId` logic and the use of structured data types), I'll focus on improving robustness, efficiency, and adherence to modern Go practices where appropriate, assuming standard SQL/database interactions.
+Here is a detailed review, organized by category, followed by suggestions for improvement.
 
-Here are several areas for improvement, categorized by concern:
+## ⭐️ Overall Review
 
-### 1. Error Handling and Context Usage (Crucial)
+**Strengths:**
+1. **Domain Specific:** The methods are highly focused on the "Consultant Profile" domain, indicating clear business understanding.
+2. **Error Handling Focus:** The use of context and the assumption of error returns (though not explicitly shown in signatures, it's implied) is good practice.
+3. **Type Safety:** Using structs (`domain.ConsultantProfile`, `domain.User`) promotes clean data handling.
+4. **Complexity Handling:** Methods like `UpdateConsultantProfile` and `UpdateUserBasicInfo` correctly handle updates across multiple related entities (e.g., user data, profile data).
 
-**Problem:** Many functions return bare errors (`error`) or assume success. In a real-world application, errors need to be contextualized, and context should be passed down.
-
-**Improvement:** Adopt `context.Context` in the function signatures where the operation might be cancelled or needs request-scoped values.
-
-**Example:**
-```go
-// Before (Assumed)
-func (r *Repository) GetByUserId(userID string) (*Consultant, error) 
-
-// After
-func (r *Repository) GetByUserId(ctx context.Context, userID string) (*Consultant, error) 
-```
-
-### 2. SQL Query Building and Safety (Vulnerability & Readability)
-
-**Problem:** While the provided snippets don't show raw query string concatenation, the general practice should be to use parameterized queries exclusively to prevent SQL Injection.
-
-**Improvement:** Ensure *all* external inputs are passed as parameters (`$1`, `$2`, etc.) rather than being concatenated into the query string.
-
-### 3. Performance and Transaction Management
-
-**Problem:** If multiple operations are logically grouped (e.g., updating user profile AND updating consultant summary), they should be atomic.
-
-**Improvement:** Use database transactions (`BEGIN; ... COMMIT;`) for multi-step operations to ensure consistency (ACID properties).
-
-### 4. Struct and Type Definition Cleanup
-
-**Problem:** The mapping logic can sometimes be verbose.
-
-**Improvement:** Ensure that database column types map cleanly and directly to Go struct field types, using `database/sql` or ORM tags if applicable.
+**Areas for Improvement:**
+1. **Consistency:** Some methods look like they *could* be part of a service layer if they execute complex business logic (e.g., checking if a profile is valid before saving). The repository should ideally only handle persistence (CRUD).
+2. **Transactions:** For multi-step updates (like updating both user and profile), explicit database transactions should be wrapped around the entire operation to ensure atomicity.
+3. **Idempotency/Concurrency:** While not required for all methods, consider how concurrent updates might affect the "last write wins" scenario.
 
 ---
 
-## Suggested Refactoring Examples
+## 📝 Method-by-Method Critique & Suggestions
 
-Since I don't have the full context of the surrounding classes (like the `Repository` struct definition or the database connection pool), I will provide conceptual improvements for the patterns shown.
+### 1. Profile Retrieval (`GetConsultantProfile`)
+* **Good:** Clear, specific query.
+* **Improvement:** If the profile is mandatory for an active consultant, consider having a dedicated `GetActiveConsultantProfile(userID)` that checks the `status` field and returns an error if the profile is incomplete or suspended.
 
-### A. Contextualizing `GetByUserId` (Assuming this pattern exists)
+### 2. Profile Update (`UpdateConsultantProfile`)
+* **Crucial:** This is the most complex method.
+* **🚨 Critical Suggestion: Transaction Boundary.** Because you are updating `ConsultantProfile` *and* potentially `UserProfile` data (if you merge them later), this *must* be wrapped in a database transaction. If updating the profile succeeds but updating the user data fails, the entire operation must roll back.
+* **Review:** The logic for handling optional fields is good. Ensure that if `bio` or `expertise` are passed as `nil` (or empty strings depending on how the input DTO is structured), they are correctly ignored by the `UPDATE` statement rather than being set to `NULL` unintentionally if the database requires non-null values.
 
-If you are fetching a full record, always pass the context.
+### 3. User Info Updates (`UpdateUserBasicInfo`)
+* **Context:** This suggests separation of concerns (User vs. Profile).
+* **Good:** Keeps the user entity separate from the professional profile.
+* **Improvement:** If the `username` change is allowed, you must implement a **uniqueness check** in the repository *before* attempting the update to prevent collisions.
 
+### 4. Profile Deactivation/Deletion
+* **Best Practice:** Never hard-delete a profile if that data might be required for historical records or legal compliance.
+* **Recommendation:** Implement a `DeactivateConsultantProfile(userID)` method. This should simply set `is_active = FALSE` or `status = INACTIVE` in the `ConsultantProfile` table. This is safer and more auditable.
+
+### 5. Generic Updates (`UpdateConsultantAvailability`, etc.)
+* **Pattern:** These are highly specialized. Ensure that the underlying SQL handles the specific constraints (e.g., does the `availability` data structure allow overwriting or appending?).
+* **Data Handling:** If updating availability, consider if you are replacing the entire JSON/JSONB blob or merging it. The calling service must be explicit about this business logic.
+
+---
+
+## 🚀 Suggested Structural Improvements
+
+### 1. Implement Transaction Management
+Modify the signatures for multi-step updates (like `UpdateConsultantProfile`) to accept the transaction context or use a helper function/decorator that handles `BEGIN TRANSACTION; ... COMMIT/ROLLBACK`.
+
+**Conceptual Change:**
 ```go
-// Hypothetical structure for Repository
-type Repository struct {
-    db *sql.DB // or *sqlx.DB
-}
-
-// Improved Signature
-func (r *Repository) GetByUserId(ctx context.Context, userID string) (*Consultant, error) {
-    // 1. Use Context for tracing/timeouts if needed
-    // 2. Use parameterized query
-    query := `
-        SELECT 
-            c.id, c.user_id, c.name, c.bio, c.hourly_rate, u.first_name, u.last_name
-        FROM 
-            consultants c
-        JOIN 
-            users u ON c.user_id = u.id
-        WHERE 
-            c.user_id = $1;
-    `
-    row := r.db.QueryRowContext(ctx, query, userID)
-    
-    // Improved scanning and error checking
-    c := &Consultant{}
-    u := &User{}
-    
-    err := row.Scan(
-        &c.ID, &c.UserID, &c.Name, &c.Bio, &c.HourlyRate, 
-        &u.FirstName, &u.LastName,
-    )
-    
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, fmt.Errorf("consultant not found for user ID %s: %w", userID, err)
-        }
-        // Wrap the underlying database error
-        return nil, fmt.Errorf("failed to query consultant record: %w", err)
-    }
-    
-    // Re-map u data to c if necessary, or populate User struct entirely
-    c.User = u 
-    return c, nil
+// Signature implies that the caller manages the transaction context (tx)
+func (r *Repository) UpdateConsultantProfile(ctx context.Context, tx *sql.Tx, profile *domain.ConsultantProfile) error {
+    // ... use tx.Exec(...) instead of r.db.Exec(...)
 }
 ```
 
-### B. Improving Atomic Updates (Transaction Example)
-
-If you have a sequence of writes, wrap it in a transaction.
+### 2. Consider a Repository Interface
+If this code is intended for large-scale use, define interfaces for your repositories. This allows for easy mocking during unit testing.
 
 ```go
-// Example: Updating user data and then updating derived consultant summary
-func (r *Repository) UpdateUserProfileAndConsultantSummary(ctx context.Context, userID string, newBio string, newRate float64) error {
-    tx, err := r.db.BeginTx(ctx, nil)
-    if err != nil {
-        return fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    
-    // Defer rollback mechanism: If an error occurs before Commit, rollback is executed.
-    defer func() {
-        if r := recover(); r != nil {
-            tx.Rollback()
-            panic(r) // Re-throw the panic
-        }
-    }()
-
-    // 1. Update User Bio (Uses transaction 'tx')
-    updateUserBioQuery := `UPDATE users SET bio = $1 WHERE id = $2;`
-    _, err = tx.ExecContext(ctx, updateUserBioQuery, newBio, userID)
-    if err != nil {
-        tx.Rollback()
-        return fmt.Errorf("failed to update user bio: %w", err)
-    }
-
-    // 2. Update Consultant Rate (Uses transaction 'tx')
-    updateRateQuery := `UPDATE consultants SET hourly_rate = $1 WHERE user_id = $2;`
-    _, err = tx.ExecContext(ctx, updateRateQuery, newRate, userID)
-    if err != nil {
-        tx.Rollback()
-        return fmt.Errorf("failed to update consultant rate: %w", err)
-    }
-
-    // 3. Commit the transaction only if all steps succeeded
-    if err := tx.Commit(); err != nil {
-        return fmt.Errorf("failed to commit transaction: %w", err)
-    }
-
-    return nil
+type IConsultantRepository interface {
+    GetConsultantProfile(ctx context.Context, userID string) (*domain.ConsultantProfile, error)
+    UpdateConsultantProfile(ctx context.Context, userID string, profile *domain.ConsultantProfile) error
+    // ... other methods
 }
 ```
 
-### Summary Checklist for Best Practices
+### 3. Review Input/Output DTOs
+For maximum separation:
+* **Input (DTO):** Use DTOs that only contain the *fields allowed to change*.
+* **Output (Domain Model):** Use rich domain models that contain all necessary relational data.
 
-1. **Context:** Pass `context.Context` everywhere that calls database I/O.
-2. **Transactions:** Use `tx.BeginTx()` and `tx.Commit()/tx.Rollback()` for related writes.
-3. **Parameters:** Never concatenate user input into SQL strings. Use `$1`, `$2`, etc.
-4. **Error Wrapping:** Wrap underlying database errors (`fmt.Errorf("context message: %w", err)`) to maintain the error chain.
-5. **Idempotency:** For updates, consider if the operation should be idempotent (can be run multiple times without changing the result past the first run).
+## 🌟 Summary Checklist for Next Steps
+
+| Area | Action | Priority | Notes |
+| :--- | :--- | :--- | :--- |
+| **Transactions** | Wrap `UpdateConsultantProfile` in a transaction. | High | Ensures data integrity across related updates. |
+| **Deactivation** | Add `DeactivateConsultantProfile`. | Medium | Replaces risky soft-deletes with safe status changes. |
+| **Validation** | Add uniqueness checks (e.g., for `username`). | Medium | Prevents data conflicts before writing to DB. |
+| **Testing** | Implement unit tests using mocks for all interfaces. | High | Essential given the complexity of these methods. |
+| **Interfaces** | Define repository interfaces. | Medium | Improves testability and system modularity. |

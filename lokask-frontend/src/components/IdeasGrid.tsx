@@ -18,14 +18,12 @@ const IdeasGrid = () => {
   });
 
   return (
-    // 🟢 Added overflow-hidden to prevent horizontal page scrolling
     <section className="py-10 lg:py-14 bg-secondary/30 w-full overflow-hidden">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center mb-6 md:mb-8">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-sans">
             Ideas locals often recommend
           </h2>
-          {/* 🟢 Hidden top link on mobile, visible on desktop */}
           <Link
             to="/blog"
             className="hidden md:inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline whitespace-nowrap"
@@ -35,7 +33,6 @@ const IdeasGrid = () => {
           </Link>
         </div>
 
-        {/* 🟢 Removed px-12 on mobile */}
         <div className="relative px-0 md:px-12">
           {isLoading ? (
             <div className="flex justify-center py-20">
@@ -53,7 +50,6 @@ const IdeasGrid = () => {
                 {blogs.map((blog, index) => (
                   <CarouselItem
                     key={blog.id}
-                    // 🟢 Set to basis-[80%] so the next card peeks slightly
                     className="pl-4 basis-[80%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4"
                   >
                     <Link
@@ -87,14 +83,12 @@ const IdeasGrid = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {/* 🟢 Hide arrows on mobile */}
               <CarouselPrevious className="hidden md:flex left-0" />
               <CarouselNext className="hidden md:flex right-0" />
             </Carousel>
           )}
         </div>
 
-        {/* 🟢 Mobile-friendly "See more" button centered at the bottom */}
         <div className="mt-8 flex justify-center md:hidden">
           <Link to="/blog" className="inline-flex items-center gap-1.5 text-primary font-medium text-sm hover:underline">
             See more ideas
