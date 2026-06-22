@@ -28,6 +28,7 @@ type UpdateProfilePayload struct {
 	FullName    *string  `json:"full_name"`
 	DisplayName *string  `json:"display_name"`
 	CityID      *int     `json:"city_id"`
+	CityName    *string  `json:"city_name"`
 	Quote       *string  `json:"quote"`
 	Bio         *string  `json:"bio"`
 	MainNicheID *int     `json:"main_niche_id"`
@@ -390,34 +391,61 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 	}
 	defer tx.Rollback()
 
-	// user information
+	// basic information, name, fullname
 	userQuery := `
-		UPDATE users 
-		SET full_name = COALESCE($1, full_name), 
-		    alias = COALESCE($2, alias), 
-		    updated_at = NOW() 
-		WHERE id = $3
-	`
+        UPDATE users 
+        SET full_name = COALESCE($1, full_name), 
+            alias = COALESCE($2, alias), 
+            updated_at = NOW() 
+        WHERE id = $3
+    `
 	_, err = tx.ExecContext(ctx, userQuery, data.FullName, data.DisplayName, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update users table: %w", err)
 	}
 
-	// consultant information
+	// check city if valid
+	finalCityID := data.CityID
+
+	if data.CityName != nil && strings.TrimSpace(*data.CityName) != "" {
+		cityName := strings.TrimSpace(*data.CityName)
+		var resolvedCityID int
+
+		// city name first
+		err = tx.GetContext(ctx, &resolvedCityID, "SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1", cityName)
+
+		if err == sql.ErrNoRows {
+			err = tx.QueryRowContext(ctx, `
+                INSERT INTO cities (name) 
+                VALUES ($1) 
+                RETURNING id
+            `, cityName).Scan(&resolvedCityID)
+
+			if err != nil {
+				return fmt.Errorf("failed to create new city '%s': %w", cityName, err)
+			}
+		} else if err != nil {
+			return fmt.Errorf("failed to lookup city '%s': %w", cityName, err)
+		}
+
+		finalCityID = &resolvedCityID
+	}
+
+	// update city, bio, language
 	consultantQuery := `
-		UPDATE consultants 
-		SET city_id = COALESCE($1, city_id), 
-		    quote = COALESCE($2, quote), 
-		    bio = COALESCE($3, bio), 
-		    languages = COALESCE($4, languages)
-		WHERE user_id = $5
-	`
-	_, err = tx.ExecContext(ctx, consultantQuery, data.CityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
+        UPDATE consultants 
+        SET city_id = COALESCE($1, city_id), 
+            quote = COALESCE($2, quote), 
+            bio = COALESCE($3, bio), 
+            languages = COALESCE($4, languages)
+        WHERE user_id = $5
+    `
+	_, err = tx.ExecContext(ctx, consultantQuery, finalCityID, data.Quote, data.Bio, pq.Array(data.Languages), userID)
 	if err != nil {
 		return fmt.Errorf("failed to update consultants table: %w", err)
 	}
 
-	// look up: consultant - consultant_niches - niches
+	// 4. Update consultant - consultant_niches - niches
 	if data.MainNicheID != nil || data.Tags != nil {
 		// A. Get the internal consultant UUID
 		var consultantID uuid.UUID
@@ -431,10 +459,10 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 
 		var currentTags []string
 		_ = tx.SelectContext(ctx, &currentTags, `
-			SELECT n.display_name 
-			FROM consultant_niches cn 
-			JOIN niches n ON cn.niche_id = n.id 
-			WHERE cn.consultant_id = $1 AND cn.is_primary = false`,
+            SELECT n.display_name 
+            FROM consultant_niches cn 
+            JOIN niches n ON cn.niche_id = n.id 
+            WHERE cn.consultant_id = $1 AND cn.is_primary = false`,
 			consultantID,
 		)
 
@@ -455,8 +483,8 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 
 		if activeMainNicheID != nil && *activeMainNicheID > 0 {
 			_, err = tx.ExecContext(ctx, `
-				INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
-				VALUES ($1, $2, true)`, consultantID, *activeMainNicheID)
+                INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+                VALUES ($1, $2, true)`, consultantID, *activeMainNicheID)
 			if err != nil {
 				return fmt.Errorf("failed to insert primary niche: %w", err)
 			}
@@ -476,10 +504,10 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 
 				if err == sql.ErrNoRows {
 					err = tx.QueryRowContext(ctx, `
-						INSERT INTO niches (slug, display_name) 
-						VALUES ($1, $2) 
-						RETURNING id
-					`, slug, tag).Scan(&nicheID)
+                        INSERT INTO niches (slug, display_name) 
+                        VALUES ($1, $2) 
+                        RETURNING id
+                    `, slug, tag).Scan(&nicheID)
 
 					if err != nil {
 						return fmt.Errorf("failed to create new niche '%s': %w", tag, err)
@@ -493,9 +521,9 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 				}
 
 				_, err = tx.ExecContext(ctx, `
-					INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
-					VALUES ($1, $2, false)
-					ON CONFLICT DO NOTHING`, consultantID, nicheID)
+                    INSERT INTO consultant_niches (consultant_id, niche_id, is_primary) 
+                    VALUES ($1, $2, false)
+                    ON CONFLICT DO NOTHING`, consultantID, nicheID)
 
 				if err != nil {
 					return fmt.Errorf("failed to insert secondary niche link: %w", err)

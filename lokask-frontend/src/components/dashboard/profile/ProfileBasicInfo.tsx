@@ -7,30 +7,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Define the shape of the city data coming from your Go backend
-interface CityOption {
-  id: number;
-  name: string;
-  country: string;
-}
+import { CityOption } from "@/lib/consultants";
 
 interface ProfileBasicInfoProps {
-  fullName: string;      // Maps to users.full_name
-  displayName: string;   // Maps to users.alias
-  cityId: number | "";   // Maps to consultants.city_id
-  quote: string;         // Maps to consultants.quote
-  availableCities: CityOption[]; // Fetched dynamically from the database
+  fullName: string;
+  displayName: string;
+  cityName: string;
+  quote: string;
+  availableCities: CityOption[];
   onFullNameChange: (value: string) => void;
   onDisplayNameChange: (value: string) => void;
-  onCityChange: (cityId: number) => void;
+  onCityChange: (cityName: string) => void;
   onQuoteChange: (value: string) => void;
 }
 
 const ProfileBasicInfo = ({
   fullName,
   displayName,
-  cityId,
+  cityName,
   quote,
   availableCities,
   onFullNameChange,
@@ -46,10 +40,15 @@ const ProfileBasicInfo = ({
       {/* Full Legal Name (users.full_name) */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <Label htmlFor="fullName" className="text-sm font-medium text-muted-foreground">
+          <Label
+            htmlFor="fullName"
+            className="text-sm font-medium text-muted-foreground"
+          >
             Full Legal Name
           </Label>
-          <span className="text-xs text-muted-foreground">Private (Not shown to travelers)</span>
+          <span className="text-xs text-muted-foreground">
+            Private (Not shown to travelers)
+          </span>
         </div>
         <Input
           id="fullName"
@@ -63,7 +62,10 @@ const ProfileBasicInfo = ({
 
       {/* Display Name (users.alias) */}
       <div className="space-y-2">
-        <Label htmlFor="displayName" className="text-sm font-medium text-muted-foreground">
+        <Label
+          htmlFor="displayName"
+          className="text-sm font-medium text-muted-foreground"
+        >
           Public Display Name
         </Label>
         <Input
@@ -78,38 +80,83 @@ const ProfileBasicInfo = ({
 
       {/* City (consultants.city_id) */}
       <div className="space-y-2">
-        <Label htmlFor="city" className="text-sm font-medium text-muted-foreground">
-          Location
-        </Label>
-        <Select
-          // Convert integer to string for the Select component
-          value={cityId ? cityId.toString() : ""}
-          onValueChange={(value) => {
-            // Parse back to integer when the user selects an option
-            onCityChange(parseInt(value, 10));
-          }}
-        >
-          <SelectTrigger className="rounded-xl">
-            <SelectValue placeholder="Select your city" />
-          </SelectTrigger>
-          <SelectContent>
-            {/* Dynamically render the actual cities from your database */}
-            {(availableCities || []).map((option) => (
-              <SelectItem key={option.id} value={option.id.toString()}>
-                {option.name}, {option.country}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex justify-between items-center">
+          <Label
+            htmlFor="fullName"
+            className="text-sm font-medium text-muted-foreground"
+          >
+            Full Legal Name
+          </Label>
+          <span className="text-xs text-muted-foreground">
+            Private (Not shown to travelers)
+          </span>
+        </div>
+        <Input
+          id="fullName"
+          value={fullName}
+          onChange={(e) => onFullNameChange(e.target.value)}
+          placeholder="Your full legal name"
+          className="rounded-xl"
+          maxLength={100}
+        />
       </div>
 
-      {/* Quote (consultants.quote) */}
+      <div className="space-y-2">
+        <Label
+          htmlFor="displayName"
+          className="text-sm font-medium text-muted-foreground"
+        >
+          Public Display Name
+        </Label>
+        <Input
+          id="displayName"
+          value={displayName}
+          onChange={(e) => onDisplayNameChange(e.target.value)}
+          placeholder="How travelers will see you"
+          className="rounded-xl"
+          maxLength={50}
+        />
+      </div>
+
+      {/* 🟢 Updated City Input */}
+      <div className="space-y-2 relative">
+        <Label
+          htmlFor="city"
+          className="text-sm font-medium text-muted-foreground"
+        >
+          Location
+        </Label>
+        <Input
+          id="city"
+          list="db-cities"
+          type="text"
+          value={cityName}
+          onChange={(e) => onCityChange(e.target.value)}
+          placeholder="Type your city (e.g. Hanoi)"
+          className="rounded-xl w-full"
+        />
+        {/* Datalist populated by real DB data */}
+        <datalist id="db-cities">
+          {(availableCities || []).map((option) => (
+            <option key={option.id} value={option.name}>
+              {option.country}
+            </option>
+          ))}
+        </datalist>
+      </div>
+
+      {/* Quote */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <Label htmlFor="quote" className="text-sm font-medium text-muted-foreground">
+          <Label
+            htmlFor="quote"
+            className="text-sm font-medium text-muted-foreground"
+          >
             Tagline
           </Label>
-          <span className={`text-xs ${quoteLength > maxQuoteLength * 0.9 ? 'text-destructive' : 'text-muted-foreground'}`}>
+          <span
+            className={`text-xs ${quoteLength > maxQuoteLength * 0.9 ? "text-destructive" : "text-muted-foreground"}`}
+          >
             {quoteLength}/{maxQuoteLength}
           </span>
         </div>
@@ -125,5 +172,3 @@ const ProfileBasicInfo = ({
     </div>
   );
 };
-
-export default ProfileBasicInfo;
