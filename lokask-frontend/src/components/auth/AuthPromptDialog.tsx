@@ -244,7 +244,6 @@ const AuthPromptDialog = ({
           <Input
             value={email}
             placeholder="your.email@example.com"
-            disabled
             className="bg-muted text-muted-foreground h-12 rounded-xl px-4 font-medium border-border/60 select-none cursor-not-allowed"
           />
         </div>
