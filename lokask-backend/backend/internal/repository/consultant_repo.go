@@ -445,9 +445,8 @@ func (r *ConsultantRepository) UpdateProfile(ctx context.Context, userID uuid.UU
 		return fmt.Errorf("failed to update consultants table: %w", err)
 	}
 
-	// 4. Update consultant - consultant_niches - niches
+	// Update consultant - consultant_niches - niches
 	if data.MainNicheID != nil || data.Tags != nil {
-		// A. Get the internal consultant UUID
 		var consultantID uuid.UUID
 		err = tx.GetContext(ctx, &consultantID, "SELECT id FROM consultants WHERE user_id = $1", userID)
 		if err != nil {
