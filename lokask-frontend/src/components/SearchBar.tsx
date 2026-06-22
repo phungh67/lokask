@@ -3,7 +3,6 @@ import { Search, ChevronDown, Calendar, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNiches, Niche } from "@/lib/consultants";
 
-// 🟢 Replaced flat array with structured locations
 const LOCATIONS = [
   { city: "Hanoi", country: "Vietnam", supported: true },
   { city: "Ho Chi Minh City", country: "Vietnam", supported: true },
@@ -64,7 +63,6 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
     onSearch({ where, who, when });
   };
 
-  // 🟢 Dynamically grab the selected country name for the UI
   const selectedCountry = LOCATIONS.find(loc => loc.city === where)?.country || "Vietnam";
 
   return (
@@ -103,7 +101,6 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
           {/* City Dropdown */}
           {isWhereOpen && (
             <div className="absolute top-full left-0 w-[280px] mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
-              {/* 🟢 Updated mapping to handle supported vs unsupported locations */}
               {LOCATIONS.map(({ city, country, supported }) => (
                 <button
                   key={city}
