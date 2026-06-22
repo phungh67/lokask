@@ -1,26 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, ChevronDown, Calendar, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNiches, Niche } from "@/lib/consultants";
-
-const LOCATIONS = [
-  { city: "Hanoi", country: "Vietnam", supported: true },
-  { city: "Ho Chi Minh City", country: "Vietnam", supported: true },
-  { city: "Da Nang", country: "Vietnam", supported: true },
-  { city: "Hoi An", country: "Vietnam", supported: true },
-  { city: "Nha Trang", country: "Vietnam", supported: true },
-  { city: "Da Lat", country: "Vietnam", supported: true },
-  { city: "Phu Quoc", country: "Vietnam", supported: true },
-  { city: "Quang Binh", country: "Vietnam", supported: true },
-  { city: "Sapa", country: "Vietnam", supported: true },
-  { city: "Hue", country: "Vietnam", supported: true },
-  // International / Upcoming locations
-  { city: "Bangkok", country: "Thailand", supported: false },
-  { city: "Bali", country: "Indonesia", supported: false },
-  { city: "Tokyo", country: "Japan", supported: false },
-  { city: "Paris", country: "France", supported: false },
-  { city: "Rome", country: "Italy", supported: false },
-];
+import { getNiches, getCities, Niche, CityOption } from "@/lib/consultants";
 
 const FALLBACK_NICHES = [
   "Foodie & Local Cuisines",
@@ -45,25 +26,30 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const [niches, setNiches] = useState<string[]>([]);
+  const [cities, setCities] = useState<CityOption[]>([]);
 
   useEffect(() => {
-    const fetchNiches = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getNiches();
-        setNiches(data.map((n: Niche) => n.display_name));
+        const [nichesData, citiesData] = await Promise.all([
+          getNiches(),
+          getCities(),
+        ]);
+        setNiches(nichesData.map((n: Niche) => n.display_name));
+        setCities(citiesData);
       } catch (error) {
-        console.error("Failed to load niches from API, using fallback", error);
+        console.error("Failed to load search parameters from API", error);
         setNiches(FALLBACK_NICHES);
       }
     };
-    fetchNiches();
+    fetchData();
   }, []);
 
   const handleSearchClick = () => {
     onSearch({ where, who, when });
   };
 
-  const selectedCountry = LOCATIONS.find(loc => loc.city === where)?.country || "Vietnam";
+  const selectedCountry = cities.find(loc => loc.name === where)?.country || "Vietnam";
 
   return (
     <div className="w-full">
@@ -101,33 +87,25 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
           {/* City Dropdown */}
           {isWhereOpen && (
             <div className="absolute top-full left-0 w-[280px] mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
-              {LOCATIONS.map(({ city, country, supported }) => (
+              {cities.map(({ id, name, country }) => (
                 <button
-                  key={city}
-                  disabled={!supported}
-                  className={cn(
-                    "w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors",
-                    supported ? "hover:bg-muted cursor-pointer" : "opacity-40 cursor-not-allowed"
-                  )}
+                  key={id}
+                  className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors hover:bg-muted cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (supported) {
-                      setWhere(city);
-                      setIsWhereOpen(false);
-                    }
+                    setWhere(name);
+                    setIsWhereOpen(false);
                   }}
                 >
                   <div className="flex items-center gap-1">
-                    <span className="font-medium">{city}</span>
+                    <span className="font-medium">{name}</span>
                     <span className="text-muted-foreground text-xs">- {country}</span>
                   </div>
-                  {!supported && (
-                    <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                      Coming soon
-                    </span>
-                  )}
                 </button>
               ))}
+              <div className="w-full text-left px-4 py-3 mt-1 border-t border-border/50 text-sm flex items-center justify-between opacity-50 cursor-default">
+                <span className="font-medium italic">More are coming soon...</span>
+              </div>
             </div>
           )}
         </div>
@@ -227,32 +205,24 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
 
           {isWhereOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 max-h-[250px] overflow-y-auto">
-              {LOCATIONS.map(({ city, country, supported }) => (
+              {cities.map(({ id, name, country }) => (
                 <button
-                  key={city}
-                  disabled={!supported}
-                  className={cn(
-                    "w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors",
-                    supported ? "hover:bg-muted cursor-pointer" : "opacity-40 cursor-not-allowed"
-                  )}
+                  key={id}
+                  className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors hover:bg-muted cursor-pointer"
                   onClick={() => {
-                    if (supported) {
-                      setWhere(city);
-                      setIsWhereOpen(false);
-                    }
+                    setWhere(name);
+                    setIsWhereOpen(false);
                   }}
                 >
                   <div className="flex items-center gap-1">
-                    <span className="font-medium">{city}</span>
+                    <span className="font-medium">{name}</span>
                     <span className="text-muted-foreground text-xs">- {country}</span>
                   </div>
-                  {!supported && (
-                    <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                      Coming soon
-                    </span>
-                  )}
                 </button>
               ))}
+              <div className="w-full text-left px-4 py-3 mt-1 border-t border-border/50 text-sm flex items-center justify-between opacity-50 cursor-default">
+                <span className="font-medium italic">More are coming soon...</span>
+              </div>
             </div>
           )}
         </div>
