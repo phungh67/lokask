@@ -36,7 +36,6 @@ const BookingCard = ({ booking, isSelected, onClick }: BookingCardProps) => {
       className={cn(
         "p-3 rounded-xl cursor-pointer transition-all border mb-2",
         isSelected
-          // 🟢 Changed from bg-primary/10 (peach) to a clean, neutral selection state
           ? "bg-muted border-border shadow-sm ring-1 ring-border"
           : "bg-card border-transparent hover:bg-secondary/30 hover:border-border",
       )}
@@ -60,7 +59,6 @@ const BookingCard = ({ booking, isSelected, onClick }: BookingCardProps) => {
             </p>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            {/* 🟢 Updated badge colors based on status for better visual scanning */}
             <Badge
               variant="outline"
               className={cn(
