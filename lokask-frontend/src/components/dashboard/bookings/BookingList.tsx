@@ -1,6 +1,6 @@
 import React from 'react';
-import BookingCard from './BookingCard'; // 🟢 Correct named import
-import { Booking } from '@/types/booking'; // 🟢 Use centralized types
+import BookingCard from './BookingCard';
+import { Booking } from '@/types/booking';
 import { Loader2, CalendarX, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 
@@ -18,7 +18,6 @@ interface BookingListProps {
   consultantId: string;
 }
 
-// 🟢 Use the props passed from BookingsPanel instead of internal state
 export const BookingList: React.FC<BookingListProps> = ({ 
   bookings, 
   selectedId, 
@@ -30,7 +29,7 @@ export const BookingList: React.FC<BookingListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="w-[350px] border-r flex flex-col items-center justify-center text-slate-500 bg-white">
+      <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-transparent">
         <Loader2 className="h-8 w-8 animate-spin mb-2" />
         <p>Loading schedule...</p>
       </div>
@@ -38,9 +37,9 @@ export const BookingList: React.FC<BookingListProps> = ({
   }
 
   return (
-    <div className="w-[350px] border-r flex flex-col bg-white overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-transparent overflow-hidden">
       {/* Search Header */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b border-border/40">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
