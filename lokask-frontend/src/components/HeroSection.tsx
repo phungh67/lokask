@@ -9,7 +9,7 @@ import { getBucketImageUrl } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 import ConsultantCardCompact from "./ConsultantCardCompact";
 
-import heroDesertPoster from "@/assets/hero-desert-poster.jpg";
+import heroVietnamPoster from "@/assets/hero-vietnam-poster.png"
 
 const SLIDES = [
   {
