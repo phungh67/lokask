@@ -5,7 +5,7 @@ import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
 import { Booking } from "@/types/booking";
-import { ArrowLeft } from "lucide-react"; 
+import { ArrowLeft, Calendar } from "lucide-react"; // 🟢 Added Calendar icon import here
 import {
   getConsultantBookings,
   updateBookingStatus,
@@ -36,14 +36,12 @@ const BookingsPanel = ({
       setIsLoading(true);
       let data: any;
 
-      // 1. Fetch Consultant bookings OR Traveller Trips
       if (userRole === "consultant" && consultantId) {
         data = await getConsultantBookings(consultantId);
       } else {
         data = await getMyTrips(userId);
       }
 
-      // 2. Defensively ensure we are setting an array (in case backend wraps in {data: []})
       const bookingsArray = Array.isArray(data) ? data : data?.data || [];
       setBookings(bookingsArray);
 
@@ -120,10 +118,10 @@ const BookingsPanel = ({
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden w-full h-full relative">
+    <div className="flex-1 flex overflow-hidden w-full h-full relative bg-gray-50/30">
       
-      {/* Mobile Toggle: Hidden on mobile when a booking is selected */}
-      <div className={`w-full md:w-[350px] lg:w-[400px] shrink-0 md:border-r h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}>
+      {/* List Panel */}
+      <div className={`w-full md:w-[380px] lg:w-[420px] shrink-0 md:border-r border-border/40 bg-white h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}>
         <BookingList
           consultantId={consultantId}
           bookings={filteredBookings}
@@ -137,15 +135,15 @@ const BookingsPanel = ({
         />
       </div>
 
-      {/* Details Panel: Full width on mobile, fills remaining space on desktop */}
-      <div className={`flex-1 h-full flex flex-col bg-secondary/10 relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}>
+      {/* Details Panel area */}
+      <div className={`flex-1 h-full flex flex-col relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}>
         
         {/* Mobile "Back" Button */}
         {selectedBooking && (
-          <div className="md:hidden p-3 bg-white border-b flex items-center shrink-0">
+          <div className="md:hidden p-4 bg-white border-b border-border/40 flex items-center shrink-0 shadow-sm z-10">
             <button 
               onClick={() => setSelectedBooking(null)} 
-              className="flex items-center text-sm font-medium text-[#4A5565] hover:text-[#101828]"
+              className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" /> 
               Back to Bookings
@@ -154,26 +152,31 @@ const BookingsPanel = ({
         )}
 
         {selectedBooking ? (
-          <div className="flex-1 overflow-y-auto">
-            <BookingDetail
-              booking={selectedBooking}
-              onConfirm={() => handleStatusUpdate("confirmed")}
-              onCancel={() => handleStatusUpdate("cancelled")}
-              onReschedule={() =>
-                toast({ title: "Info", description: "Feature coming soon." })
-              }
-              onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
-            />
+          <div className="flex-1 overflow-y-auto flex justify-center w-full px-4 py-6 md:p-8">
+            <div className="w-full max-w-4xl h-fit animate-in fade-in duration-300">
+              <BookingDetail
+                booking={selectedBooking}
+                onConfirm={() => handleStatusUpdate("confirmed")}
+                onCancel={() => handleStatusUpdate("cancelled")}
+                onReschedule={() =>
+                  toast({ title: "Info", description: "Feature coming soon." })
+                }
+                onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
+              />
+            </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-white">
-            <p>Select a booking to view details</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-border/40">
+               <Calendar className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="font-medium">Select a booking to view details</p>
           </div>
         )}
       </div>
 
-      {/* Mini Calendar: Hidden on smaller screens to prevent squeezing */}
-      <div className="hidden xl:block w-[280px] shrink-0 border-l border-border bg-card">
+      {/* Calendar Panel */}
+      <div className="hidden xl:block w-[320px] shrink-0 border-l border-border/40 bg-white">
         <BookingMiniCalendar
           selectedDate={
             selectedBooking ? new Date(selectedBooking.start_time) : undefined
