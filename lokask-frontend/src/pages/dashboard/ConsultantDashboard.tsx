@@ -9,7 +9,8 @@ import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import BlogPanel from "@/components/dashboard/BlogPanel";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
+// 🟢 Added layout icons for the mobile navigation bar
+import { AlertCircle, MessageSquare, Calendar, User, FileText, ArrowLeft } from "lucide-react";
 import {
   getInbox,
   getChatHistory,
@@ -104,6 +105,10 @@ const ConsultantDashboard = () => {
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
   >(null);
+  
+  // 🟢 State to manage Mobile Chat View sliding over the inbox
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+  
   const [conversations, setConversations] = useState<any[]>([]);
   const [currentMessages, setCurrentMessages] = useState<any[]>([]);
 
@@ -150,6 +155,7 @@ const ConsultantDashboard = () => {
           // If it exists, just open it
           setActiveConversationId(existingConv.id);
           setActiveSection("inbox");
+          setIsMobileChatOpen(true); // 🟢 Auto-open full chat on mobile
 
           // Clear the router state so it doesn't re-trigger on refresh
           window.history.replaceState({}, document.title);
@@ -168,6 +174,7 @@ const ConsultantDashboard = () => {
             });
             setActiveConversationId(mappedNewConv.id);
             setActiveSection("inbox");
+            setIsMobileChatOpen(true); // 🟢 Auto-open full chat on mobile
 
             // Clear the router state
             window.history.replaceState({}, document.title);
@@ -313,9 +320,6 @@ const ConsultantDashboard = () => {
         });
 
         setCurrentMessages(uiMessages);
-
-        // const sessionData = await getChatSession(activeConversationId);
-        // setActiveSession(sessionData);
       } catch (error) {
         console.error("Failed to load history", error);
       }
@@ -418,70 +422,154 @@ const ConsultantDashboard = () => {
     ? { ...foundConversation, messages: currentMessages }
     : null;
 
+  // 🟢 Helper to determine if we should show the bottom navbar
+  const showMobileBottomNav = !isMobileChatOpen || activeSection !== "inbox";
+
   return (
-    <div className="h-screen flex flex-col bg-[#F5F2EE]">
-      <DashboardHeader onLogout={handleLogout} />
+    // 🟢 Changed from h-screen to h-[100dvh] for better mobile browser support
+    <div className="h-[100dvh] flex flex-col bg-[#F5F2EE] overflow-hidden">
+      
+      {/* 🟢 Hide the top header on mobile if a chat is actively open to maximize screen space */}
+      <div className={isMobileChatOpen && activeSection === "inbox" ? "hidden md:block" : "block"}>
+        <DashboardHeader onLogout={handleLogout} />
+      </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <DashboardSidebar
-          consultant={consultantProfile}
-          activeSection={activeSection}
-          onSectionChange={setActiveSection}
-          userRole={userRole}
-        />
-        <main className="flex-1 flex overflow-hidden bg-white">
+        {/* 🟢 Desktop Sidebar (Hidden on Mobile) */}
+        <div className="hidden md:flex">
+          <DashboardSidebar
+            consultant={consultantProfile}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            userRole={userRole}
+          />
+        </div>
+
+        {/* 🟢 Main Panel Wrapper - Add padding bottom on mobile to accommodate the fixed navigation bar */}
+        <main className={`flex-1 flex overflow-hidden bg-white relative ${showMobileBottomNav ? 'pb-[64px] md:pb-0' : ''}`}>
+          
           {activeSection === "inbox" && (
-            <>
-              <InboxPanel
-                conversations={conversations}
-                activeConversationId={activeConversationId}
-                onSelectConversation={setActiveConversationId}
-              />
-              {activeConversationData ? (
-                <ChatPanel
-                  conversation={activeConversationData}
-                  session={activeSession}
-                  userRole={userRole}
-                  onSendMessage={handleSendMessage}
-                  onTriggerPurchase={() => setShowPurchaseDialog(true)}
-                  onScheduleCall={() => {}}
-                  onCancelCall={() => {}}
+            <div className="flex-1 flex w-full h-full relative">
+              {/* Inbox List Panel */}
+              <div className={`w-full md:w-[350px] md:border-r md:flex flex-col h-full bg-white ${isMobileChatOpen ? 'hidden' : 'flex'}`}>
+                <InboxPanel
+                  conversations={conversations}
+                  activeConversationId={activeConversationId}
+                  onSelectConversation={(id) => {
+                    setActiveConversationId(id);
+                    setIsMobileChatOpen(true); // Open the chat sliding overlay on mobile
+                  }}
                 />
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a conversation to start chatting
+              </div>
+
+              {/* Chat Interface Panel */}
+              <div className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? 'flex w-full absolute inset-0 z-20' : 'hidden'}`}>
+                {/* 🟢 Mobile "Back to Inbox" Header */}
+                <div className="md:hidden flex items-center p-3 border-b border-border/50 bg-white shadow-sm shrink-0">
+                  <button 
+                    onClick={() => setIsMobileChatOpen(false)} 
+                    className="flex items-center text-[#4A5565] hover:text-[#101828] transition-colors"
+                  >
+                    <ArrowLeft className="w-5 h-5 mr-2" />
+                    <span className="font-medium text-sm">Back to Inbox</span>
+                  </button>
                 </div>
-              )}
-            </>
+                
+                {activeConversationData ? (
+                  <div className="flex-1 overflow-hidden relative">
+                    <ChatPanel
+                      conversation={activeConversationData}
+                      session={activeSession}
+                      userRole={userRole}
+                      onSendMessage={handleSendMessage}
+                      onTriggerPurchase={() => setShowPurchaseDialog(true)}
+                      onScheduleCall={() => {}}
+                      onCancelCall={() => {}}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">
+                    Select a conversation to start chatting
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {activeSection === "bookings" && (
-            <BookingsPanel
-              consultantId={consultantProfile.id}
-              userId={accountUserId}
-              userRole={userRole}
-            />
+             <div className="flex-1 w-full overflow-y-auto">
+               <BookingsPanel
+                 consultantId={consultantProfile.id}
+                 userId={accountUserId}
+                 userRole={userRole}
+               />
+             </div>
           )}
 
           {activeSection === "profile" && (
-            <ProfilePanel
-              consultant={consultantProfile}
-              onSave={(updates) =>
-                setConsultantProfile((prev) =>
-                  prev ? { ...prev, ...updates } : null,
-                )
-              }
-            />
+            <div className="flex-1 w-full overflow-y-auto">
+              <ProfilePanel
+                consultant={consultantProfile}
+                onSave={(updates) =>
+                  setConsultantProfile((prev) =>
+                    prev ? { ...prev, ...updates } : null,
+                  )
+                }
+              />
+            </div>
           )}
 
           {activeSection === "articles" && (
-            <BlogPanel consultant={consultantProfile} />
+            <div className="flex-1 w-full overflow-y-auto">
+              <BlogPanel consultant={consultantProfile} />
+            </div>
           )}
         </main>
       </div>
 
+      {/* 🟢 Mobile Bottom Navigation Bar */}
+      {showMobileBottomNav && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-[64px] pb-safe z-50">
+          <button 
+            onClick={() => { setActiveSection("inbox"); setIsMobileChatOpen(false); }} 
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'inbox' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+          >
+            <MessageSquare className="w-5 h-5" />
+            <span className="text-[10px] font-semibold tracking-wide">Inbox</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveSection("bookings")} 
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'bookings' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+          >
+            <Calendar className="w-5 h-5" />
+            <span className="text-[10px] font-semibold tracking-wide">Bookings</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveSection("profile")} 
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'profile' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+          >
+            <User className="w-5 h-5" />
+            <span className="text-[10px] font-semibold tracking-wide">Profile</span>
+          </button>
+          
+          {/* Only show articles if the user is a consultant, else this takes up unnecessary space */}
+          {userRole === "consultant" && (
+            <button 
+              onClick={() => setActiveSection("articles")} 
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'articles' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-[10px] font-semibold tracking-wide">Articles</span>
+            </button>
+          )}
+        </nav>
+      )}
+
+      {/* Purchase / Top Up Dialog */}
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
-        <DialogContent className="max-w-md rounded-2xl p-6">
+        <DialogContent className="max-w-md rounded-2xl p-6 w-[95vw] md:w-full">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-[#FCE8E0] rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-8 h-8 text-[#C77752]" />
