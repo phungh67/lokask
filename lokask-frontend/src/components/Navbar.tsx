@@ -244,7 +244,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* 🟢 MOBILE MENU DROPDOWN */}
         {isOpen && (
           <div className="md:hidden absolute top-16 left-0 w-full bg-background border-b border-border/50 shadow-lg animate-fade-in z-50">
             <div className="px-6 py-6 flex flex-col gap-4">
