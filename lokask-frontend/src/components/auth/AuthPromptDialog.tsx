@@ -37,7 +37,7 @@ const VIETNAM_CITIES = [
   "Phu Quoc",
   "Quang Binh",
   "Sapa",
-  "Hue"
+  "Hue",
 ];
 
 const AuthPromptDialog = ({
@@ -53,8 +53,9 @@ const AuthPromptDialog = ({
   const [step, setStep] = useState<AuthStep>("initial");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🟢 Added a dynamic role state so users can switch during signup
-  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(defaultRole || "traveller");
+  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(
+    defaultRole || "traveller",
+  );
 
   // Form State
   const [email, setEmail] = useState("");
@@ -114,7 +115,7 @@ const AuthPromptDialog = ({
 
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (selectedRole === "consultant" && !city) {
       toast.error("Please select a city from the list.");
       return;
@@ -154,21 +155,22 @@ const AuthPromptDialog = ({
     <>
       <DialogHeader className="text-center space-y-4 pt-4">
         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-           <span className="text-2xl">✉️</span> 
+          <span className="text-2xl">✉️</span>
         </div>
         <DialogTitle className="text-2xl font-display font-semibold">
           Check your email
         </DialogTitle>
       </DialogHeader>
-      
+
       <div className="mt-4 text-center space-y-6">
         <p className="text-muted-foreground">
-          We've sent a secure verification link to <strong>{email}</strong>. Please check your inbox and click the link to activate your account.
+          We've sent a secure verification link to <strong>{email}</strong>.
+          Please check your inbox and click the link to activate your account.
         </p>
         <p className="text-xs text-muted-foreground">
           Note: The link will expire in 24 hours.
         </p>
-        
+
         <Button
           type="button"
           onClick={() => setStep("login")}
@@ -259,7 +261,11 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
           </button>
         </div>
         <Button
@@ -289,8 +295,6 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleSignup} className="mt-4 space-y-4">
-        
-        {/* 🟢 Interactive Role Toggle */}
         <div className="flex bg-muted/60 p-1 rounded-xl mb-2">
           <button
             type="button"
@@ -334,20 +338,20 @@ const AuthPromptDialog = ({
 
         {selectedRole === "consultant" && (
           <div className="relative">
-            <select
+            <Input
+              list="city-suggestions"
+              type="text"
+              placeholder="Which city do you live in? (e.g. Hanoi)"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="w-full h-12 rounded-xl border-2 border-input bg-transparent px-4 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
+              className="h-12 rounded-xl border-2 px-4 w-full"
               required
-            >
-              <option value="" disabled>Select your city...</option>
+            />
+            <datalist id="city-suggestions">
               {VIETNAM_CITIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c} />
               ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-xs">
-              ▼
-            </div>
+            </datalist>
           </div>
         )}
 
@@ -365,7 +369,11 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
           </button>
         </div>
 
