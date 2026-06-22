@@ -6,7 +6,6 @@ import { formatDistanceToNow } from "date-fns";
 interface ConversationCardProps {
   conversation: {
     id: string;
-    // 🟢 Changed from 'traveller' to 'otherUser' to support dual roles
     otherUser: {
       name: string;
       avatar: string;
@@ -24,7 +23,6 @@ interface ConversationCardProps {
 }
 
 const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardProps) => {
-  // 🟢 Destructure otherUser instead of traveller
   const { otherUser, lastMessage, time, unread, status, isTyping, context } = conversation;
 
   const getStatusBadge = () => {
@@ -55,14 +53,17 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-start gap-3 p-4 rounded-2xl transition-colors text-left",
-        isActive ? "bg-primary/5 border border-primary/20" : "hover:bg-secondary/50"
+        "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left mb-2 border",
+        // 🟢 FIX: Replaced peach selection color with the clean BookingCard aesthetic
+        isActive 
+          ? "bg-muted border-border shadow-sm ring-1 ring-border" 
+          : "bg-card border-transparent hover:bg-secondary/30 hover:border-border"
       )}
     >
       <div className="relative shrink-0">
-        <Avatar className="h-12 w-12">
-          {/* 🟢 Updated to use otherUser details */}
-          <AvatarImage src={otherUser.avatar} alt={otherUser.name} />
+        {/* 🟢 Added a subtle border to the avatar to match BookingCard */}
+        <Avatar className="h-10 w-10 border border-border/50">
+          <AvatarImage src={otherUser.avatar} alt={otherUser.name} className="object-cover" />
           <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
         </Avatar>
         {otherUser.isOnline && (
@@ -72,16 +73,15 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          {/* 🟢 Correctly displays the other participant's name */}
-          <span className="font-medium text-sm truncate">{otherUser.name}</span>
-          <span className="text-xs text-muted-foreground shrink-0 ml-2">
+          <span className="font-semibold text-sm truncate">{otherUser.name}</span>
+          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
             {formatDistanceToNow(new Date(time), { addSuffix: true })}
           </span>
         </div>
 
-        {context && <p className="text-xs text-muted-foreground mb-1">{context}</p>}
+        {context && <p className="text-[11px] text-muted-foreground mb-1">{context}</p>}
 
-        <p className="text-sm text-muted-foreground truncate">
+        <p className="text-xs text-muted-foreground truncate">
           {isTyping ? (
             <span className="text-primary animate-pulse">typing...</span>
           ) : (
