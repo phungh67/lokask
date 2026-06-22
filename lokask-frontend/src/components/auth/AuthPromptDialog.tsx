@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-// 🟢 Imported Select components for the dropdown
 import {
   Select,
   SelectContent,
@@ -19,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { login, registerTraveller, registerConsultant } from "@/lib/auth";
-// 🟢 Imported the API function and interface
 import { getCities, CityOption } from "@/lib/consultants";
 import { toast } from "sonner";
 
@@ -56,10 +54,9 @@ const AuthPromptDialog = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [cityId, setCityId] = useState<number | "">(""); // 🟢 Track strict numeric ID
+  const [cityId, setCityId] = useState<number | "">("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // 🟢 State to hold real cities from DB
   const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
 
   // Fetch cities on mount
@@ -127,7 +124,6 @@ const AuthPromptDialog = ({
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    // 🟢 Validation specifically for the city ID
     if (selectedRole === "consultant" && !cityId) {
       toast.error("Please select a city from the list.");
       return;
@@ -140,7 +136,7 @@ const AuthPromptDialog = ({
           fullName,
           email,
           password,
-          city_id: cityId as number, // 🟢 Passed cleanly to API payload
+          city_id: cityId as number,
         });
         toast.success("Consultant account created! Please log in.");
       } else {
@@ -248,44 +244,60 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <Input
-          value={email}
-          disabled
-          className="bg-muted text-muted-foreground h-12 rounded-xl px-4"
-        />
-        <div className="relative">
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground pl-1">
+            Email address
+          </label>
           <Input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleLogin();
-              }
-            }}
-            className="h-12 rounded-xl border-2 px-4 pr-12"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="h-12 rounded-xl border-2 px-4 text-base"
+            required
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-3 text-muted-foreground"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
         </div>
+        
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground pl-1">
+            Password
+          </label>
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleLogin();
+                }
+              }}
+              className="h-12 rounded-xl border-2 px-4 pr-12 text-base"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-3 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+
         <Button
           type="submit"
-          className="w-full h-12 rounded-full"
-          disabled={isLoading}
+          className="w-full h-12 rounded-full font-semibold text-base mt-2"
+          disabled={isLoading || !password || !email}
         >
-          {isLoading ? <Loader2 className="animate-spin" /> : "Log in"}
+          {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Log in"}
         </Button>
         <button
           type="button"
           onClick={() => setStep("initial")}
-          className="text-sm text-center w-full text-muted-foreground hover:text-primary"
+          className="text-sm text-center w-full text-muted-foreground hover:text-primary mt-2 font-medium transition-colors"
         >
           Back
         </button>
@@ -344,7 +356,6 @@ const AuthPromptDialog = ({
           required
         />
 
-        {/* 🟢 Refactored City Dropdown using API data and Shadcn Select */}
         {selectedRole === "consultant" && (
           <div className="relative">
             <Select
