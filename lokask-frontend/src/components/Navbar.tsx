@@ -108,7 +108,7 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft w-full border-b border-border/40">
-      <div className="w-full max-w-[2400px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
+      <div className="w-full max-w-[2400px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
@@ -238,11 +238,113 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Mobile Toggle */}
-          <button className="md:hidden p-2" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          {/* Mobile Toggle Button */}
+          <button className="md:hidden p-2 text-foreground" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
+
+        {/* 🟢 MOBILE MENU DROPDOWN */}
+        {isOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-background border-b border-border/50 shadow-lg animate-fade-in z-50">
+            <div className="px-6 py-6 flex flex-col gap-4">
+              
+              <Link
+                to="/wishlist"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted text-foreground transition-colors"
+              >
+                <Heart className="w-5 h-5 text-primary" />
+                <span className="font-medium text-base">Wishlist</span>
+              </Link>
+
+              <hr className="border-border/40" />
+
+              {loading ? (
+                <div className="w-full h-12 bg-muted animate-pulse rounded-xl" />
+              ) : user ? (
+                /* Mobile Authenticated View */
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3 p-3 mb-2 bg-muted/30 rounded-xl">
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt="Profile"
+                        className="w-10 h-10 rounded-full object-cover border border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                    <span className="font-semibold text-foreground text-lg">
+                      Hello, {user.full_name?.split(" ")[0] || "User"}
+                    </span>
+                  </div>
+
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted text-foreground transition-colors"
+                  >
+                    <LayoutDashboard className="w-5 h-5 text-primary" />
+                    <span className="font-medium text-base">Dashboard</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-colors text-left"
+                  >
+                    <X className="w-5 h-5" />
+                    <span className="font-medium text-base">Logout</span>
+                  </button>
+                </div>
+              ) : (
+                /* Mobile Guest View */
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      handleOpenAuth("traveller", "Welcome back! Please log in.", "login");
+                    }}
+                    className="w-full py-3.5 bg-foreground text-background rounded-full font-medium text-base"
+                  >
+                    Log in
+                  </button>
+                  
+                  <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                      Create an account
+                    </p>
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        handleOpenAuth("traveller", "Join as a Traveller", "signup");
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors"
+                    >
+                      <User className="w-5 h-5 text-primary" />
+                      <span className="font-medium">Sign up as Traveller</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        handleOpenAuth("consultant", "Join as a Consultant", "signup");
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors mt-1"
+                    >
+                      <Briefcase className="w-5 h-5 text-primary" />
+                      <span className="font-medium">Sign up as Consultant</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <AuthPromptDialog
           open={showAuthDialog}

@@ -227,3 +227,8 @@ export async function getConsultantBlogs(authorId: string) {
 
     return (response || []).map(mapBlog);
 }
+
+export async function getFeaturedBlogs(limit: number = 8): Promise<Blog[]> {
+    const response = await fetchJson<any[]>(`/blogs?limit=${limit}`);
+    return (response || []).map(mapBlog);
+}
