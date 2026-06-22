@@ -30,6 +30,13 @@ export interface Niche {
     display_name: string; // matches Go JSON tag "display_name"
 }
 
+// for city update
+export interface CityOption {
+    id: number;
+    name: string;
+    country: string;
+}
+
 // prototype for an unified form of returned object
 export const mapConsultant = (c: any): Consultant => ({
     id: String(c.id),
@@ -140,6 +147,11 @@ export async function getConsultantByUserId(userId: string): Promise<Consultant>
 
 export async function getNiches(): Promise<Niche[]> {
     const data = await fetchJson<Niche[]>("/niches");
+    return data || [];
+}
+
+export async function getCities(): Promise<CityOption[]> {
+    const data = await fetchJson<CityOption[]>("/cities");
     return data || [];
 }
 
