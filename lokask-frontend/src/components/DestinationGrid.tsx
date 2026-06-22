@@ -40,6 +40,7 @@ const DESTINATIONS = [
     imageUrl: "https://images.unsplash.com/photo-1542012836-e82eb0b4b2c1?w=800&auto=format&fit=crop",
   },
 ];
+
 const DestinationGrid = () => {
   return (
     <section className="py-16 lg:py-24">
@@ -72,7 +73,7 @@ const DestinationGrid = () => {
                   className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/6"
                 >
                   <Link
-                    to={`/destinations/${destination.slug}`}
+                    to={`/explore-locals?city=${encodeURIComponent(destination.name)}`}
                     className="group relative overflow-hidden rounded-2xl aspect-[4/5] block animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
