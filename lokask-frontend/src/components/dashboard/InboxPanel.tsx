@@ -47,9 +47,10 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
   });
 
   return (
-    <div className="w-full md:w-[360px] bg-card border-r border-border flex flex-col h-full shrink-0">
+    <div className="w-full h-full md:w-[360px] bg-white border-r border-border/40 flex flex-col shrink-0">
+      
       {/* Header */}
-      <div className="p-4 shrink-0">
+      <div className="p-4 border-b border-border/40 shrink-0">
         <h1 className="text-xl font-semibold mb-4">Inbox</h1>
 
         {/* Tabs */}
@@ -87,8 +88,8 @@ const InboxPanel = ({ conversations, activeConversationId, onSelectConversation 
       </div>
 
       {/* Conversation list */}
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1 pb-4">
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-1">
           {filteredConversations.length > 0 ? (
             filteredConversations.map((conversation) => (
               <ConversationCard
