@@ -10,7 +10,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+// 🟢 Imported Select components for the dropdown
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { login, registerTraveller, registerConsultant } from "@/lib/auth";
+// 🟢 Imported the API function and interface
+import { getCities, CityOption } from "@/lib/consultants";
 import { toast } from "sonner";
 
 type AuthStep = "initial" | "login" | "signup" | "verify";
@@ -27,19 +37,6 @@ interface AuthPromptDialogProps {
   onFacebookAuth?: () => void;
 }
 
-const VIETNAM_CITIES = [
-  "Hanoi",
-  "Ho Chi Minh City",
-  "Da Nang",
-  "Hoi An",
-  "Nha Trang",
-  "Da Lat",
-  "Phu Quoc",
-  "Quang Binh",
-  "Sapa",
-  "Hue",
-];
-
 const AuthPromptDialog = ({
   open,
   onOpenChange,
@@ -53,16 +50,30 @@ const AuthPromptDialog = ({
   const [step, setStep] = useState<AuthStep>("initial");
   const [isLoading, setIsLoading] = useState(false);
 
-  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(
-    defaultRole || "traveller",
-  );
+  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(defaultRole || "traveller");
 
   // Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [city, setCity] = useState("");
+  const [cityId, setCityId] = useState<number | "">(""); // 🟢 Track strict numeric ID
   const [showPassword, setShowPassword] = useState(false);
+
+  // 🟢 State to hold real cities from DB
+  const [availableCities, setAvailableCities] = useState<CityOption[]>([]);
+
+  // Fetch cities on mount
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const data = await getCities();
+        setAvailableCities(data);
+      } catch (error) {
+        console.error("Failed to load cities", error);
+      }
+    };
+    fetchCities();
+  }, []);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -71,7 +82,7 @@ const AuthPromptDialog = ({
       setEmail("");
       setPassword("");
       setFullName("");
-      setCity("");
+      setCityId(""); // Reset city ID
       setIsLoading(false);
       setSelectedRole(defaultRole || "traveller");
     }
@@ -115,8 +126,9 @@ const AuthPromptDialog = ({
 
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
-    if (selectedRole === "consultant" && !city) {
+    
+    // 🟢 Validation specifically for the city ID
+    if (selectedRole === "consultant" && !cityId) {
       toast.error("Please select a city from the list.");
       return;
     }
@@ -128,7 +140,7 @@ const AuthPromptDialog = ({
           fullName,
           email,
           password,
-          city,
+          city_id: cityId as number, // 🟢 Passed cleanly to API payload
         });
         toast.success("Consultant account created! Please log in.");
       } else {
@@ -155,22 +167,21 @@ const AuthPromptDialog = ({
     <>
       <DialogHeader className="text-center space-y-4 pt-4">
         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <span className="text-2xl">✉️</span>
+           <span className="text-2xl">✉️</span> 
         </div>
         <DialogTitle className="text-2xl font-display font-semibold">
           Check your email
         </DialogTitle>
       </DialogHeader>
-
+      
       <div className="mt-4 text-center space-y-6">
         <p className="text-muted-foreground">
-          We've sent a secure verification link to <strong>{email}</strong>.
-          Please check your inbox and click the link to activate your account.
+          We've sent a secure verification link to <strong>{email}</strong>. Please check your inbox and click the link to activate your account.
         </p>
         <p className="text-xs text-muted-foreground">
           Note: The link will expire in 24 hours.
         </p>
-
+        
         <Button
           type="button"
           onClick={() => setStep("login")}
@@ -237,19 +248,11 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground pl-1">
-            Account Email
-          </label>
-          <Input
-            type="text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email or username"
-            className="h-12 rounded-xl px-4 font-medium text-base border-2"
-            required
-          />
-        </div>
+        <Input
+          value={email}
+          disabled
+          className="bg-muted text-muted-foreground h-12 rounded-xl px-4"
+        />
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
@@ -269,11 +272,7 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         <Button
@@ -303,6 +302,7 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleSignup} className="mt-4 space-y-4">
+        
         <div className="flex bg-muted/60 p-1 rounded-xl mb-2">
           <button
             type="button"
@@ -344,22 +344,25 @@ const AuthPromptDialog = ({
           required
         />
 
+        {/* 🟢 Refactored City Dropdown using API data and Shadcn Select */}
         {selectedRole === "consultant" && (
           <div className="relative">
-            <Input
-              list="city-suggestions"
-              type="text"
-              placeholder="Which city do you live in? (e.g. Hanoi)"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="h-12 rounded-xl border-2 px-4 w-full"
+            <Select
+              value={cityId ? cityId.toString() : ""}
+              onValueChange={(value) => setCityId(parseInt(value, 10))}
               required
-            />
-            <datalist id="city-suggestions">
-              {VIETNAM_CITIES.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            >
+              <SelectTrigger className="h-12 rounded-xl border-2 px-4 w-full">
+                <SelectValue placeholder="Which city do you live in?" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCities.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.name}, {c.country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -377,11 +380,7 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
 

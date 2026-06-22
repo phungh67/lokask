@@ -38,8 +38,8 @@ type RegisterRequest struct {
 	Role string `json:"role"` // Expected: "traveler" or "consultant"
 
 	// Required ONLY if Role == "consultant"
-	CityID   int    `json:"city_id"`
-	CityName string `json:"city"`
+	CityID int `json:"city_id"`
+	// CityName string `json:"city"`
 }
 
 type LostPasswordRequest struct {
@@ -89,35 +89,41 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// validation logic
 	if req.Role == "consultant" {
-		if req.CityName == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Consultants must provide a city name"})
-		}
+		// if req.CityName == "" {
+		// 	return c.Status(400).JSON(fiber.Map{"error": "Consultants must provide a city name"})
+		// }
 
 		// Look up the ID based on the name provided in the form
-		err := h.DB.Get(&req.CityID, "SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1", req.CityName)
+		// err := h.DB.Get(&req.CityID, "SELECT id FROM cities WHERE id = $1 LIMIT 1", req.CityName)
+		// if err == sql.ErrNoRows {
+		// 	log.Printf("[ERROR][AUTH] An empty record, considering ID guessing attack: %v", err)
+		// }
 
-		if err == sql.ErrNoRows {
-			insertErr := h.DB.QueryRow(
-				"INSERT INTO cities (name) VALUES ($1) RETURNING id",
-				req.CityName,
-			).Scan(&req.CityID)
-
-			if insertErr != nil {
-				log.Printf("[ERROR][AUTH] Failed to insert new city: %v", insertErr)
-				return c.Status(500).JSON(fiber.Map{"error": "Failed to register new city"})
-			}
-		} else if err != nil {
-			log.Printf("[ERROR][AUTH] Database error checking city: %v", err)
-			return c.Status(500).JSON(fiber.Map{"error": "Database error checking city"})
+		if req.CityID <= 0 {
+			return c.Status(400).JSON(fiber.Map{"error": "Consultants must select a valid city"})
 		}
+		// if err == sql.ErrNoRows {
+		// 	insertErr := h.DB.QueryRow(
+		// 		"INSERT INTO cities (name) VALUES ($1) RETURNING id",
+		// 		req.CityName,
+		// 	).Scan(&req.CityID)
+
+		// 	if insertErr != nil {
+		// 		log.Printf("[ERROR][AUTH] Failed to insert new city: %v", insertErr)
+		// 		return c.Status(500).JSON(fiber.Map{"error": "Failed to register new city"})
+		// 	}
+		// } else if err != nil {
+		// 	log.Printf("[ERROR][AUTH] Database error checking city: %v", err)
+		// 	return c.Status(500).JSON(fiber.Map{"error": "Database error checking city"})
+		// }
 	}
 
 	// begin transaction
 	tx, err := h.DB.Beginx()
 	if err != nil {
+		log.Printf("[ERROR][AUTH] Error in communication with DB: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":  "Server error starting transaction",
-			"detail": err.Error(),
+			"error": "Server error starting transaction",
 		})
 	}
 

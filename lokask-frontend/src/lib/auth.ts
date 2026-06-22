@@ -7,7 +7,7 @@ export interface RegisterData {
 }
 
 export interface RegisterConsultantData extends RegisterData {
-    city: string; // "Tokyo", "Paris", etc.
+    city_id: number; // "Tokyo", "Paris", etc.
 }
 
 export interface LoginData {
@@ -52,7 +52,7 @@ export async function registerConsultant(data: RegisterConsultantData) {
             full_name: data.fullName,
             email: data.email,
             password: data.password,
-            city: data.city,       
+            city: data.city_id,       
             role: "consultant"       
         }),
     });
