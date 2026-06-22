@@ -237,11 +237,17 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <Input
-          value={email}
-          disabled
-          className="bg-muted text-muted-foreground h-12 rounded-xl px-4"
-        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground pl-1">
+            Account Email
+          </label>
+          <Input
+            value={email}
+            placeholder="your.email@example.com"
+            disabled
+            className="bg-muted text-muted-foreground h-12 rounded-xl px-4 font-medium border-border/60 select-none cursor-not-allowed"
+          />
+        </div>
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
