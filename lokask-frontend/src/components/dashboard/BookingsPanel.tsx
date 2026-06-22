@@ -5,7 +5,7 @@ import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
 import BookingDetail from "./bookings/BookingDetail";
 import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
 import { Booking } from "@/types/booking";
-import { ArrowLeft, Calendar } from "lucide-react"; // 🟢 Added Calendar icon import here
+import { ArrowLeft, Calendar } from "lucide-react";
 import {
   getConsultantBookings,
   updateBookingStatus,
