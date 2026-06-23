@@ -69,7 +69,7 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
           }
         };
 
-        const token = localStorage.getItem("token") || "";
+        const token = sessionStorage.getItem("token") || "";
         const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const wsHost = window.location.host;
         const wsUrl = `${wsProtocol}//${wsHost}/ws/video?booking_id=${bookingId}&token=${token}`;

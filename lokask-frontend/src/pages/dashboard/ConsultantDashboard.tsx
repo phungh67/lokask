@@ -77,9 +77,9 @@ const ConsultantDashboard = () => {
     } catch (e) {
       console.error("Logout request failed", e);
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("dashboard_active_section");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("dashboard_active_section");
 
       window.location.href = "/";
     }
@@ -88,7 +88,7 @@ const ConsultantDashboard = () => {
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
   >(() => {
-    const saved = localStorage.getItem("dashboard_active_section");
+    const saved = sessionStorage.getItem("dashboard_active_section");
     return (saved as "inbox" | "bookings" | "profile" | "articles") || "inbox";
   });
 
@@ -106,7 +106,7 @@ const ConsultantDashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("dashboard_active_section", activeSection);
+    sessionStorage.setItem("dashboard_active_section", activeSection);
   }, [activeSection]);
 
   useEffect(() => {
@@ -157,8 +157,8 @@ const ConsultantDashboard = () => {
 
   useEffect(() => {
     const loadIdentity = async () => {
-      const storedUser = localStorage.getItem("user");
-      const token = localStorage.getItem("token");
+      const storedUser = sessionStorage.getItem("user");
+      const token = sessionStorage.getItem("token");
 
       if (!storedUser || !token) {
         navigate("/login");

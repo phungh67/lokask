@@ -14,7 +14,7 @@ export class ApiError extends Error {
 }
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const headers: HeadersInit = {
         "Content-Type": "application/json",
@@ -247,7 +247,7 @@ export async function getChatHistory(conversationId: string): Promise<ChatMessag
 // send a message
 // POST /api/v1/conversations/:id/messages
 export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     const response = await fetch(`${BASE_URL}/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
@@ -358,7 +358,7 @@ export async function uploadAvatar(file: File){
     const formData = new FormData();
     formData.append("avatar", file);
 
-    const token = localStorage.getItem("token")
+    const token = sessionStorage.getItem("token")
 
     const res = await fetch(`${BASE_URL}/users/avatar`, {
         method: "POST",
@@ -372,7 +372,7 @@ export async function uploadAvatar(file: File){
 
 // consultant's cover and gallery upload
 export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery") => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) throw new Error("No authentication token found");
 
     const formData = new FormData();
@@ -397,7 +397,7 @@ export const uploadConsultantMedia = async (file: File, type: "cover" | "gallery
 
 // adding chat session for billing purpose
 export const getChatSession = async (conversationId: string) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     const response = await fetch(`${BASE_URL}/conversations/${conversationId}/session`, {
     headers: { Authorization: `Bearer ${token}` }
   });
