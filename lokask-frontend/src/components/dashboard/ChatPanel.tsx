@@ -6,6 +6,7 @@ import FloatingAISummary from "./FloatingAISummary";
 import ConsultantScheduleSidebar from "../chat/ConsultantScheduleSidebar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { MessageSquare } from "lucide-react";
 
 interface ChatPanelProps {
   conversation: any | null; 
@@ -42,11 +43,12 @@ const ChatPanel = ({
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-secondary/20 h-full">
-        <div className="text-center text-muted-foreground">
-          <p className="text-lg font-medium">Select a conversation</p>
-          <p className="text-sm">Choose from your inbox to start chatting</p>
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 h-full text-muted-foreground">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-border/40">
+           <MessageSquare className="w-6 h-6 text-muted-foreground/50" />
         </div>
+        <p className="font-medium text-foreground">Select a conversation</p>
+        <p className="text-sm">Choose from your inbox to start chatting</p>
       </div>
     );
   }
@@ -61,16 +63,16 @@ const ChatPanel = ({
       >
         <div
           className={cn(
-            "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5",
+            "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm border",
             isMe
-              ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-card border border-border rounded-bl-md",
+              ? "bg-primary text-primary-foreground rounded-br-sm border-primary/20"
+              : "bg-white border-border/40 rounded-bl-sm",
           )}
         >
-          <p className="text-sm break-words">{message.content}</p>
+          <p className="text-sm break-words leading-relaxed">{message.content}</p>
           <p
             className={cn(
-              "text-xs mt-1",
+              "text-[10px] mt-1 font-medium",
               isMe ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
@@ -90,7 +92,7 @@ const ChatPanel = ({
 
   return (
     <div className="flex-1 flex flex-row overflow-hidden w-full h-full">
-      <div className="flex-1 flex flex-col bg-secondary/20 relative min-w-0">
+      <div className="flex-1 flex flex-col bg-gray-50/30 relative min-w-0">
         <ChatPanelHeader
           consultantId={resolvedConsultantId}
           otherUser={{
@@ -121,7 +123,7 @@ const ChatPanel = ({
 
         <div className="flex-1 relative overflow-hidden">
           <ScrollArea className="h-full" ref={scrollRef}>
-            <div className="p-4 md:pr-80 space-y-4 pb-6">
+            <div className="p-4 md:px-6 md:pr-80 space-y-4 pb-6">
               {conversation.messages?.map(renderMessage)}
             </div>
           </ScrollArea>

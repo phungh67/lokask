@@ -54,14 +54,12 @@ const ConversationCard = ({ conversation, isActive, onClick }: ConversationCardP
       onClick={onClick}
       className={cn(
         "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left mb-2 border",
-        // 🟢 FIX: Replaced peach selection color with the clean BookingCard aesthetic
         isActive 
           ? "bg-muted border-border shadow-sm ring-1 ring-border" 
           : "bg-card border-transparent hover:bg-secondary/30 hover:border-border"
       )}
     >
       <div className="relative shrink-0">
-        {/* 🟢 Added a subtle border to the avatar to match BookingCard */}
         <Avatar className="h-10 w-10 border border-border/50">
           <AvatarImage src={otherUser.avatar} alt={otherUser.name} className="object-cover" />
           <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>

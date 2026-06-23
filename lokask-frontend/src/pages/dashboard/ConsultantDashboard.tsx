@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
-import ChatPanel from "@/components/dashboard/ChatPanel";
+import DashboardChatRoom from "@/components/dashboard/ChatRoom"; 
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
 import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import BlogPanel from "@/components/dashboard/BlogPanel";
@@ -12,13 +12,8 @@ import { toast } from "@/hooks/use-toast";
 import { AlertCircle, MessageSquare, Calendar, User, FileText, ArrowLeft } from "lucide-react";
 import {
   getInbox,
-  getChatHistory,
-  sendMessage,
   startChat,
-  getChatSession,
 } from "@/lib/chat";
-import { ChatMessage } from "@/types/chat";
-
 import { Consultant } from "@/types/consultant";
 
 interface DashboardLocationState {
@@ -84,7 +79,6 @@ const ConsultantDashboard = () => {
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      // Clear saved dashboard state on logout
       localStorage.removeItem("dashboard_active_section");
 
       window.location.href = "/";
@@ -98,26 +92,18 @@ const ConsultantDashboard = () => {
     return (saved as "inbox" | "bookings" | "profile" | "articles") || "inbox";
   });
 
-  const [activeSession, setActiveSession] = useState<any>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(null);
-  
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   
   const [conversations, setConversations] = useState<any[]>([]);
-  const [currentMessages, setCurrentMessages] = useState<any[]>([]);
+
+  // 🟢 2. Removed currentMessages state and polling interval here
 
   const [userRole, setUserRole] = useState<string | null>(null);
-
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
-  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
-    null,
-  );
-
+  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
-  const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     localStorage.setItem("dashboard_active_section", activeSection);
@@ -127,27 +113,19 @@ const ConsultantDashboard = () => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;
 
-      if (
-        !state ||
-        (!state.targetId && !state.openChatWith) ||
-        isProfileLoading
-      )
-        return;
+      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
 
       const targetConsultantId = state.targetId || state.openChatWith;
 
       if (state.intent === "startChat" || targetConsultantId) {
         const existingConv = conversations.find(
-          (c) =>
-            c.consultantId === targetConsultantId ||
-            c.id === targetConsultantId,
+          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId,
         );
 
         if (existingConv) {
           setActiveConversationId(existingConv.id);
           setActiveSection("inbox");
           setIsMobileChatOpen(true); 
-
           window.history.replaceState({}, document.title);
         } else if (targetConsultantId && accountUserId) {
           try {
@@ -161,7 +139,6 @@ const ConsultantDashboard = () => {
             setActiveConversationId(mappedNewConv.id);
             setActiveSection("inbox");
             setIsMobileChatOpen(true); 
-
             window.history.replaceState({}, document.title);
           } catch (error) {
             console.error("Failed to start new chat:", error);
@@ -176,13 +153,7 @@ const ConsultantDashboard = () => {
     };
 
     handleIncomingChatIntent();
-  }, [
-    location.state,
-    conversations,
-    isProfileLoading,
-    accountUserId,
-    consultantProfile,
-  ]);
+  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
 
   useEffect(() => {
     const loadIdentity = async () => {
@@ -261,126 +232,20 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [
-    consultantProfile,
-    accountUserId,
-    isProfileLoading,
-    activeConversationId,
-  ]);
+  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
 
-  useEffect(() => {
-    if (
-      !activeConversationId ||
-      !accountUserId ||
-      !consultantProfile ||
-      isProfileLoading
-    )
-      return;
-
-    const fetchMessages = async () => {
-      try {
-        const history = await getChatHistory(activeConversationId);
-        const safeHistory = history ?? [];
-
-        const uiMessages = safeHistory.map((m: any) => {
-          const actualSenderId =
-            m.sender_id || m.senderId || m.SenderID || m.SenderId;
-          const isMe =
-            actualSenderId === accountUserId ||
-            actualSenderId === consultantProfile.id;
-
-          return {
-            id: (m.id || Date.now()).toString(),
-            content: m.content,
-            sender: isMe ? "user" : "other", 
-            timestamp: new Date(m.created_at || m.createdAt || Date.now()),
-            type: m.type || "text",
-          };
-        });
-
-        setCurrentMessages(uiMessages);
-      } catch (error) {
-        console.error("Failed to load history", error);
+  // 🟢 3. Added handleInboxMessageUpdate so the child ChatRoom can instantly update the side-panel text
+  const handleInboxMessageUpdate = (convId: string, newMsg: any) => {
+    setConversations((prev) => prev.map((conv) => {
+      if (conv.id === convId) {
+        return {
+          ...conv,
+          lastMessage: newMsg.content,
+          time: newMsg.timestamp,
+        };
       }
-    };
-
-    fetchMessages();
-    pollInterval.current = setInterval(fetchMessages, 3000);
-    return () => {
-      if (pollInterval.current) clearInterval(pollInterval.current);
-    };
-  }, [
-    activeConversationId,
-    consultantProfile,
-    accountUserId,
-    isProfileLoading,
-  ]);
-
-  const handleSendMessage = async (content: string) => {
-    if (!activeConversationId || !accountUserId) {
-      toast({ title: "Error", description: "Missing active chat or profile." });
-      return;
-    }
-
-    const currentConv = conversations.find(
-      (c) => c.id === activeConversationId,
-    );
-    const isActingAsConsultant = currentConv?.consultantId === accountUserId;
-    const isSelfChat = currentConv?.consultantId === currentConv?.travelerId;
-
-    const tempId = "temp-" + Date.now();
-
-    const optimisticMsg = {
-      id: tempId,
-      conversation_id: activeConversationId,
-      sender_id: accountUserId,
-      content,
-      is_read: true,
-      created_at: new Date().toISOString(),
-      timestamp: new Date(),
-      sender: "user" as const,
-      type: "text" as const,
-    };
-
-    setCurrentMessages((prev) => [...prev, optimisticMsg]);
-
-    try {
-      await sendMessage(activeConversationId, content);
-    } catch (error: any) {
-      setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
-
-      const errorStr = JSON.stringify(error).toLowerCase();
-      const isSessionError =
-        errorStr.includes("expired") ||
-        errorStr.includes("package") ||
-        error.status === 403 ||
-        error.status === 404;
-
-      if (isSessionError) {
-        if (isSelfChat) {
-          toast({
-            title: "Test Chat",
-            description:
-              "You cannot purchase a package for yourself. (Self-chat exception needed on backend).",
-          });
-        } else if (isActingAsConsultant) {
-          toast({
-            title: "Session Ended",
-            description:
-              "The traveler's paid session has expired. They must top up before you can reply.",
-            variant: "destructive",
-          });
-        } else {
-          setShowPurchaseDialog(true);
-        }
-      } else {
-        toast({
-          title: "Message Failed",
-          description: error.message || "The server rejected your message.",
-          variant: "destructive",
-        });
-      }
-    }
+      return conv;
+    }));
   };
 
   if (isProfileLoading || !consultantProfile) {
@@ -396,9 +261,6 @@ const ConsultantDashboard = () => {
   const foundConversation = conversations.find(
     (c) => c.id === activeConversationId,
   );
-  const activeConversationData = foundConversation
-    ? { ...foundConversation, messages: currentMessages }
-    : null;
 
   const showMobileBottomNav = !isMobileChatOpen || activeSection !== "inbox";
 
@@ -445,18 +307,17 @@ const ConsultantDashboard = () => {
                   </button>
                 </div>
                 
-                {activeConversationData ? (
-                  <div className="flex-1 overflow-hidden relative">
-                    <ChatPanel
-                      conversation={activeConversationData}
-                      session={activeSession}
-                      userRole={userRole}
-                      onSendMessage={handleSendMessage}
-                      onTriggerPurchase={() => setShowPurchaseDialog(true)}
-                      onScheduleCall={() => {}}
-                      onCancelCall={() => {}}
-                    />
-                  </div>
+                {/* 🟢 4. Render the newly extracted Chat Room component here */}
+                {foundConversation ? (
+                  <DashboardChatRoom
+                    activeConversationId={activeConversationId!}
+                    accountUserId={accountUserId!}
+                    consultantProfile={consultantProfile}
+                    userRole={userRole}
+                    conversationData={foundConversation}
+                    onTriggerPurchase={() => setShowPurchaseDialog(true)}
+                    onMessageUpdate={handleInboxMessageUpdate}
+                  />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">
                     Select a conversation to start chatting
@@ -553,7 +414,7 @@ const ConsultantDashboard = () => {
                 onClick={() => {
                   setShowPurchaseDialog(false);
                   navigate(
-                    `/consultant/${activeConversationData?.consultantId}/packages`,
+                    `/consultant/${foundConversation?.consultantId}/packages`,
                   );
                 }}
                 className="w-full h-12 rounded-full bg-[#C77752] hover:bg-[#b06745] text-white font-medium transition-colors"
