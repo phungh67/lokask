@@ -37,7 +37,7 @@ const BookingDetail = ({ booking, onConfirm, onReschedule, onCancel, onUpdateNot
 
     const checkStatus = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         const res = await fetch(`/api/v1/bookings/${booking.id}/call-status`, {
           headers: { Authorization: `Bearer ${token}` }
         });

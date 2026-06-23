@@ -53,7 +53,7 @@ const DashboardChatRoom = ({
   // 2. Configure the WebSocket for Real-Time Receiving
   const chatWsUrl = useMemo(() => {
     if (!activeConversationId) return null;
-    const token = localStorage.getItem("token") || "";
+    const token = sessionStorage.getItem("token") || "";
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${wsProtocol}//${window.location.host}/ws/chat?conversation_id=${activeConversationId}&token=${token}`;
   }, [activeConversationId]);

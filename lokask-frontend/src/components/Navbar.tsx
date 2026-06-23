@@ -50,7 +50,7 @@ const Navbar = () => {
   useEffect(() => {
     const checkAuth = async () => {
       // check local storage for stored credential
-      const storedToken = localStorage.getItem("token");
+      const storedToken = sessionStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
       if (storedToken && storedUser) {

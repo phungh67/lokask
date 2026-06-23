@@ -28,8 +28,8 @@ const Login = () => {
       const res = await login({ email, password });
 
       // Save session
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
+      sessionStorage.setItem("token", res.token);
+      sessionStorage.setItem("user", JSON.stringify(res.user));
 
       toast.success("Welcome back!");
 
