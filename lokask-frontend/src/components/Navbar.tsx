@@ -54,8 +54,9 @@ const Navbar = () => {
       const storedToken = AuthStorage.getToken();
       const storedUser = AuthStorage.getUser();
 
-      if (storedToken && storedUser) {
-        setUser(JSON.parse(storedUser));
+if (storedToken && storedUser) {
+        // ✅ FIX: storedUser is already a parsed object! Just set it directly.
+        setUser(storedUser); 
         setLoading(false);
       } else {
         setUser(null);
