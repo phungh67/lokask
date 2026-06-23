@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { login, registerTraveller, registerConsultant } from "@/lib/auth";
 import { getCities, CityOption } from "@/lib/consultants";
+import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
 
 type AuthStep = "initial" | "login" | "signup" | "verify";
@@ -102,8 +103,8 @@ const AuthPromptDialog = ({
 
       toast.success(`Welcome back, ${res.user.full_name}!`);
 
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
+      AuthStorage.setToken(res.token);
+      AuthStorage.setUser(res.user)
 
       window.dispatchEvent(new Event("auth-changed"));
       onOpenChange(false);

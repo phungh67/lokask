@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Booking } from "@/types/booking";
+import { AuthStorage } from "@/lib/storage";
 
 interface CallRoomProps {
   bookingId: string;
@@ -69,7 +70,7 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
           }
         };
 
-        const token = sessionStorage.getItem("token") || "";
+        const token = AuthStorage.getToken() || "";
         const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const wsHost = window.location.host;
         const wsUrl = `${wsProtocol}//${wsHost}/ws/video?booking_id=${bookingId}&token=${token}`;

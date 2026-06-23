@@ -1,4 +1,5 @@
 // the core API for front-end logic
+import { AuthStorage } from "./storage";
 
 export const BASE_URL = "/api/v1";
 
@@ -12,7 +13,8 @@ export class ApiError extends Error {
 // fetch JSON
 export async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
     // get the token in the localstorage first
-    const token = localStorage.getItem("token");
+    const token = AuthStorage.getToken();
+
 
     // in upload media case
     const isFormData = options?.body instanceof FormData;
@@ -23,7 +25,7 @@ export async function fetchJson<T>(endpoint: string, options?: RequestInit): Pro
     };
 
     if (token) {
-        (headers as any)["Authorization"] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
     }
 
     const res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });

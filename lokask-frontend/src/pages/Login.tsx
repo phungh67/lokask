@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { login } from "@/lib/api";
+import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 const Login = () => {
@@ -28,8 +29,8 @@ const Login = () => {
       const res = await login({ email, password });
 
       // Save session
-      sessionStorage.setItem("token", res.token);
-      sessionStorage.setItem("user", JSON.stringify(res.user));
+      AuthStorage.setToken(res.token)
+      AuthStorage.setUser(res.user)
 
       toast.success("Welcome back!");
 
