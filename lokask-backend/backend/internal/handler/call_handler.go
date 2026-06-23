@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
 )
 
 type VideoRoom struct {
@@ -76,4 +77,35 @@ func VideoCallHandler(c *websocket.Conn) {
 	room.mu.Lock()
 	delete(room.Clients, userID)
 	room.mu.Unlock()
+}
+
+// GET /api/v1/bookings/:id/call-status
+// fancy for someone to know is there is anyone in room yet
+func GetCallRoomStatus(c *fiber.Ctx) error {
+	bookingID := c.Params("id")
+	if bookingID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Missing booking ID"})
+	}
+
+	CallHub.mu.RLock()
+	room := CallHub.Rooms[bookingID]
+	CallHub.mu.RUnlock()
+
+	isActive := false
+	participants := 0
+
+	// If the room exists, safely count the active clients
+	if room != nil {
+		room.mu.RLock()
+		participants = len(room.Clients)
+		if participants > 0 {
+			isActive = true
+		}
+		room.mu.RUnlock()
+	}
+
+	return c.JSON(fiber.Map{
+		"is_active":    isActive,
+		"participants": participants,
+	})
 }

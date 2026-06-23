@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   PhoneOff,
   Video as VideoIcon,
@@ -7,7 +7,6 @@ import {
   VideoOff,
   User,
 } from "lucide-react";
-import { useWebSocket } from "@/lib/websocket";
 import { Button } from "@/components/ui/button";
 import { Booking } from "@/types/booking";
 
@@ -27,7 +26,11 @@ const ICE_SERVERS = {
 const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
   const localMediaRef = useRef<HTMLVideoElement>(null);
   const remoteMediaRef = useRef<HTMLVideoElement>(null);
+
+  const wsRef = useRef<WebSocket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  
+  const iceQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
   const isVideoCall = serviceType === "video_call";
 
@@ -35,56 +38,8 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
   const [isMicOn, setIsMicOn] = useState(true);
   const [status, setStatus] = useState("Initializing media...");
 
-  // init
-  const wsUrl = useMemo(() => {
-    if (!bookingId) return null;
-    const token = localStorage.getItem("token") || "";
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsHost = window.location.host;
-    return `${wsProtocol}//${wsHost}/ws/video?booking_id=${bookingId}&token=${token}`;
-  }, [bookingId]);
-
-  // handler signal (drop, call, reconnect,...)
-  const handleSignalingMessage = useCallback(async (message: any) => {
-    const pc = peerConnectionRef.current;
-    if (!pc) return;
-
-    try {
-      if (message.type === "user-joined") {
-        setStatus("Connecting peers...");
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        sendMessage({ type: "offer", offer });
-      } else if (message.type === "offer") {
-        setStatus("Incoming stream...");
-        await pc.setRemoteDescription(new RTCSessionDescription(message.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        sendMessage({ type: "answer", answer });
-      } else if (message.type === "answer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(message.answer));
-      } else if (message.type === "ice-candidate") {
-        await pc.addIceCandidate(new RTCIceCandidate(message.candidate));
-      }
-    } catch (error) {
-      console.error("WebRTC Error handling message:", error);
-    }
-  }, []);
-
-  const { status: wsStatus, sendMessage } = useWebSocket(wsUrl, handleSignalingMessage);
-
   useEffect(() => {
-    if (wsStatus === "connected") {
-      setStatus("Waiting for the other person to join...");
-      sendMessage({ type: "user-joined" });
-    } else if (wsStatus === "disconnected") {
-      setStatus("Disconnected from signaling server.");
-    } else if (wsStatus === "error") {
-      setStatus("Connection error.");
-    }
-  }, [wsStatus, sendMessage]);
-
-  useEffect(() => {
+    let isMounted = true;
     let localStream: MediaStream | null = null;
 
     const startCall = async () => {
@@ -93,6 +48,8 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
           video: isVideoCall,
           audio: true,
         });
+
+        if (!isMounted) return;
 
         if (localMediaRef.current) {
           localMediaRef.current.srcObject = localStream;
@@ -112,31 +69,93 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
           }
         };
 
+        const token = localStorage.getItem("token") || "";
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsHost = window.location.host;
+        const wsUrl = `${wsProtocol}//${wsHost}/ws/video?booking_id=${bookingId}&token=${token}`;
+        
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
         pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            sendMessage({
-              type: "ice-candidate",
-              candidate: event.candidate,
-            });
+          if (event.candidate && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: "ice-candidate",
+                candidate: event.candidate,
+              }),
+            );
+          }
+        };
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setStatus("Waiting for the other person to join...");
+          ws.send(JSON.stringify({ type: "user-joined" }));
+        };
+
+        ws.onmessage = async (event) => {
+          if (!isMounted) return;
+          try {
+            const message = JSON.parse(event.data);
+
+            if (message.type === "user-joined") {
+              setStatus("Connecting peers...");
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              ws.send(JSON.stringify({ type: "offer", offer }));
+              
+            } else if (message.type === "offer") {
+              setStatus("Incoming stream...");
+              await pc.setRemoteDescription(new RTCSessionDescription(message.offer));
+              
+              for (const cand of iceQueueRef.current) {
+                await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+              }
+              iceQueueRef.current = [];
+
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              ws.send(JSON.stringify({ type: "answer", answer }));
+              
+            } else if (message.type === "answer") {
+              await pc.setRemoteDescription(new RTCSessionDescription(message.answer));
+              
+              for (const cand of iceQueueRef.current) {
+                await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+              }
+              iceQueueRef.current = [];
+              setStatus("Connected!");
+
+            } else if (message.type === "ice-candidate") {
+              if (pc.remoteDescription && pc.remoteDescription.type) {
+                await pc.addIceCandidate(new RTCIceCandidate(message.candidate)).catch(console.error);
+              } else {
+                iceQueueRef.current.push(message.candidate);
+              }
+            }
+          } catch (err) {
+            console.error("Signaling processing error:", err);
           }
         };
       } catch (error) {
         console.error("Media/WebRTC Error:", error);
-        setStatus("Failed to access camera/mic.");
+        if (isMounted) setStatus("Failed to access camera/mic.");
       }
     };
 
     startCall();
 
     return () => {
+      isMounted = false;
       if (localStream) localStream.getTracks().forEach((track) => track.stop());
       if (peerConnectionRef.current) peerConnectionRef.current.close();
+      if (wsRef.current) wsRef.current.close();
     };
-  }, [isVideoCall, sendMessage]); // sendMessage is memoized safely by the hook
+  }, [bookingId, isVideoCall]);
 
-  // media Toggles
   const toggleVideo = () => {
-    if (!isVideoCall) return;
+    if (!isVideoCall) return; 
     if (localMediaRef.current?.srcObject) {
       const stream = localMediaRef.current.srcObject as MediaStream;
       stream.getVideoTracks().forEach((track) => (track.enabled = !isCameraOn));
@@ -208,7 +227,11 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
           className={`rounded-full w-14 h-14 border-none ${isMicOn ? "bg-white/20 hover:bg-white/30 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
           onClick={toggleMic}
         >
-          {isMicOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+          {isMicOn ? (
+            <Mic className="w-6 h-6" />
+          ) : (
+            <MicOff className="w-6 h-6" />
+          )}
         </Button>
 
         <Button
@@ -227,7 +250,11 @@ const CallRoom = ({ bookingId, serviceType, onClose }: CallRoomProps) => {
             className={`rounded-full w-14 h-14 border-none ${isCameraOn ? "bg-white/20 hover:bg-white/30 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
             onClick={toggleVideo}
           >
-            {isCameraOn ? <VideoIcon className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+            {isCameraOn ? (
+              <VideoIcon className="w-6 h-6" />
+            ) : (
+              <VideoOff className="w-6 h-6" />
+            )}
           </Button>
         )}
       </div>
