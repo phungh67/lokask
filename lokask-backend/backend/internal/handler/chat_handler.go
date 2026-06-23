@@ -7,7 +7,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -15,6 +18,20 @@ import (
 type ChatHandler struct {
 	Repo   *repository.ChatRepository
 	Mailer *mailer.MailService
+}
+
+type ChatRoom struct {
+	Clients map[string]*websocket.Conn
+	mu      sync.RWMutex
+}
+
+type ChatHubStruct struct {
+	Rooms map[string]*ChatRoom
+	mu    sync.RWMutex
+}
+
+var ChatHub = ChatHubStruct{
+	Rooms: make(map[string]*ChatRoom),
 }
 
 // helper function to get user ID
@@ -26,6 +43,81 @@ func getUserID(c *fiber.Ctx) (string, error) {
 	}
 
 	return userID.(string), nil
+}
+
+func ChatWebSocket(c *websocket.Conn) {
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		log.Println("[ERROR][CHAT] Unauthorized WebSocket connection")
+		c.Close()
+		return
+	}
+
+	conversationID := c.Query("conversation_id")
+	if conversationID == "" {
+		log.Println("[ERROR][CHAT] Missing conversation_id in WebSocket request")
+		c.Close()
+		return
+	}
+
+	ChatHub.mu.Lock()
+	if ChatHub.Rooms[conversationID] == nil {
+		ChatHub.Rooms[conversationID] = &ChatRoom{
+			Clients: make(map[string]*websocket.Conn),
+		}
+	}
+	room := ChatHub.Rooms[conversationID]
+	ChatHub.mu.Unlock()
+
+	room.mu.Lock()
+	room.Clients[userID] = c
+	room.mu.Unlock()
+
+	log.Printf("[INFO][CHAT] User %s connected to chat stream of conversation %s", userID, conversationID)
+
+	defer func() {
+		room.mu.Lock()
+		delete(room.Clients, userID)
+
+		if len(room.Clients) == 0 {
+			ChatHub.mu.Lock()
+			delete(ChatHub.Rooms, conversationID)
+			ChatHub.mu.Unlock()
+		}
+		room.mu.Unlock()
+
+		c.Close()
+		log.Printf("[INFO][CHAT] User %s disconnected to chat stream of conversation %s", userID, conversationID)
+	}()
+
+	for {
+		_, _, err := c.ReadMessage()
+		if err != nil {
+			break
+		}
+
+		//@TODO: can add and broadcast the *User is typing... here
+	}
+}
+
+func BroadcastChatMessage(conversationID string, messagePayload interface{}) {
+	ChatHub.mu.RLock()
+	room := ChatHub.Rooms[conversationID]
+	ChatHub.mu.RUnlock()
+
+	if room == nil {
+		return
+	}
+
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	for clientID, conn := range room.Clients {
+		err := conn.WriteJSON(messagePayload)
+		if err != nil {
+			log.Printf("[ERROR][CHAT] Failed to deliver messages for users %s: %v", clientID, err)
+		}
+	}
 }
 
 // POST method, converstation
@@ -141,6 +233,18 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		}
 
 	}(myID, convID, req.Content)
+
+	// @TODO current not sure about the ID of the message if it fit with
+	// previous payload in the DB
+	wsPayload := fiber.Map{
+		"id":         uuid.New().String(),
+		"content":    req.Content,
+		"sender_id":  myID.String(),
+		"created_at": time.Now().Format(time.RFC3339),
+		"type":       "text",
+	}
+
+	go BroadcastChatMessage(convID.String(), wsPayload)
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",
