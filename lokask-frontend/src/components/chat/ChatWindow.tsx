@@ -13,6 +13,7 @@ import {
   getChatSession,
 } from "@/lib/chat";
 import { ChatMessage } from "@/types/chat";
+import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
 
 interface ChatWindowProps {
@@ -42,7 +43,7 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         setMessages([]);
         setConversationId(null);
 
-        const storedUser = localStorage.getItem("user");
+        const storedUser = AuthStorage.getUser();
         if (storedUser) {
           const user = JSON.parse(storedUser);
           setCurrentUserId(user.id);

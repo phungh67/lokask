@@ -32,6 +32,7 @@ import BlogCardCompact from "@/components/BlogCardCompact";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";
 import ReviewCard from "@/components/ReviewCard";
+import { AuthStorage } from "@/lib/storage";
 
 const ConsultantPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -188,7 +189,7 @@ const ConsultantPage = () => {
 
               <button
                 onClick={() => {
-                  const isAuthenticated = !!localStorage.getItem("token");
+                  const isAuthenticated = !!AuthStorage.getToken();
                   if (isAuthenticated) {
                     navigate("/dashboard", {
                       state: { intent: "startChat", targetId: consultant.id },
@@ -550,7 +551,7 @@ const ConsultantPage = () => {
 
           <button
             onClick={() => {
-              const isAuthenticated = !!localStorage.getItem("token");
+              const isAuthenticated = !!AuthStorage.getToken();
               if (isAuthenticated) {
                 navigate("/dashboard", {
                   state: { intent: "startChat", targetId: consultant.id },

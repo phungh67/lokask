@@ -3,14 +3,14 @@ import { Bell, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AuthStorage } from "@/lib/storage";
 
 interface DashboardHeaderProps {
   onLogout: () => void;
 }
 
 const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
-  const userJson = localStorage.getItem("user");
-  const user = userJson ? JSON.parse(userJson) : null;
+  const user = AuthStorage.getUser();
 
   // Fallback values if data is missing
   const displayName = user?.full_name || "Consultant";
@@ -35,7 +35,11 @@ const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
         </Badge>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative hover:bg-muted transition-colors">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative hover:bg-muted transition-colors"
+        >
           <Bell className="h-5 w-5 text-muted-foreground" />
           <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-destructive border-2 border-card rounded-full" />
         </Button>
@@ -50,7 +54,11 @@ const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
           </div>
           <Avatar className="h-9 w-9 border-2 border-primary/10">
             {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt={displayName} className="object-cover" />
+              <AvatarImage
+                src={avatarUrl}
+                alt={displayName}
+                className="object-cover"
+              />
             ) : null}
             <AvatarFallback className="bg-primary/5 text-primary font-bold">
               {initial || <User size={16} />}

@@ -7,6 +7,7 @@ import ConsultantBannerFull from "@/components/ConsultantBanner";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { useAuthPrompt } from "@/hooks/useAuthPrompt";
 import LocalsCarousel from "@/components/LocalsCarousel";
+import { AuthStorage } from "@/lib/storage";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -174,7 +175,7 @@ const BlogPage = () => {
 
                 <button
                   onClick={() => {
-                    const isAuthenticated = !!localStorage.getItem("token");
+                    const isAuthenticated = !!AuthStorage.getToken();
                     if (isAuthenticated) {
                       navigate("/dashboard", {
                         state: { intent: "startChat", targetId: consultant.id },

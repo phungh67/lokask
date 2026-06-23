@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import { useWebSocket } from "@/lib/websocket";
 import { getChatHistory, sendMessage } from "@/lib/chat";
+import { AuthStorage } from "@/lib/storage";
 import { toast } from "@/hooks/use-toast";
 
 interface DashboardChatRoomProps {
@@ -53,7 +54,7 @@ const DashboardChatRoom = ({
   // 2. Configure the WebSocket for Real-Time Receiving
   const chatWsUrl = useMemo(() => {
     if (!activeConversationId) return null;
-    const token = sessionStorage.getItem("token") || "";
+    const token = AuthStorage.getToken();
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${wsProtocol}//${window.location.host}/ws/chat?conversation_id=${activeConversationId}&token=${token}`;
   }, [activeConversationId]);

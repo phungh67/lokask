@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Booking } from "@/types/booking";
 import { cn } from "@/lib/utils";
+import { AuthStorage } from "@/lib/storage";
 
 interface BookingDetailProps {
   booking: Booking | null;
@@ -37,7 +38,7 @@ const BookingDetail = ({ booking, onConfirm, onReschedule, onCancel, onUpdateNot
 
     const checkStatus = async () => {
       try {
-        const token = sessionStorage.getItem("token");
+        const token = AuthStorage.getToken();
         const res = await fetch(`/api/v1/bookings/${booking.id}/call-status`, {
           headers: { Authorization: `Bearer ${token}` }
         });

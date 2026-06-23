@@ -15,6 +15,7 @@ import {
   startChat,
 } from "@/lib/chat";
 import { Consultant } from "@/types/consultant";
+import { AuthStorage } from "@/lib/storage";
 
 interface DashboardLocationState {
   intent?: string;
@@ -77,9 +78,7 @@ const ConsultantDashboard = () => {
     } catch (e) {
       console.error("Logout request failed", e);
     } finally {
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
-      sessionStorage.removeItem("dashboard_active_section");
+      AuthStorage.clearAll();
 
       window.location.href = "/";
     }
@@ -88,7 +87,7 @@ const ConsultantDashboard = () => {
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
   >(() => {
-    const saved = sessionStorage.getItem("dashboard_active_section");
+    const saved = AuthStorage.getDashboardSection();
     return (saved as "inbox" | "bookings" | "profile" | "articles") || "inbox";
   });
 
@@ -106,7 +105,7 @@ const ConsultantDashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   useEffect(() => {
-    sessionStorage.setItem("dashboard_active_section", activeSection);
+    AuthStorage.setDashboardSection(activeSection);
   }, [activeSection]);
 
   useEffect(() => {
@@ -157,8 +156,8 @@ const ConsultantDashboard = () => {
 
   useEffect(() => {
     const loadIdentity = async () => {
-      const storedUser = sessionStorage.getItem("user");
-      const token = sessionStorage.getItem("token");
+      const storedUser = AuthStorage.getUser();
+      const token = AuthStorage.getToken();
 
       if (!storedUser || !token) {
         navigate("/login");
