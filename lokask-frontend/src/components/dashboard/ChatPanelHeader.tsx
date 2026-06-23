@@ -19,7 +19,6 @@ interface ChatPanelHeaderProps {
 const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo }: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
-      // 🟢 Changed to bg-white and border-border/40 to match the clean aesthetic
       <div className="h-[73px] px-6 flex items-center border-b border-border/40 bg-white shrink-0">
         <div className="animate-pulse flex space-x-3 items-center">
           <div className="rounded-full bg-slate-200 h-10 w-10"></div>
@@ -35,11 +34,9 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo }
   };
 
   return (
-    // 🟢 Adjusted padding and colors to match the Inbox header perfectly
     <div className="px-6 py-4 flex items-center justify-between border-b border-border/40 bg-white shrink-0">
       <div className="flex items-center gap-3">
         <div className="relative">
-          {/* 🟢 Added a subtle border to the avatar to match ConversationCards */}
           <Avatar className="h-10 w-10 border border-border/50">
             <AvatarImage src={otherUser.avatar} alt={otherUser.name} className="object-cover" />
             <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>

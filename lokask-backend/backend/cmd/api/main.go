@@ -200,6 +200,7 @@ func main() {
 	protected.Get("/bookings/consultant/:id", bookHandler.GetMySchedule)
 	protected.Delete("/bookings/:id", bookHandler.DeleteBooking)
 	protected.Patch("/bookings/:id/status", bookHandler.UpdateStatus)
+	protected.Get("/bookings/:id/call-status", handler.GetCallRoomStatus)
 	protected.Post("/consultant/media", consultantHandler.UploadMedia) // handler upload file
 	protected.Delete("/consultant/media", consultantHandler.DeleteGalleryMedia)
 	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
