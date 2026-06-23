@@ -24,10 +24,8 @@ const ChatPanelComposer = ({ onSendMessage }: ChatPanelComposerProps) => {
   };
 
   return (
-    // 🟢 Changed to bg-white and border-border/40
     <div className="p-4 md:px-6 border-t border-border/40 bg-white shrink-0">
       <form onSubmit={handleSubmit}>
-        {/* 🟢 Refined the input area to look like a clean, floating bubble */}
         <div className="flex items-center gap-2 bg-gray-50/80 border border-border/40 rounded-full px-4 py-2 shadow-sm transition-colors focus-within:border-border/80 focus-within:bg-white">
           <button
             type="button"

@@ -205,10 +205,13 @@ func main() {
 	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
 
 	// use for test @TODO: disabled it on release
-	app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)
+	// app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)
 
 	// websocket interceptor
 	app.Use("/ws/video", middleware.Protect(), websocket.New(handler.VideoCallHandler))
+
+	// websocket chat
+	app.Use("/ws/chat", middleware.Protect(), websocket.New(handler.ChatWebSocket))
 
 	// start server
 	port := getEnv("PORT", "8080")
