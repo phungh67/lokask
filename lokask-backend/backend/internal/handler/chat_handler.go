@@ -197,6 +197,25 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	go func(senderID, conversationID uuid.UUID, message string) {
 		bgCtx := context.Background()
 
+		var recentCount int
+		countQuery := `
+			SELECT COUNT(*) 
+			FROM messages 
+			WHERE conversation_id = $1 
+			  AND sender_id = $2 
+			  AND created_at >= NOW() - INTERVAL '8 hours'
+		`
+		err := h.Repo.DB.GetContext(bgCtx, &recentCount, countQuery, conversationID, senderID)
+		if err != nil {
+			log.Printf("[WARN][MAILER] Failed to check recent messages: %v", err)
+			return
+		}
+
+		if recentCount > 1 {
+			log.Printf("[INFO][MAILER] Skipped: Sender %s already sent a message within the last 8 hours.", senderID)
+			return
+		}
+
 		var info struct {
 			ReceiverEmail string `db:"receiver_email"`
 			ReceiverName  string `db:"receiver_name"`
@@ -215,11 +234,11 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
             WHERE c.id = $2
         `
 
-		err := h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
+		err = h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
 		if err == sql.ErrNoRows {
-			return // It's a self-chat. No receiver found, so no email needed.
+			return // Self-chat, abort
 		} else if err != nil {
-			log.Printf("[WARN] Could not fetch receiver info for email notification: %v", err)
+			log.Printf("[WARN][MAILER] Could not fetch receiver info: %v", err)
 			return
 		}
 
@@ -229,7 +248,12 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 				preview = preview[:47] + "..."
 			}
 
-			h.Mailer.SendMessageNotification(info.ReceiverEmail, info.ReceiverName, info.SenderName, preview)
+			mailErr := h.Mailer.SendMessageNotification(info.ReceiverEmail, info.ReceiverName, info.SenderName, preview)
+			if mailErr != nil {
+				log.Printf("[ERROR][MAILER] Failed to send to %s: %v", info.ReceiverEmail, mailErr)
+			} else {
+				log.Printf("[INFO][MAILER] Successfully sent notification to %s", info.ReceiverEmail)
+			}
 		}
 
 	}(myID, convID, req.Content)

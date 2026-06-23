@@ -57,7 +57,6 @@ const ChatPanel = ({
     return (
       <div
         key={message.id}
-        // 🟢 FIX: Added 'w-full' to guarantee the row spans edge-to-edge
         className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}
       >
         <div
@@ -122,13 +121,11 @@ const ChatPanel = ({
 
         <div className="flex-1 relative overflow-hidden">
           <ScrollArea className="h-full" ref={scrollRef}>
-            {/* 🟢 FIX: Removed md:pr-80. Added md:px-6 for standard, clean padding */}
             <div className="p-4 md:px-6 space-y-4 pb-6">
               {conversation.messages?.map(renderMessage)}
             </div>
           </ScrollArea>
           
-          {/* 🟢 FIX: Added pointer-events-none so if messages stretch under the AI summary, users can still click/scroll through it */}
           <div className="hidden md:block absolute right-4 top-4 z-10 pointer-events-none">
             <FloatingAISummary summary={conversation.summary} />
           </div>

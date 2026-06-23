@@ -148,7 +148,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
       new Date() < new Date(activeSession.expires_at));
 
   return (
-    // 🟢 FIX: Added responsive w-full h-[100dvh] for mobile, switching to w-[390px] h-[600px] on desktop
     <div className="fixed bottom-0 right-0 md:bottom-20 md:right-4 z-50 w-full h-[100dvh] md:w-[390px] md:h-[600px] bg-card md:rounded-[18px] shadow-strong flex flex-col overflow-hidden animate-fade-in border-t md:border border-border">
       <ChatHeader
         consultant={consultant}
@@ -164,7 +163,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         <ChatMessages messages={uiMessages} />
       )}
 
-      {/* 🟢 Conditionally show Composer or Interceptor */}
       {canChat ? (
         <ChatComposer onSendMessage={handleSendMessage} />
       ) : (
