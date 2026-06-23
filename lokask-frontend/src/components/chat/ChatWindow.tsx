@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom"; // 🟢 Added for routing
+import { useNavigate } from "react-router-dom";
 import { Consultant } from "@/types/consultant";
 import ChatHeader from "./ChatHeader";
 import ChatMessages from "./ChatMessages";
 import ChatComposer from "./ChatComposer";
-import { Dialog, DialogContent } from "@/components/ui/dialog"; // 🟢 Added Dialog
-import { AlertCircle, Loader2 } from "lucide-react"; // 🟢 Added AlertCircle
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AlertCircle, Loader2 } from "lucide-react"; 
 import {
   startChat,
   getChatHistory,
@@ -29,13 +29,11 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("traveller");
 
-  // 🟢 Session State
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
 
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Initialize User & Chat
   useEffect(() => {
     const initChat = async () => {
       try {
@@ -57,8 +55,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         const history = await getChatHistory(conversation.id);
         setMessages(history);
 
-        // const session = await getChatSession(conversation.id);
-        // setActiveSession(session);
       } catch (error) {
         console.error("Failed to start chat:", error);
         toast.error("Could not connect to chat");
@@ -76,7 +72,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     };
   }, [consultant.id]);
 
-  // 2. Poll for messages and session
   useEffect(() => {
     if (!conversationId) return;
 
@@ -84,9 +79,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
       try {
         const history = await getChatHistory(conversationId);
         setMessages(history);
-
-        // const session = await getChatSession(conversationId);
-        // setActiveSession(session);
       } catch (err) {
         console.error("Polling error", err);
       }
@@ -97,7 +89,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     };
   }, [conversationId]);
 
-  // 3. Handle Send
   const handleSendMessage = async (content: string) => {
     if (!conversationId || !currentUserId) return;
 
@@ -129,10 +120,9 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
 
       const errorStr = JSON.stringify(error).toLowerCase();
 
-      // 🟢 Intercept the expired session
       if (
         errorStr.includes("expired") ||
-        errorStr.includes("package") || // Catches "no active package found"
+        errorStr.includes("package") || 
         error.status === 403 ||
         error.status === 404
       ) {
@@ -150,7 +140,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
     timestamp: new Date(m.created_at),
   }));
 
-  // 🟢 Logic Lock
   const canChat =
     activeSession &&
     activeSession.status !== "expired" &&
@@ -159,7 +148,8 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
       new Date() < new Date(activeSession.expires_at));
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 w-[390px] h-[600px] bg-card rounded-[18px] shadow-strong flex flex-col overflow-hidden animate-fade-in border border-border">
+    // 🟢 FIX: Added responsive w-full h-[100dvh] for mobile, switching to w-[390px] h-[600px] on desktop
+    <div className="fixed bottom-0 right-0 md:bottom-20 md:right-4 z-50 w-full h-[100dvh] md:w-[390px] md:h-[600px] bg-card md:rounded-[18px] shadow-strong flex flex-col overflow-hidden animate-fade-in border-t md:border border-border">
       <ChatHeader
         consultant={consultant}
         onMinimize={onMinimize}
@@ -195,7 +185,6 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
         </div>
       )}
 
-      {/* 🟢 The Purchase Intercept Dialog */}
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
         <DialogContent className="max-w-[350px] rounded-2xl p-6">
           <div className="text-center space-y-4">
@@ -213,8 +202,8 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
               <button
                 onClick={() => {
                   setShowPurchaseDialog(false);
-                  onClose(); // Close the floating widget
-                  navigate(`/consultant/${consultant.id}/packages`); // Navigate to purchase page
+                  onClose(); 
+                  navigate(`/consultant/${consultant.id}/packages`); 
                 }}
                 className="w-full h-10 rounded-full bg-[#C77752] hover:bg-[#b06745] text-white font-medium transition-colors"
               >
