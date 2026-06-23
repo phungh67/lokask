@@ -165,7 +165,7 @@ const ConsultantDashboard = () => {
       }
 
       try {
-        const user = JSON.parse(storedUser);
+        const user = storedUser;
         setUserRole(user.role);
         setAccountUserId(user.id); 
 

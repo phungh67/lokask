@@ -54,9 +54,8 @@ const Navbar = () => {
       const storedToken = AuthStorage.getToken();
       const storedUser = AuthStorage.getUser();
 
-if (storedToken && storedUser) {
-        // ✅ FIX: storedUser is already a parsed object! Just set it directly.
-        setUser(storedUser); 
+      if (storedToken && storedUser) {
+        setUser(storedUser);
         setLoading(false);
       } else {
         setUser(null);
@@ -67,7 +66,7 @@ if (storedToken && storedUser) {
         try {
           const userData = await getMe();
           setUser(userData);
-          AuthStorage.setUser(userData)
+          AuthStorage.setUser(userData);
         } catch (err) {
           console.error("Session expired or invalid token");
           setUser(null);
@@ -98,12 +97,12 @@ if (storedToken && storedUser) {
     } catch (e) {
       console.error("Logout request failed");
     } finally {
-      AuthStorage.clearAll()
+      AuthStorage.clearAll();
 
       setUser(null);
 
       window.dispatchEvent(new Event("auth-changed"));
-      
+
       window.location.href = "/";
     }
   };
@@ -241,7 +240,10 @@ if (storedToken && storedUser) {
           </div>
 
           {/* Mobile Toggle Button */}
-          <button className="md:hidden p-2 text-foreground" onClick={() => setIsOpen(!isOpen)}>
+          <button
+            className="md:hidden p-2 text-foreground"
+            onClick={() => setIsOpen(!isOpen)}
+          >
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
@@ -249,7 +251,6 @@ if (storedToken && storedUser) {
         {isOpen && (
           <div className="md:hidden absolute top-16 left-0 w-full bg-background border-b border-border/50 shadow-lg animate-fade-in z-50">
             <div className="px-6 py-6 flex flex-col gap-4">
-              
               <Link
                 to="/wishlist"
                 onClick={() => setIsOpen(false)}
@@ -309,13 +310,17 @@ if (storedToken && storedUser) {
                   <button
                     onClick={() => {
                       setIsOpen(false);
-                      handleOpenAuth("traveller", "Welcome back! Please log in.", "login");
+                      handleOpenAuth(
+                        "traveller",
+                        "Welcome back! Please log in.",
+                        "login",
+                      );
                     }}
                     className="w-full py-3.5 bg-foreground text-background rounded-full font-medium text-base"
                   >
                     Log in
                   </button>
-                  
+
                   <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
                       Create an account
@@ -323,7 +328,11 @@ if (storedToken && storedUser) {
                     <button
                       onClick={() => {
                         setIsOpen(false);
-                        handleOpenAuth("traveller", "Join as a Traveller", "signup");
+                        handleOpenAuth(
+                          "traveller",
+                          "Join as a Traveller",
+                          "signup",
+                        );
                       }}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors"
                     >
@@ -333,7 +342,11 @@ if (storedToken && storedUser) {
                     <button
                       onClick={() => {
                         setIsOpen(false);
-                        handleOpenAuth("consultant", "Join as a Consultant", "signup");
+                        handleOpenAuth(
+                          "consultant",
+                          "Join as a Consultant",
+                          "signup",
+                        );
                       }}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors mt-1"
                     >

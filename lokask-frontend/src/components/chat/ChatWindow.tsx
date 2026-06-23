@@ -45,9 +45,8 @@ const ChatWindow = ({ consultant, onMinimize, onClose }: ChatWindowProps) => {
 
         const storedUser = AuthStorage.getUser();
         if (storedUser) {
-          const user = JSON.parse(storedUser);
-          setCurrentUserId(user.id);
-          if (user.role) setUserRole(user.role);
+          setCurrentUserId(storedUser.id);
+          if (storedUser.role) setUserRole(storedUser.role);
         }
 
         const conversation = await startChat(consultant.id);
