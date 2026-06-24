@@ -21,6 +21,7 @@ import BlogPage from "./pages/BlogPage";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ChoosePackagePage from "./pages/ChoosePackagePage"; 
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/signup/traveller" element={<SignupTraveller />} />
             <Route path="/signup/consultant" element={<SignupConsultant />} />
             <Route path="/dashboard" element={<ConsultantDashboard />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Calling */}
             <Route path="/call/:roomId" element={<CallPage />} />

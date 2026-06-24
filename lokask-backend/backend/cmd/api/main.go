@@ -205,6 +205,10 @@ func main() {
 	protected.Delete("/consultant/media", consultantHandler.DeleteGalleryMedia)
 	protected.Patch("/updateprofile", consultantHandler.UpdateProfile)
 
+	//reset password
+	protected.Post("/auth/lost-password", authHandler.LostPassword)
+	protected.Post("/auth/reset-password", authHandler.ResetPassword)
+
 	// use for test @TODO: disabled it on release
 	// app.Post("/api/v1/conversations/:id/cheat-code", chatHandler.RefilSession)
 
