@@ -5,14 +5,18 @@ import (
 	"asklocal/internal/helper"
 	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
+	"context"
 	"crypto/md5"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"cloud.google.com/go/auth/credentials/idtoken"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -452,4 +456,93 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		"avatar_url": user.AvatarURLJSON,
 		"role":       role,
 	})
+}
+
+// support google auth
+func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid payload",
+		})
+	}
+
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	if googleClientID == "" {
+		return errors.New("Not set Google Client ID")
+	}
+
+	payload, err := idtoken.Validate(context.Background(), req.Token, googleClientID)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"error": "Invalid Google Token",
+		})
+	}
+
+	// extract data from google
+	email := payload.Claims["email"].(string)
+	name := payload.Claims["name"].(string)
+	avatarUrl := ""
+	if pic, ok := payload.Claims["picture"]; ok {
+		avatarUrl = pic.(string)
+	}
+
+	// check db
+	var user struct {
+		ID           string `db:"id"`
+		Email        string `db:"email"`
+		PasswordHash string `db:"password_hash"`
+		FullName     string `db:"full_name"`
+		Role         string `db:"role"`
+		AvatarUrl    string `db:"avatar_url"`
+	}
+
+	err = h.DB.Get(&user, "SELECT id, email, password_hash, full_name, role, avatar_url FROM users WHERE email = $1", email)
+	if err == sql.ErrNoRows {
+		randomPass, _ := bcrypt.GenerateFromPassword([]byte(uuid.New().String()), bcrypt.DefaultCost)
+
+		err = h.DB.QueryRow(`
+			INSERT INTO users (full_name, email, password_hash, role, avatar_url, is_verified, created_at, updated_at) 
+			VALUES ($1, $2, $3, 'traveller', $4, true, NOW(), NOW()) 
+			RETURNING id`,
+			name, email, randomPass, avatarUrl).Scan(&user.ID)
+
+		if err != nil {
+			log.Printf("[ERROR] Failed to create Google user: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create account"})
+		}
+
+		user.Email = email
+		user.FullName = name
+		user.Role = "traveller"
+		user.AvatarUrl = avatarUrl
+
+	} else if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+
+	sessionToken := uuid.New().String()
+	err = config.RedisClient.Set(c.Context(), "session:"+sessionToken, user.ID, 6*time.Hour).Err()
+	if err != nil {
+		// Log the actual error so you can see it in "docker compose logs backend"
+		fmt.Printf("[REDIS] Redis Set Failed: %v\n", err)
+
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to create session",
+		})
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_id",
+		Value:    sessionToken,
+		Expires:  time.Now().Add(6 * time.Hour),
+		HTTPOnly: true,  // Prevents XSS access to the token
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
+	return nil
 }
