@@ -17,7 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { login, registerTraveller, registerConsultant, forgotPassword, resetPassword } from "@/lib/auth";
+import {
+  login,
+  registerTraveller,
+  registerConsultant,
+  forgotPassword,
+  resetPassword,
+} from "@/lib/auth";
 import { getCities, CityOption } from "@/lib/consultants";
 import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
@@ -263,16 +269,19 @@ const AuthPromptDialog = ({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground pl-1">
-            Password
-          </label>
-          <button
-            type="button"
-            onClick={() => setStep("forgot-password")}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Forgot password?
-          </button>
+          <div className="flex justify-between items-center pl-1 pr-1">
+            <label className="text-xs font-semibold text-muted-foreground">
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => setStep("forgot-password")}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
@@ -436,8 +445,10 @@ const AuthPromptDialog = ({
     setIsLoading(true);
     try {
       // Import this function at the top from your auth.ts
-      await forgotPassword(email); 
-      toast.success("If an account exists, a reset link has been sent to your email.");
+      await forgotPassword(email);
+      toast.success(
+        "If an account exists, a reset link has been sent to your email.",
+      );
       setStep("login");
     } catch (error: any) {
       toast.error(error.message || "Failed to process request");
@@ -453,7 +464,8 @@ const AuthPromptDialog = ({
           Reset password
         </DialogTitle>
         <DialogDescription className="text-base">
-          Enter your email address and we'll send you a link to reset your password.
+          Enter your email address and we'll send you a link to reset your
+          password.
         </DialogDescription>
       </DialogHeader>
 
@@ -471,7 +483,11 @@ const AuthPromptDialog = ({
           className="w-full h-12 rounded-full font-semibold text-base"
           disabled={isLoading || !isValidEmail(email)}
         >
-          {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Send reset link"}
+          {isLoading ? (
+            <Loader2 className="animate-spin w-5 h-5" />
+          ) : (
+            "Send reset link"
+          )}
         </Button>
         <button
           type="button"
