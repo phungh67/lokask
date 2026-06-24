@@ -17,12 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { login, registerTraveller, registerConsultant } from "@/lib/auth";
+import { login, registerTraveller, registerConsultant, forgotPassword, resetPassword } from "@/lib/auth";
 import { getCities, CityOption } from "@/lib/consultants";
 import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
 
-type AuthStep = "initial" | "login" | "signup" | "verify";
+type AuthStep = "initial" | "login" | "signup" | "verify" | "forgot-password";
 
 interface AuthPromptDialogProps {
   open: boolean;
@@ -49,7 +49,9 @@ const AuthPromptDialog = ({
   const [step, setStep] = useState<AuthStep>("initial");
   const [isLoading, setIsLoading] = useState(false);
 
-  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(defaultRole || "traveller");
+  const [selectedRole, setSelectedRole] = useState<"traveller" | "consultant">(
+    defaultRole || "traveller",
+  );
 
   // Form State
   const [email, setEmail] = useState("");
@@ -104,7 +106,7 @@ const AuthPromptDialog = ({
       toast.success(`Welcome back, ${res.user.full_name}!`);
 
       AuthStorage.setToken(res.token);
-      AuthStorage.setUser(res.user)
+      AuthStorage.setUser(res.user);
 
       window.dispatchEvent(new Event("auth-changed"));
       onOpenChange(false);
@@ -124,7 +126,7 @@ const AuthPromptDialog = ({
 
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (selectedRole === "consultant" && !cityId) {
       toast.error("Please select a city from the list.");
       return;
@@ -164,21 +166,22 @@ const AuthPromptDialog = ({
     <>
       <DialogHeader className="text-center space-y-4 pt-4">
         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-           <span className="text-2xl">✉️</span> 
+          <span className="text-2xl">✉️</span>
         </div>
         <DialogTitle className="text-2xl font-display font-semibold">
           Check your email
         </DialogTitle>
       </DialogHeader>
-      
+
       <div className="mt-4 text-center space-y-6">
         <p className="text-muted-foreground">
-          We've sent a secure verification link to <strong>{email}</strong>. Please check your inbox and click the link to activate your account.
+          We've sent a secure verification link to <strong>{email}</strong>.
+          Please check your inbox and click the link to activate your account.
         </p>
         <p className="text-xs text-muted-foreground">
           Note: The link will expire in 24 hours.
         </p>
-        
+
         <Button
           type="button"
           onClick={() => setStep("login")}
@@ -258,11 +261,18 @@ const AuthPromptDialog = ({
             required
           />
         </div>
-        
+
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-muted-foreground pl-1">
             Password
           </label>
+          <button
+            type="button"
+            onClick={() => setStep("forgot-password")}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Forgot password?
+          </button>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
@@ -283,7 +293,11 @@ const AuthPromptDialog = ({
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-3 text-muted-foreground hover:text-foreground transition-colors"
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -315,7 +329,6 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleSignup} className="mt-4 space-y-4">
-        
         <div className="flex bg-muted/60 p-1 rounded-xl mb-2">
           <button
             type="button"
@@ -392,7 +405,11 @@ const AuthPromptDialog = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-3 text-muted-foreground"
           >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
           </button>
         </div>
 
@@ -414,6 +431,59 @@ const AuthPromptDialog = ({
     </>
   );
 
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      // Import this function at the top from your auth.ts
+      await forgotPassword(email); 
+      toast.success("If an account exists, a reset link has been sent to your email.");
+      setStep("login");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to process request");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderForgotPasswordStep = () => (
+    <>
+      <DialogHeader className="text-left space-y-2">
+        <DialogTitle className="text-2xl font-display font-semibold">
+          Reset password
+        </DialogTitle>
+        <DialogDescription className="text-base">
+          Enter your email address and we'll send you a link to reset your password.
+        </DialogDescription>
+      </DialogHeader>
+
+      <form onSubmit={handleForgotPasswordSubmit} className="mt-4 space-y-4">
+        <Input
+          type="email"
+          placeholder="Email address"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-12 rounded-xl border-2 px-4 text-base"
+          required
+        />
+        <Button
+          type="submit"
+          className="w-full h-12 rounded-full font-semibold text-base"
+          disabled={isLoading || !isValidEmail(email)}
+        >
+          {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Send reset link"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setStep("login")}
+          className="text-sm text-center w-full text-muted-foreground hover:text-primary font-medium transition-colors"
+        >
+          Back to login
+        </button>
+      </form>
+    </>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-2xl p-6">
@@ -421,6 +491,7 @@ const AuthPromptDialog = ({
         {step === "login" && renderLoginStep()}
         {step === "signup" && renderSignupStep()}
         {step === "verify" && renderVerifyStep()}
+        {step === "forgot-password" && renderForgotPasswordStep()}
       </DialogContent>
     </Dialog>
   );

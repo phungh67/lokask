@@ -203,7 +203,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			FROM messages 
 			WHERE conversation_id = $1 
 			  AND sender_id = $2 
-			  AND created_at >= NOW() - INTERVAL '8 hours'
+			  AND created_at >= NOW() - INTERVAL '30 minutes'
 		`
 		err := h.Repo.DB.GetContext(bgCtx, &recentCount, countQuery, conversationID, senderID)
 		if err != nil {

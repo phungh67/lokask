@@ -6,7 +6,9 @@ import (
 	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
 	"crypto/md5"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"time"
@@ -63,6 +65,15 @@ var validCities = map[string]bool{
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+// helper for token generate
+func generateSecureToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
@@ -224,27 +235,79 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 
 // send the request
 func (h *AuthHandler) LostPassword(c *fiber.Ctx) error {
-	var req LostPasswordRequest
-	err := c.BodyParser(&req)
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		log.Printf("[ERROR][AUTH] Error in email input %s: %v", req.Email, err)
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid request",
+		})
+	}
+
+	var userID string
+	var userName string
+	err := h.DB.QueryRow("SELECT id, full_name FROM users WHERE email = $1", req.Email).Scan(&userID, &userName)
 	if err != nil {
-		return c.Status(200).JSON(fiber.Map{
-			"message": "null",
+		return c.JSON(fiber.Map{"message": "If an account exists, a reset link has been sent."})
+	}
+
+	token, err := generateSecureToken()
+	if err != nil {
+		log.Printf("[ERROR][AUTH] Generate token failed: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Internal server error"})
+	}
+
+	expires := time.Now().Add(1 * time.Hour)
+	_, err = h.DB.Exec("UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3", token, expires, userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate reset token"})
+	}
+
+	resetLink := fmt.Sprintf("https://lokask.se/reset-password?token=%s", token)
+
+	_ = h.Mailer.SendResetPasswordEmail(req.Email, userName, resetLink)
+
+	return c.JSON(fiber.Map{"message": "If an account exists, a reset link has been sent."})
+}
+
+func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
+	var req struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid input",
 		})
 	}
 
-	log.Printf("[ERROR][AUTH] Error in password reset, caused by: %v", err)
-
-	user, err := h.UserRepo.GetByEmail(req.Email)
-	if err != nil || user == nil || user.ID == "" {
-		return c.Status(200).JSON(fiber.Map{
-			"message": "Reset email sent, check the inbox",
+	var userID string
+	err := h.DB.QueryRow("SELECT id FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()", req.Token).Scan(&userID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Token error",
 		})
 	}
-	log.Printf("[ERROR][AUTH] Invalid user, if this happened many times, considered brute attack: %v", err)
 
-	//resetToken := uuid.New().String()
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("[ERROR][AUTH] Error when hashing password: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
 
-	return nil
+	_, err = h.DB.Exec("UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2", hashedPassword, userID)
+	if err != nil {
+		log.Printf("[ERROR][AUTH] Error in reset password with: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error.",
+		})
+	}
+
+	return c.JSON(fiber.Map{"message": "Password has been successfully reset."})
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {

@@ -77,3 +77,29 @@ func (m *MailService) SendVerificationEmail(toEmail, toName, token string) {
 		log.Printf("[INFO] Verification email successfully sent to %s", toEmail)
 	}
 }
+
+// send reset password email
+func (m *MailService) SendResetPasswordEmail(toEmail, toName, LostPasswordURL string) error {
+	params := &resend.SendEmailRequest{
+		From:    m.From,
+		To:      []string{toEmail},
+		Subject: "Reset your account's password",
+		Template: &resend.EmailTemplate{
+			Id: "password-reset",
+			Variables: map[string]any{
+				"ReceiverName": toName,
+				"ResetURL":     LostPasswordURL,
+			},
+		},
+	}
+
+	log.Printf("[MAILER] Sending verification email via Resend to: %s", toEmail)
+	_, err := m.Client.Emails.Send(params)
+	if err != nil {
+		log.Printf("[ERROR][MAILER] Failed to send verification email to %s via Resend: %v", toEmail, err)
+	} else {
+		log.Printf("[INFO][MAILER] Verification email successfully sent to %s", toEmail)
+	}
+
+	return err
+}
