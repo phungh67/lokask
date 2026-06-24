@@ -72,23 +72,15 @@ export async function getMe() {
 }
 
 export const forgotPassword = async (email: string) => {
-  const res = await fetch("/auth/lost-password", {
+  return fetchJson<any>("/auth/lost-password", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to send reset email");
-  return data;
 };
 
 export const resetPassword = async (token: string, new_password: string) => {
-  const res = await fetch("/auth/reset-password", {
+  return fetchJson<any>("/auth/reset-password", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, new_password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to reset password");
-  return data;
 };
