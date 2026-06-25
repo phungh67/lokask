@@ -116,6 +116,8 @@ jobs:
                 tags: |
                     ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-${{ github.sha }}
                     ${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-latest
+                build-args: |
+                  VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
                 cache-from: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache
                 cache-to: type=registry,ref=${{ vars.DOCKER_HUB_USERNAME }}/lokask-repository:frontend-buildcache,mode=max
     
