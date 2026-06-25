@@ -8,6 +8,9 @@ RUN npm ci --silent
 
 COPY . .
 
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 RUN npm run build
 
 FROM nginx:stable-alpine3.23-perl AS runner

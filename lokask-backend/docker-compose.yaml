@@ -60,6 +60,7 @@ services:
       AWS_S3_AVATAR_BUCKET: ${AWS_S3_AVATAR_BUCKET}
       AWS_S3_MEDIA_BUCKET: ${AWS_S3_MEDIA_BUCKET}
       DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
   
   frontend:
     image: huyhoangph99/lokask-repository:frontend-latest
