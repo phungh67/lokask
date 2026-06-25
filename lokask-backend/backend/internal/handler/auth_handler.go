@@ -462,6 +462,7 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 
 	payload, err := idtoken.Validate(context.Background(), req.Token, googleClientID)
 	if err != nil {
+		log.Printf("[ERROR][AUTH][GOOGLE] Failed to get the token from Google: %v", err)
 		return c.Status(401).JSON(fiber.Map{
 			"error": "Invalid Google Token",
 		})
