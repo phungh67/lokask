@@ -23,7 +23,9 @@ import {
   registerConsultant,
   forgotPassword,
   resetPassword,
+  googleLogin,
 } from "@/lib/auth";
+import { useGoogleLogin } from "@react-oauth/google";
 import { getCities, CityOption } from "@/lib/consultants";
 import { AuthStorage } from "@/lib/storage";
 import { toast } from "sonner";
@@ -130,6 +132,38 @@ const AuthPromptDialog = ({
     }
   };
 
+  const handleGoogleSuccess = async (tokenResponse: any) => {
+    setIsLoading(true);
+    try {
+      // Send the Google token to our Go backend
+      const res = await googleLogin(tokenResponse.access_token);
+
+      toast.success(`Welcome, ${res.user.full_name}!`);
+
+      // Store using our centralized utility
+      AuthStorage.setToken(res.token);
+      AuthStorage.setUser(res.user);
+
+      window.dispatchEvent(new Event("auth-changed"));
+      onOpenChange(false);
+
+      if (onLogin) onLogin();
+
+      if (res.user.role === "consultant") {
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Google authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => toast.error("Google Login Failed"),
+  });
+
   const handleSignup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -209,6 +243,30 @@ const AuthPromptDialog = ({
       </DialogHeader>
 
       <form onSubmit={handleInitialSubmit} className="mt-6 space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 rounded-full font-medium text-base relative border-2 hover:bg-gray-50 flex items-center justify-center gap-3"
+          onClick={() => loginWithGoogle()}
+          disabled={isLoading}
+        >
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="w-5 h-5"
+          />
+          Continue with Google
+        </Button>
+
+        <div className="relative py-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border/60" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase font-medium">
+            <span className="bg-background px-4 text-muted-foreground">or</span>
+          </div>
+        </div>
+        
         <Input
           type="email"
           placeholder="Email address"
