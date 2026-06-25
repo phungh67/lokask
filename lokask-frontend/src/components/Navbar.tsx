@@ -188,7 +188,7 @@ const Navbar = () => {
                       handleOpenAuth(
                         "traveller",
                         "Welcome back! Please log in.",
-                        "login",
+                        "initial",
                       )
                     }
                     className="btn-outline-pill"
@@ -313,7 +313,7 @@ const Navbar = () => {
                       handleOpenAuth(
                         "traveller",
                         "Welcome back! Please log in.",
-                        "login",
+                        "initial",
                       );
                     }}
                     className="w-full py-3.5 bg-foreground text-background rounded-full font-medium text-base"
