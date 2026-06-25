@@ -80,6 +80,48 @@ func generateSecureToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
+// helper for DRY login
+func (h *AuthHandler) generateSessionAndRespond(c *fiber.Ctx, user *repository.User, role string, consultantID string) error {
+	sessionToken := uuid.New().String()
+
+	err := config.RedisClient.Set(c.Context(), "session:"+sessionToken, user.ID, 6*time.Hour).Err()
+	if err != nil {
+		log.Printf("[ERROR][AUTH][REDIS] Redis Set Failed: %v\n", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error.",
+		})
+	}
+
+	if user.AvatarURL.Valid {
+		user.AvatarURLJSON = user.AvatarURL.String
+	}
+
+	isProduction := os.Getenv("APP_ENV") == "production"
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_id",
+		Value:    sessionToken,
+		Expires:  time.Now().Add(6 * time.Hour),
+		HTTPOnly: true,
+		Secure:   isProduction,
+		SameSite: "Strict",
+		Path:     "/",
+	})
+
+	return c.JSON(fiber.Map{
+		"token": sessionToken,
+		"user": fiber.Map{
+			"id":            user.ID,
+			"consultant_id": consultantID,
+			"full_name":     user.FullName,
+			"email":         user.Email,
+			"avatar_url":    user.AvatarURLJSON,
+			"role":          role,
+		},
+		"message": "Logged in",
+	})
+}
+
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req RegisterRequest
 	err := c.BodyParser(&req)
@@ -171,9 +213,9 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	if err := h.UserRepo.CreateUserTx(tx, user, verificationToken, expiresAt); err != nil {
 		// This usually catches the UNIQUE(email) constraint
+		log.Printf("[ERROR][AUTH][DB] Could not created user: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":  "Could not create user",
-			"detail": err.Error(),
+			"error": "Internal server error",
 		})
 	}
 
@@ -315,17 +357,13 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	// login logic function
-
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error":    err.Error(),
-			"messages": "Check log and backend for details",
+			"error": "Invalid payload",
 		})
 	}
 
-	// find user in the db
 	user, err := h.UserRepo.GetByEmail(req.Email)
 	if err != nil || user == nil || user.ID == "" {
 		return c.Status(401).JSON(fiber.Map{
@@ -333,78 +371,26 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	// check password (if correctly)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return c.Status(401).JSON(fiber.Map{
-			"error":  "Invalid credentials",
-			"detail": err.Error(),
+			"error": "Invalid credentials",
 		})
 	}
 
-	// check role (additional check)
-	var role string = "traveller"
-	var consultantID string
-	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
-	if err == nil && consultantID != "" {
-		role = "consultant"
-	} else {
-		consultantID = ""
-	}
-
-	// redis logic
-	// generate session token
-	sessionToken := uuid.New().String()
-
-	// debug logic
-	// key := "session:" + sessionToken
-	// fmt.Printf("[INFO] LOGIN: Saving Key [%s] for User [%s]\n", key, user.ID)
-
-	if user.IsVerified == false {
-		// log.Printf("[LOG] user status: %s %t", user.FullName, user.IsVerified)
+	if !user.IsVerified {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "not verified yet",
 		})
 	}
 
-	err = config.RedisClient.Set(c.Context(), "session:"+sessionToken, user.ID, 6*time.Hour).Err()
-	if err != nil {
-		// Log the actual error so you can see it in "docker compose logs backend"
-		fmt.Printf("[REDIS] Redis Set Failed: %v\n", err)
-
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to create session",
-		})
+	var role string = "traveller"
+	var consultantID string
+	err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
+	if err == nil && consultantID != "" {
+		role = "consultant"
 	}
 
-	if user.AvatarURL.Valid {
-		user.AvatarURLJSON = user.AvatarURL.String
-	}
-
-	// cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "session_id",
-		Value:    sessionToken,
-		Expires:  time.Now().Add(6 * time.Hour),
-		HTTPOnly: true,  // Prevents XSS access to the token
-		Secure:   false, // Set to true in production with HTTPS
-		SameSite: "Lax",
-		Path:     "/",
-	})
-
-	// generate jwt (of course, this step, user must be existed)
-	// only five minutes !!!
-	return c.JSON(fiber.Map{
-		"token": sessionToken,
-		"user": fiber.Map{
-			"id":            user.ID,
-			"consultant_id": consultantID,
-			"full_name":     user.FullName,
-			"email":         user.Email,
-			"avatar_url":    user.AvatarURLJSON,
-			"role":          role,
-		},
-		"message": "Logged in",
-	})
+	return h.generateSessionAndRespond(c, user, role, consultantID)
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
@@ -489,60 +475,69 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 		avatarUrl = pic.(string)
 	}
 
-	// check db
-	var user struct {
-		ID           string `db:"id"`
-		Email        string `db:"email"`
-		PasswordHash string `db:"password_hash"`
-		FullName     string `db:"full_name"`
-		Role         string `db:"role"`
-		AvatarUrl    string `db:"avatar_url"`
-	}
-
-	err = h.DB.Get(&user, "SELECT id, email, password_hash, full_name, role, avatar_url FROM users WHERE email = $1", email)
-	if err == sql.ErrNoRows {
-		randomPass, _ := bcrypt.GenerateFromPassword([]byte(uuid.New().String()), bcrypt.DefaultCost)
-
-		err = h.DB.QueryRow(`
-			INSERT INTO users (full_name, email, password_hash, role, avatar_url, is_verified, created_at, updated_at) 
-			VALUES ($1, $2, $3, 'traveller', $4, true, NOW(), NOW()) 
-			RETURNING id`,
-			name, email, randomPass, avatarUrl).Scan(&user.ID)
-
-		if err != nil {
-			log.Printf("[ERROR] Failed to create Google user: %v", err)
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to create account"})
-		}
-
-		user.Email = email
-		user.FullName = name
-		user.Role = "traveller"
-		user.AvatarUrl = avatarUrl
-
-	} else if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
-	}
-
-	sessionToken := uuid.New().String()
-	err = config.RedisClient.Set(c.Context(), "session:"+sessionToken, user.ID, 6*time.Hour).Err()
+	// query DB
+	user, err := h.UserRepo.GetByEmail(email)
 	if err != nil {
-		// Log the actual error so you can see it in "docker compose logs backend"
-		fmt.Printf("[REDIS] Redis Set Failed: %v\n", err)
-
+		log.Printf("[ERROR][AUTH] Error when querying from database: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to create session",
+			"error": "Internal server error.",
 		})
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "session_id",
-		Value:    sessionToken,
-		Expires:  time.Now().Add(6 * time.Hour),
-		HTTPOnly: true,  // Prevents XSS access to the token
-		Secure:   false, // Set to true in production with HTTPS
-		SameSite: "Lax",
-		Path:     "/",
-	})
+	var role string = "traveller"
+	var consultantID string
 
-	return nil
+	if user == nil || user.ID == "" {
+		tx, err := h.DB.Beginx()
+		if err != nil {
+			log.Printf("[ERROR][AUTH] Error starting transaction: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"error": "Internal server error.",
+			})
+		}
+		defer tx.Rollback()
+
+		randomPass, _ := bcrypt.GenerateFromPassword([]byte(uuid.New().String()), bcrypt.DefaultCost)
+		user = &repository.User{
+			Email:        email,
+			PasswordHash: string(randomPass),
+			FullName:     name,
+			AvatarURL:    sql.NullString{String: avatarUrl, Valid: avatarUrl != ""},
+		}
+
+		if err = h.UserRepo.CreateUserTx(tx, user, "", time.Time{}); err != nil {
+			log.Printf("[ERROR][AUTH][DB] Could not create user: %v", err)
+			return c.Status(500).JSON(fiber.Map{
+				"error": "Internal server error",
+			})
+		}
+
+		// Google accounts are inherently verified. Override the default status.
+		if _, err := tx.Exec("UPDATE users SET is_verified = true WHERE id = $1", user.ID); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": "Internal server error",
+			})
+		}
+
+		if err := tx.Commit(); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": "Failed to commit transaction",
+			})
+		}
+
+		user.IsVerified = true
+
+	} else {
+		if !user.IsVerified {
+			h.DB.Exec("UPDATE users SET is_verified = true WHERE id = $1", user.ID)
+			user.IsVerified = true
+		}
+
+		err = h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
+		if err == nil && consultantID != "" {
+			role = "consultant"
+		}
+	}
+
+	return h.generateSessionAndRespond(c, user, role, consultantID)
 }
