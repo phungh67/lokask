@@ -167,6 +167,7 @@ func main() {
 	// post (auth)
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)
+	api.Post("/auth/google", authHandler.GoogleLogin)
 
 	api.Post("/auth/logout", authHandler.Logout)
 

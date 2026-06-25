@@ -84,3 +84,10 @@ export const resetPassword = async (token: string, new_password: string) => {
     body: JSON.stringify({ token, new_password }),
   });
 };
+
+export const googleLogin = async (googleToken: string) => {
+  return fetchJson<any>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ token: googleToken }),
+  });
+};
