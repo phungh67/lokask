@@ -485,7 +485,7 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 
 	// query DB
 	user, err := h.UserRepo.GetByEmail(email)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		log.Printf("[ERROR][AUTH] Error when querying from database: %v", err)
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Internal server error.",
