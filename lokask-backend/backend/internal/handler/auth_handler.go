@@ -5,18 +5,18 @@ import (
 	"asklocal/internal/helper"
 	"asklocal/internal/mailer"
 	"asklocal/internal/repository"
-	"context"
 	"crypto/md5"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
-	"cloud.google.com/go/auth/credentials/idtoken"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -460,21 +460,28 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 		return errors.New("Not set Google Client ID")
 	}
 
-	payload, err := idtoken.Validate(context.Background(), req.Token, googleClientID)
-	if err != nil {
-		log.Printf("[ERROR][AUTH][GOOGLE] Failed to get the token from Google: %v", err)
-		return c.Status(401).JSON(fiber.Map{
-			"error": "Invalid Google Token",
-		})
+	resp, err := http.Get("https://www.googleapis.com/oauth2/v3/userinfo?access_token=" + req.Token)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		log.Printf("[ERROR] Failed to fetch Google user info: %v", err)
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid Google Access Token"})
+	}
+	defer resp.Body.Close()
+
+	var googleUser struct {
+		Email         string `json:"email"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+		EmailVerified bool   `json:"email_verified"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse Google response"})
 	}
 
 	// extract data from google
-	email := payload.Claims["email"].(string)
-	name := payload.Claims["name"].(string)
-	avatarUrl := ""
-	if pic, ok := payload.Claims["picture"]; ok {
-		avatarUrl = pic.(string)
-	}
+	email := googleUser.Email
+	name := googleUser.Name
+	avatarUrl := googleUser.Picture
 
 	// query DB
 	user, err := h.UserRepo.GetByEmail(email)
