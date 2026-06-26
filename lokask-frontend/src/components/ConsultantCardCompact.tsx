@@ -49,15 +49,15 @@ const ConsultantCardCompact = ({ consultant }: ConsultantCardCompactProps) => {
         </div>
 
         {/* Name with Wishlist */}
-        <div className="flex items-center justify-between w-full gap-2 overflow-hidden">
+        <div className="flex items-center justify-center w-full relative mb-1">
           <h3
-            className="font-bold text-[18px] text-foreground leading-tight font-sans truncate flex-1 text-left"
-            title={consultant.name} // Native HTML tooltip shows their full name on hover
+            className="font-bold text-[18px] text-foreground leading-tight font-sans truncate text-center px-6"
+            title={consultant.name}
           >
             {finalName}
           </h3>
           <button
-            className="p-1 shrink-0 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+            className="absolute right-0 p-1 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
