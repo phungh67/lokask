@@ -42,7 +42,7 @@ export const mapConsultant = (c: any): Consultant => ({
     id: String(c.id),
     userId: c.user_id ? String(c.user_id) : (c.userId ? String(c.userId) : ""),
     name: c.full_name || c.name || "User",
-    displayName: c.display_name || c.full_name || c.name || "User",
+    displayName: c.displayName || c.display_name || c.name || c.full_name || "User",
     city: c.city_name || c.city || "",
     country: c.country_code || c.country || "",
 
@@ -142,7 +142,7 @@ export async function getConsultantById(id: string): Promise<Consultant> {
 
 export async function getConsultantByUserId(userId: string): Promise<Consultant> {
     const data = await fetchJson<any>(`/users/${userId}/consultant`);
-    return mapConsultant(data); 
+    return mapConsultant(data);
 }
 
 export async function getNiches(): Promise<Niche[]> {
