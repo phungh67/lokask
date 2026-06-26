@@ -12,11 +12,11 @@ import (
 
 type User struct {
 	// user structure
-	ID           string `db:"id" json:"id"`
-	Email        string `db:"email" json:"email"`
-	PasswordHash string `db:"password_hash" json:"-"`
-	FullName     string `db:"full_name" json:"full_name"`
-
+	ID           string         `db:"id" json:"id"`
+	Email        string         `db:"email" json:"email"`
+	PasswordHash string         `db:"password_hash" json:"-"`
+	FullName     string         `db:"full_name" json:"full_name"`
+	Alias        sql.NullString `db:"alias" json:"alias"`
 	// prevent spam or disposable mail
 	IsVerified        bool           `db:"is_verified" json:"is_verified"`
 	VerificationToken sql.NullString `db:"verification_token" json:"-"`

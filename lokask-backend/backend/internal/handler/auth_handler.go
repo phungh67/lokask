@@ -202,12 +202,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	seed := fmt.Sprintf("%x", hash)
 
 	defaultAvatarURL := fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", seed)
+	userAlias := helper.GenerateAlias(req.FullName)
 
 	// create new user to put to database
 	user := &repository.User{
 		Email:        req.Email,
 		PasswordHash: string(hashedPwd),
 		FullName:     req.FullName,
+		Alias:        sql.NullString{String: userAlias, Valid: userAlias != ""},
 		AvatarURL:    sql.NullString{String: defaultAvatarURL, Valid: true},
 	}
 
@@ -514,11 +516,13 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 		}
 		defer tx.Rollback()
 
+		userAlias := helper.GenerateAlias(name) // Or req.FullName for standard registration
 		randomPass, _ := bcrypt.GenerateFromPassword([]byte(uuid.New().String()), bcrypt.DefaultCost)
 		user = &repository.User{
 			Email:        email,
 			PasswordHash: string(randomPass),
 			FullName:     name,
+			Alias:        sql.NullString{String: userAlias, Valid: userAlias != ""},
 			AvatarURL:    sql.NullString{String: avatarUrl, Valid: avatarUrl != ""},
 		}
 
