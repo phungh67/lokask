@@ -135,12 +135,21 @@ const AuthPromptDialog = ({
   const handleGoogleSuccess = async (tokenResponse: any) => {
     setIsLoading(true);
     try {
-      // Send the Google token to our Go backend
-      const res = await googleLogin(tokenResponse.access_token);
+      const isSignup = step === "signup";
+      const targetRole = isSignup ? selectedRole : undefined;
+      const targetCity =
+        isSignup && selectedRole === "consultant"
+          ? (cityId as number)
+          : undefined;
+
+      const res = await googleLogin(
+        tokenResponse.access_token,
+        targetRole,
+        targetCity,
+      );
 
       toast.success(`Welcome, ${res.user.full_name}!`);
 
-      // Store using our centralized utility
       AuthStorage.setToken(res.token);
       AuthStorage.setUser(res.user);
 
@@ -266,7 +275,7 @@ const AuthPromptDialog = ({
             <span className="bg-background px-4 text-muted-foreground">or</span>
           </div>
         </div>
-        
+
         <Input
           type="email"
           placeholder="Email address"
@@ -419,6 +428,37 @@ const AuthPromptDialog = ({
           >
             Consultant
           </button>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 rounded-full font-medium text-base relative border-2 hover:bg-gray-50 flex items-center justify-center gap-3 mt-4"
+          onClick={() => {
+            // Safeguard: Ensure city is picked first
+            if (selectedRole === "consultant" && !cityId) {
+              toast.error("Please select a city from the list before continuing with Google.");
+              return;
+            }
+            loginWithGoogle();
+          }}
+          disabled={isLoading}
+        >
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="w-5 h-5"
+          />
+          Sign up with Google
+        </Button>
+
+        <div className="relative py-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border/60" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase font-medium">
+            <span className="bg-background px-4 text-muted-foreground">or sign up with email</span>
+          </div>
         </div>
 
         <Input

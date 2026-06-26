@@ -447,7 +447,9 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 // support google auth
 func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 	var req struct {
-		Token string `json:"token"`
+		Token  string `json:"token"`
+		Role   string `json:"role"`
+		CityID int    `json:"city_id"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -496,6 +498,13 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 	var consultantID string
 
 	if user == nil || user.ID == "" {
+		// check role
+		if req.Role == "consultant" && req.CityID <= 0 {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Consultants must choose a base city.",
+			})
+		}
+
 		tx, err := h.DB.Beginx()
 		if err != nil {
 			log.Printf("[ERROR][AUTH] Error starting transaction: %v", err)
@@ -520,11 +529,31 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 			})
 		}
 
-		// Google accounts are inherently verified. Override the default status.
 		if _, err := tx.Exec("UPDATE users SET is_verified = true WHERE id = $1", user.ID); err != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"error": "Internal server error",
 			})
+		}
+
+		if req.Role == "consultant" {
+			uID, err := uuid.Parse(user.ID)
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{
+					"error": "Internal ID conversion error",
+				})
+			}
+
+			consultant := &repository.Consultant{
+				UserID: uID,
+				CityID: req.CityID,
+			}
+
+			if err := h.ConsultantRepo.CreateConsultantTx(tx, consultant); err != nil {
+				return c.Status(500).JSON(fiber.Map{
+					"error": "Failed to create consultant profile",
+				})
+			}
+			role = "consultant"
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -534,6 +563,10 @@ func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
 		}
 
 		user.IsVerified = true
+
+		if role == "consultant" {
+			h.DB.Get(&consultantID, "SELECT id FROM consultants WHERE user_id=$1", user.ID)
+		}
 
 	} else {
 		if !user.IsVerified {

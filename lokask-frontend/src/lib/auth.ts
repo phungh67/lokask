@@ -85,9 +85,9 @@ export const resetPassword = async (token: string, new_password: string) => {
   });
 };
 
-export const googleLogin = async (googleToken: string) => {
+export const googleLogin = async (token: string, role?: string, city_id?: number) => {
   return fetchJson<any>("/auth/google", {
     method: "POST",
-    body: JSON.stringify({ token: googleToken }),
+    body: JSON.stringify({ token, role, city_id }),
   });
 };
