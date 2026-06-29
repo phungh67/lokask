@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, MessageCircle, Sparkles, User, MessageSquare, Wallet, MapPin, Star } from "lucide-react";
+import { 
+  Search, MessageCircle, Sparkles, User, MessageSquare, 
+  Wallet, MapPin, Star, ShieldCheck, Clock, BadgeCheck, 
+  Bot, CheckCircle2, XCircle
+} from "lucide-react";
 
-// --- PURE CSS UI MOCKUPS ---
+// --- 1. PURE CSS UI MOCKUPS (From Step 2) ---
 const ConsultantCardMockup = () => (
   <div className="bg-white p-5 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 w-72 mx-auto rotate-[-2deg] hover:rotate-0 transition-all duration-300">
     <div className="flex items-center gap-4 mb-4">
@@ -30,7 +34,7 @@ const ChatInterfaceMockup = () => (
       Is it safe to walk around District 1 at 2 AM?
     </div>
     <div className="self-start bg-gray-100 text-gray-700 text-[11px] py-2 px-3 rounded-2xl rounded-bl-none max-w-[85%] shadow-sm">
-      Absolutely! Just stick to the main lit streets. I can send you a map of the best late-night food spots there if you want!
+      Absolutely! Just stick to the main lit streets. I can send you a map of the best late-night spots!
     </div>
   </div>
 );
@@ -84,8 +88,8 @@ const EarningsMockup = () => (
     <div className="text-xs text-gray-400 font-medium tracking-wide uppercase">Available Balance</div>
   </div>
 );
-// ----------------------------
 
+// --- DATA STRUCTURES ---
 const travelerSteps = [
   {
     icon: Search,
@@ -128,16 +132,30 @@ const localSteps = [
   },
 ];
 
+const scenarios = [
+  {
+    q: "I'm highly allergic to peanuts. Can you write down exactly what I need to show waiters in Hanoi?",
+    a: "Of course! I'll write it out in formal Vietnamese for you, and give you a list of 5 local dishes that never use peanuts so you can eat stress-free."
+  },
+  {
+    q: "Does the 4-day JR train pass actually make sense if I'm only going from Tokyo to Kyoto once?",
+    a: "Actually, no. It's cheaper to just buy a single Shinkansen ticket. I'll send you the exact booking link so you don't get overcharged by agencies."
+  },
+  {
+    q: "We have one free afternoon in Rome. Where can we get incredible pasta away from the tourist crowds?",
+    a: "Skip the Pantheon area. Walk 15 mins to Testaccio. Go to 'Flavio al Velavevodetto' and order the Cacio e Pepe. Tell them Marco sent you!"
+  }
+];
+
 const HowItWorks = () => {
   const [view, setView] = useState<"traveler" | "local">("traveler");
-
   const currentSteps = view === "traveler" ? travelerSteps : localSteps;
 
   return (
     <div className="w-full bg-[#F5F2EE] min-h-screen"> 
+      
+      {/* 1 & 2. HERO & STEPS SECTION (With Mockups) */}
       <div className="py-16 lg:py-24">
-        
-        {/* Header & Toggle Section */}
         <div className="max-w-3xl mx-auto text-center mb-20 px-6">
           <h1 className="text-4xl lg:text-6xl font-display font-bold text-foreground mb-6 transition-all">
             How Lokask works
@@ -152,9 +170,7 @@ const HowItWorks = () => {
             <button
               onClick={() => setView("traveler")}
               className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 ${
-                view === "traveler"
-                  ? "bg-white text-primary shadow-md"
-                  : "text-gray-500 hover:text-gray-700"
+                view === "traveler" ? "bg-white text-primary shadow-md" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               For Travelers
@@ -162,9 +178,7 @@ const HowItWorks = () => {
             <button
               onClick={() => setView("local")}
               className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 ${
-                view === "local"
-                  ? "bg-white text-primary shadow-md"
-                  : "text-gray-500 hover:text-gray-700"
+                view === "local" ? "bg-white text-primary shadow-md" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               For Locals
@@ -172,19 +186,15 @@ const HowItWorks = () => {
           </div>
         </div>
 
-        {/* Alternating Steps Section */}
-        <div className="max-w-5xl mx-auto px-6 space-y-24 mb-24">
+        <div className="max-w-5xl mx-auto px-6 space-y-24">
           {currentSteps.map((step, index) => {
-            // Determine if the image should be on the left or right
             const isImageLeft = index % 2 !== 0;
-
             return (
               <div 
                 key={`${view}-${index}`} 
                 className={`flex flex-col gap-12 items-center md:flex-row animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both ${isImageLeft ? 'md:flex-row-reverse' : ''}`}
                 style={{ animationDelay: `${index * 150}ms` }}
               >
-                {/* Text Side */}
                 <div className="flex-1 text-center md:text-left">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto md:mx-0 mb-6">
                     <step.icon size={32} className="text-primary" />
@@ -197,41 +207,164 @@ const HowItWorks = () => {
                   </p>
                 </div>
 
-                {/* Visual Side */}
                 <div className="flex-1 w-full flex justify-center py-6">
                   <div className="relative">
-                    {/* Decorative background blob */}
                     <div className="absolute inset-0 bg-primary/5 rounded-full blur-3xl transform scale-150"></div>
-                    {/* The UI Mockup */}
-                    <div className="relative z-10">
-                      {step.visual}
-                    </div>
+                    <div className="relative z-10">{step.visual}</div>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      </div>
 
-        {/* Dynamic CTA Button */}
-        <div className="text-center px-6">
-          {view === "traveler" ? (
-            <Link
-              to="/explore-locals"
-              className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:opacity-90 hover:scale-105 transition-all shadow-lg shadow-primary/20 animate-in fade-in"
-            >
-              Start exploring locals
-            </Link>
-          ) : (
-            <Link
-              to="/become-local"
-              className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:opacity-90 hover:scale-105 transition-all shadow-lg shadow-primary/20 animate-in fade-in"
-            >
-              Become a local on Lokask
-            </Link>
-          )}
+      {/* 5. SOCIAL PROOF / SCENARIOS */}
+      <div className="py-20 lg:py-28 bg-white border-y border-gray-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-display font-bold text-foreground mb-4">
+              Real advice you can't Google.
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Algorithms don't eat at local cafes or navigate unexpected train delays. Humans do.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {scenarios.map((scenario, i) => (
+              <div key={i} className="bg-[#F5F2EE] rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
+                <div className="self-end bg-primary/10 text-gray-800 text-sm py-3 px-4 rounded-2xl rounded-tr-none w-full shadow-sm">
+                  <span className="font-semibold text-primary block mb-1">Traveler asks:</span>
+                  "{scenario.q}"
+                </div>
+                <div className="self-start bg-white text-gray-700 text-sm py-3 px-4 rounded-2xl rounded-tl-none w-full shadow-sm border border-gray-50">
+                  <span className="font-semibold text-emerald-600 block mb-1">Local answers:</span>
+                  {scenario.a}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* 3. ANTI-BOT COMPARISON */}
+      <div className="py-20 lg:py-28 bg-[#F5F2EE]">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-display font-bold text-foreground mb-4">
+              Why pay for a Local?
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-white rounded-3xl p-8 border border-gray-200 opacity-70">
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500">
+                  <Bot size={24} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-600">Free AI Travel Bots</h3>
+              </div>
+              <ul className="space-y-5">
+                {[
+                  "Scrapes outdated TripAdvisor reviews",
+                  "Recommends massive tourist traps",
+                  "Doesn't know if a street is under construction today",
+                  "Can't verify local safety nuances"
+                ].map((item, i) => (
+                  <li key={i} className="flex gap-3 text-gray-500">
+                    <XCircle className="w-6 h-6 text-red-400 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 border-2 border-primary shadow-xl shadow-primary/10 relative">
+              <div className="absolute -top-4 -right-4 bg-primary text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md uppercase tracking-wider">
+                The Lokask Way
+              </div>
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <User size={24} />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">A Lokask Local</h3>
+              </div>
+              <ul className="space-y-5">
+                {[
+                  "Personalized advice based on your exact needs",
+                  "Unmarked hidden gems and local favorites",
+                  "Real-time knowledge of weather, closures, and events",
+                  "Cultural nuances, etiquette, and safety context"
+                ].map((item, i) => (
+                  <li key={i} className="flex gap-3 text-gray-700 font-medium">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. TRUST, SAFETY & PAYMENTS */}
+      <div className="py-20 lg:py-24 bg-white border-t border-gray-100">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-10 text-center">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 mb-6">
+                <ShieldCheck size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Secure Payments</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Your payment is held securely in escrow. Locals only get paid when they actively provide the consultation package you purchased.
+              </p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-6">
+                <Clock size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Timed Sessions</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Purchase packages ranging from a 24-hour quick Q&A to a 7-day deep dive. Unlimited messaging while your session is active.
+              </p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 mb-6">
+                <BadgeCheck size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Quality Guaranteed</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                If a local fails to respond during your active session window, you are protected by our automatic refund policy.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. FINAL CTA */}
+      <div className="py-20 bg-[#F5F2EE] text-center px-6">
+        <h2 className="text-3xl lg:text-4xl font-display font-bold text-foreground mb-8">
+          Ready to experience travel differently?
+        </h2>
+        {view === "traveler" ? (
+          <Link
+            to="/explore-locals"
+            className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:opacity-90 hover:scale-105 transition-all shadow-lg shadow-primary/20"
+          >
+            Start exploring locals
+          </Link>
+        ) : (
+          <Link
+            to="/become-local"
+            className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:opacity-90 hover:scale-105 transition-all shadow-lg shadow-primary/20"
+          >
+            Become a local on Lokask
+          </Link>
+        )}
+      </div>
+
     </div>
   );
 };
