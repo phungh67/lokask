@@ -39,9 +39,9 @@ const Index = () => {
 
       <IdeasGrid />
 
-      <CTASection />
-
       <HowItWorksSection />
+
+      <CTASection />
     </div>
   );
 };
