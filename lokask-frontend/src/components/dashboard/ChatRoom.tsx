@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ChatPanel from "@/components/dashboard/ChatPanel";
 import { useWebSocket } from "@/lib/websocket";
 import { getChatHistory, sendMessage } from "@/lib/chat";
@@ -25,6 +25,9 @@ const DashboardChatRoom = ({
   onMessageUpdate
 }: DashboardChatRoomProps) => {
   const [currentMessages, setCurrentMessages] = useState<any[]>([]);
+
+  //lock
+  const isSendingRef = useRef(false);
 
   // 1. Load Initial Chat History
   useEffect(() => {
@@ -90,6 +93,9 @@ const DashboardChatRoom = ({
 
   // 3. Handle Send Message 
   const handleSendMessage = async (content: string) => {
+    if (!content.trim() || isSendingRef.current) return;
+    isSendingRef.current = true;
+
     const isActingAsConsultant = conversationData?.consultantId === accountUserId;
     const isSelfChat = conversationData?.consultantId === conversationData?.travelerId;
 
@@ -126,6 +132,8 @@ const DashboardChatRoom = ({
       } else {
         toast({ title: "Message Failed", description: error.message || "The server rejected your message.", variant: "destructive" });
       }
+    } finally {
+      isSendingRef.current = false;
     }
   };
 

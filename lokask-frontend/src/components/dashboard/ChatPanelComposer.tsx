@@ -16,13 +16,6 @@ const ChatPanelComposer = ({ onSendMessage }: ChatPanelComposerProps) => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
   return (
     <div className="p-4 md:px-6 border-t border-border/40 bg-white shrink-0">
       <form onSubmit={handleSubmit}>
@@ -39,7 +32,6 @@ const ChatPanelComposer = ({ onSendMessage }: ChatPanelComposerProps) => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder="Ask anything..."
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
