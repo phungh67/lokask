@@ -3,6 +3,7 @@ import DestinationGrid from "@/components/DestinationGrid";
 import LocalsCarousel from "@/components/LocalsCarousel";
 import IdeasGrid from "@/components/IdeasGrid";
 import CTASection from "@/components/CTASection";
+import HowItWorksSection from "@/components/home/HowItWorksSection";
 import Footer from "@/components/Footer";
 
 // logical import
@@ -39,6 +40,8 @@ const Index = () => {
       <IdeasGrid />
 
       <CTASection />
+
+      <HowItWorksSection />
     </div>
   );
 };
