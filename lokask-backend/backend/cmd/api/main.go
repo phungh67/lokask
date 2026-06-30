@@ -112,6 +112,9 @@ func main() {
 		BodyLimit: 20 * 1024 * 1024,
 	})
 
+	// block bot scanner
+	app.Use(middleware.BlockScanners())
+
 	// limiter
 	authLimiter := limiter.New(limiter.Config{
 		Max:        5,
