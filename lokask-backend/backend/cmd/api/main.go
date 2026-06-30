@@ -139,11 +139,11 @@ func main() {
 
 	authGroup := api.Group("/auth", authLimiter)
 	// post (auth)
-	authGroup.Post("/auth/register", authHandler.Register)
-	authGroup.Post("/auth/login", authHandler.Login)
-	authGroup.Post("/auth/google", authHandler.GoogleLogin)
+	authGroup.Post("/register", authHandler.Register)
+	authGroup.Post("/login", authHandler.Login)
+	authGroup.Post("/google", authHandler.GoogleLogin)
 
-	authGroup.Post("/auth/logout", authHandler.Logout)
+	authGroup.Post("/logout", authHandler.Logout)
 
 	// blog
 	api.Get("/blogs", blogHandler.List)
@@ -161,8 +161,8 @@ func main() {
 
 	// public reset password
 	//reset password
-	authGroup.Post("/auth/lost-password", authHandler.LostPassword)
-	authGroup.Post("/auth/reset-password", authHandler.ResetPassword)
+	authGroup.Post("/lost-password", authHandler.LostPassword)
+	authGroup.Post("/reset-password", authHandler.ResetPassword)
 
 	protected := api.Group("/", middleware.Protect())
 
