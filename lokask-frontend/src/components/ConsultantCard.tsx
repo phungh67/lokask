@@ -125,7 +125,7 @@ const ConsultantCard = ({
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
-        defaultStep="signup"
+        defaultStep="login"
         defaultRole="traveller"
       />
     </div>
