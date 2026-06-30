@@ -17,14 +17,13 @@ const ConsultantCard = ({
   const navigate = useNavigate();
   const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
 
-  // 🟢 Navigation handler for the whole card
   const handleCardClick = () => {
     navigate(`/consultant/${consultant.id}`);
   };
 
   return (
     <div 
-      onClick={handleCardClick} // 🟢 Make the card clickable
+      onClick={handleCardClick} 
       className="relative bg-gradient-to-b from-terracotta-light to-white rounded-2xl p-6 shadow-sm border border-primary/10 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 w-full max-w-[280px] cursor-pointer group h-full flex flex-col"
     >
       
@@ -66,7 +65,7 @@ const ConsultantCard = ({
             className="absolute right-0 p-1.5 rounded-full hover:bg-gray-100 transition-all"
             onClick={(e) => {
               e.preventDefault();
-              e.stopPropagation(); // 🟢 Prevent triggering the card click
+              e.stopPropagation();
               requireAuth(() => {}, { actionType: 'wishlist', consultantName: consultant.name });
             }}
           >
@@ -109,7 +108,6 @@ const ConsultantCard = ({
           <span>{consultant.helpedCount} travellers helped</span>
         </div>
 
-        {/* 🟢 Swapped Link for a Button to prevent nested <a> tag behavior */}
         <Button 
           onClick={(e) => {
             e.stopPropagation(); // Prevent duplicate navigation
