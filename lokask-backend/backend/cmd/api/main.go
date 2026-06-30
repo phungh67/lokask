@@ -41,18 +41,19 @@ func main() {
 	var storageService storage.FileStorage
 	var err error
 
-	if storageMode == "dev" {
+	switch {
+	case storageMode == "dev":
 		storageService, err = storage.ConnectToMinioClient()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		log.Print("[INFO] Connect to Minio Successfully...\n")
-	} else if storageMode == "prod" {
+		log.Printf("[INFO][STORAGE] Connect succefully to Minio service.\n")
+	case storageMode == "prod":
 		storageService, err = storage.ConnectToS3Client()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err.Error())
 		}
-		log.Print("[INFO] Connect to S3 successfully...\n")
+		log.Print("[INFO][STORAGE] Connect succesfully to S3 service.\n")
 	}
 
 	// setup redis
@@ -112,19 +113,10 @@ func main() {
 	})
 
 	// limiter
-	app.Use(limiter.New(limiter.Config{
-		Max:               1,
-		Expiration:        24 * time.Hour,
-		LimiterMiddleware: limiter.SlidingWindow{},
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
-		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"message": "Access denied.",
-			})
-		},
-	}))
+	authLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+	})
 
 	// logger setup
 	app.Use(logger.New())
@@ -142,12 +134,13 @@ func main() {
 	// get extra
 	api.Get("/niches", consultantHandler.GetNiches)
 
+	authGroup := api.Group("/auth", authLimiter)
 	// post (auth)
-	api.Post("/auth/register", authHandler.Register)
-	api.Post("/auth/login", authHandler.Login)
-	api.Post("/auth/google", authHandler.GoogleLogin)
+	authGroup.Post("/auth/register", authHandler.Register)
+	authGroup.Post("/auth/login", authHandler.Login)
+	authGroup.Post("/auth/google", authHandler.GoogleLogin)
 
-	api.Post("/auth/logout", authHandler.Logout)
+	authGroup.Post("/auth/logout", authHandler.Logout)
 
 	// blog
 	api.Get("/blogs", blogHandler.List)
@@ -165,8 +158,8 @@ func main() {
 
 	// public reset password
 	//reset password
-	api.Post("/auth/lost-password", authHandler.LostPassword)
-	api.Post("/auth/reset-password", authHandler.ResetPassword)
+	authGroup.Post("/auth/lost-password", authHandler.LostPassword)
+	authGroup.Post("/auth/reset-password", authHandler.ResetPassword)
 
 	protected := api.Group("/", middleware.Protect())
 
