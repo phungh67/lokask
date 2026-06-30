@@ -112,9 +112,10 @@ func main() {
 	})
 
 	// limiter
-	app.Use("/api/.env", limiter.New(limiter.Config{
-		Max:        1,
-		Expiration: 24 * time.Hour,
+	app.Use(limiter.New(limiter.Config{
+		Max:               1,
+		Expiration:        24 * time.Hour,
+		LimiterMiddleware: limiter.SlidingWindow{},
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
 		},
@@ -130,29 +131,6 @@ func main() {
 
 	// register routes
 	api := app.Group("/api/v1")
-
-	// test email
-	app.Get("/api/v1/test-email", func(c *fiber.Ctx) error {
-		toEmail := c.Query("to")
-		if toEmail == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Missing 'to' parameter. Usage: /api/v1/test-email?to=lhpespoir39@email.com",
-			})
-		}
-
-		err := mailService.SendMessageNotification(toEmail, "Test User", "No Reply", "Hello Worlds")
-
-		if err != nil {
-			log.Printf("[ERROR][MAILER] Error %v", err)
-		}
-
-		return c.JSON(fiber.Map{
-			"status": "success",
-		})
-	})
-
-	// get
-	// app.Get("/api/v1/proxy/image", proxyHandler.ProxyImage)
 
 	// get consultant
 	api.Get("/consultants", consultantHandler.List)
