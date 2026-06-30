@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"asklocal/internal/helper"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
 	"log"
@@ -30,6 +31,16 @@ func (h *UserHandler) UploadAvatar(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
+
+	safeFileName, err := helper.ValidateAndSecureFilename(fileHeader.Filename)
+	if err != nil {
+		log.Printf("[WARN][UPLOAD] Blocked upload: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad request.",
+		})
+	}
+
+	fileHeader.Filename = safeFileName
 
 	url, err := h.Storage.UploadProfilePicture(fileHeader, userID.String())
 

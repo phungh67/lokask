@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -224,20 +223,25 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 			})
 		}
 
-		santizedFileName := filepath.Base(fileHeader.Filename)
+		safeFileName, err := helper.ValidateAndSecureFilename(fileHeader.Filename)
+		if err != nil {
+			log.Printf("[WARN][UPLOAD] Blocked upload: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "Bad request.",
+			})
+		}
 
-		fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), santizedFileName)
 		var objectKey string
 
 		if mediaType == "cover" {
-			objectKey = fmt.Sprintf("covers/%s/%s", userID, fileName)
+			objectKey = fmt.Sprintf("covers/%s/%s", userID, safeFileName)
 		} else {
-			objectKey = fmt.Sprintf("galleries/%s/%s", userID, fileName)
+			objectKey = fmt.Sprintf("galleries/%s/%s", userID, safeFileName)
 		}
 
-		_, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
+		_, err = h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
 		if err != nil {
-			log.Printf("[ERROR] Bucket upload failed for %s: %v", fileName, err)
+			log.Printf("[ERROR] Bucket upload failed for %s: %v", safeFileName, err)
 			continue
 		}
 
@@ -248,7 +252,7 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to update database for %s: %v", fileName, err)
+			log.Printf("[ERROR] Failed to update database for %s: %v", safeFileName, err)
 			continue
 		}
 
