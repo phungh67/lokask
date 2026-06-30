@@ -48,14 +48,12 @@ func (h *ConsultantHandler) GetProfile(c *fiber.Ctx) error {
 
 	profile, err := h.Repo.GetProfileByID(c.Context(), id)
 	if err != nil {
-		log.Printf("Error fetching consultant: %v\n", err)
+		log.Printf("[ERROR] Error fetching consultant: %v\n", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":   err.Error(),
-			"details": "Check backend terminal for full trace",
+			"error": "internal server error.",
 		})
 	}
 
-	// log.Printf("[LOG] Successfully get profile with %v", profile)
 	return c.JSON(profile)
 }
 
@@ -104,7 +102,10 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 
 	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, nicheFilter, page, 12)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("[ERROR] Error when querying consultants: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error.",
+		})
 	}
 
 	// Return empty list instead of null if no results
@@ -122,26 +123,20 @@ func (h *ConsultantHandler) List(c *fiber.Ctx) error {
 
 // get by user id
 func (h *ConsultantHandler) GetConsultantByUserID(c *fiber.Ctx) error {
-	// 1. Get User ID from URL parameter
 	userIDParam := c.Params("id")
 	userID, err := uuid.Parse(userIDParam)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid User ID format"})
 	}
 
-	// 2. Call the Repository
-	// (Ensure you added GetProfileByUserID to your repository in the previous step!)
 	profile, err := h.Repo.GetProfileByUserID(c.Context(), userID)
 
 	if err != nil {
-		// If SQL returns "no rows", it means this user exists but is NOT a consultant yet.
-		// We return 404 so the Frontend knows to show the "Become a Guide" banner.
 		return c.Status(404).JSON(fiber.Map{
 			"error": "User is not a consultant",
 		})
 	}
 
-	// 3. Return the profile
 	return c.JSON(profile)
 }
 
@@ -149,7 +144,10 @@ func (h *ConsultantHandler) GetConsultantByUserID(c *fiber.Ctx) error {
 func (h *ConsultantHandler) GetNiches(c *fiber.Ctx) error {
 	niches, err := h.Repo.ListNiches(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("[ERROR] Cannot get consultant's niches: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error.",
+		})
 	}
 	return c.JSON(niches)
 }
@@ -157,7 +155,10 @@ func (h *ConsultantHandler) GetNiches(c *fiber.Ctx) error {
 func (h *ConsultantHandler) GetLanguages(c *fiber.Ctx) error {
 	language, err := h.Repo.ListUniqueLanguages(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("[ERROR] Cannot get languagues: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Internal server error.",
+		})
 	}
 	return c.JSON(language)
 }
@@ -172,9 +173,9 @@ func (h *ConsultantHandler) GetCities(c *fiber.Ctx) error {
 
 	err := h.Repo.DB.Select(&cities, "SELECT id, name, country_code FROM cities ORDER BY name ASC")
 	if err != nil {
+		log.Printf("[ERROR] Cannot get citites: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":  "Failed to fetch cities",
-			"detail": err.Error(),
+			"error": "Internal server error.",
 		})
 	}
 	return c.JSON(cities)
@@ -186,23 +187,22 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 	userID, err := uuid.Parse(userIDStr)      // convert to uuid format (assume that we get the string)
 
 	if err != nil {
+		log.Printf("[ERROR][PARSE] Error when parsing data: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"message": "UUID error, either malformed or mismatched",
-			"error":   err.Error(),
+			"message": "Internal server error",
 		})
 	}
 
 	// upload multiple files
 	form, err := c.MultipartForm()
 	if err != nil {
+		log.Printf("[ERROR] Error when parsing data: %v", err)
 		return c.Status(400).JSON(fiber.Map{
 			"message": "Error",
 		})
 	}
 
 	// log
-	log.Printf("[ERROR] Error when parsing data: %v", err)
-
 	files := form.File["file"]
 	if len(files) == 0 {
 		files = form.File["gallery_images"]
@@ -224,7 +224,9 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 			})
 		}
 
-		fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), fileHeader.Filename)
+		santizedFileName := filepath.Base(fileHeader.Filename)
+
+		fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), santizedFileName)
 		var objectKey string
 
 		if mediaType == "cover" {
@@ -235,7 +237,7 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 
 		_, err := h.Storage.UploadFile(fileHeader, userID.String(), objectKey)
 		if err != nil {
-			log.Printf("[ERR] Bucket upload failed for %s: %v", fileName, err)
+			log.Printf("[ERROR] Bucket upload failed for %s: %v", fileName, err)
 			continue
 		}
 
@@ -246,14 +248,14 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		}
 
 		if err != nil {
-			log.Printf("[ERR] Failed to update database for %s: %v", fileName, err)
+			log.Printf("[ERROR] Failed to update database for %s: %v", fileName, err)
 			continue
 		}
 
 		mediaURL, err := helper.BuildMediaURL(objectKey)
 		if err == nil {
 			uploadedURLs = append(uploadedURLs, mediaURL)
-			log.Printf("[LOG] Upload media successfully to %s\n", mediaURL)
+			log.Printf("[INFO] Upload media successfully to %s\n", mediaURL)
 		}
 
 		if mediaType == "cover" {

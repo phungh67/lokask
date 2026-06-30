@@ -16,7 +16,7 @@ My analysis focuses on identifying potential vulnerabilities related to input va
 
 The primary vulnerability surface area is the setup of the API routes (`app.Group("/api/v1")` and `protected.Group("/")`), as these directly handle external user input.
 
-#### 1.1. **`app.Get("/api/v1/test-email", func(c *fiber.Ctx) error { ... })`**
+#### 1.1. **`app.Get("/api/v1/test-email", func(c *fiber.Ctx) error { ... })`** DELETED - Safe
 *   **Vulnerable Function:** `mailService.SendMessageNotification(toEmail, "Test User", "No Reply", "Hello Worlds")`
 *   **Input/Object:** `toEmail` (Source: `c.Query("to")`)
 *   **Vulnerability Type:** **SSRF / Excessive Function Scope / API Abuse.**

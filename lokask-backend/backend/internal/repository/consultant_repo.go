@@ -256,6 +256,9 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	if page < 1 {
 		page = 1
 	}
+	if page > 100 {
+		page = 100
+	}
 	if limit < 1 {
 		limit = 12
 	}
