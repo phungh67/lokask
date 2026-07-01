@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"asklocal/internal/middleware"
 	"context"
 	"fmt"
 	"log"
@@ -27,7 +28,7 @@ type S3Client struct {
 
 // Connection
 func ConnectToS3Client() (*S3Client, error) {
-	defaultRegion := getEnv("AWS_DEFAULT_REGION", "us-east-1")
+	defaultRegion := middleware.GetEnv("AWS_DEFAULT_REGION", "us-east-1")
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(defaultRegion))
 	if err != nil {
@@ -51,7 +52,7 @@ func (s *S3Client) UploadProfilePicture(file *multipart.FileHeader, userID strin
 	ext := filepath.Ext(file.Filename)
 	objectKey := fmt.Sprintf("avatar/%s_%d%s", userID, time.Now().Unix(), ext)
 
-	bucketName := getEnv("AWS_S3_AVATAR_BUCKET", "lokask-user-avatars")
+	bucketName := middleware.GetEnv("AWS_S3_AVATAR_BUCKET", "lokask-user-avatars")
 	contentType := file.Header.Get("Content-type")
 
 	_, err = s.Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -78,7 +79,7 @@ func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, object
 	}
 	defer src.Close()
 
-	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	bucketName := middleware.GetEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
 	contentType := file.Header.Get("Content-Type")
 
 	_, err = s.Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -111,7 +112,7 @@ func (s *S3Client) UploadBlogCover(file *multipart.FileHeader, blogID string) (s
 
 	objectKey := fmt.Sprintf("blog/%s/cover%s", blogID, ext)
 
-	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	bucketName := middleware.GetEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
 	contentType := file.Header.Get("Content-Type")
 
 	_, err = s.Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -130,7 +131,7 @@ func (s *S3Client) UploadBlogCover(file *multipart.FileHeader, blogID string) (s
 }
 
 func (s *S3Client) DeleteFile(ctx context.Context, key string) error {
-	bucketName := getEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	bucketName := middleware.GetEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
 	if bucketName == "" {
 		return fmt.Errorf("AWS_S3_MEDIA_BUCKET environment variable is not set.")
 	}

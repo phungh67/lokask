@@ -1,10 +1,11 @@
 package storage
 
 import (
+	"asklocal/internal/middleware"
 	"context"
 	"fmt"
 	"log"
-	"mime/multipart" // <--- Import this
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"time"
@@ -100,7 +101,7 @@ func (m *MinioClient) UploadProfilePicture(file *multipart.FileHeader, userID st
 
 	// inside the container, it should be like this
 	// @TODO dynamic
-	publicURL := getEnv("MINIO_PUBLIC_URL", "http://localhost:9001")
+	publicURL := middleware.GetEnv("MINIO_PUBLIC_URL", "http://localhost:9001")
 	url := fmt.Sprintf("%s/%s/%s", publicURL, m.Bucket, objectName)
 	return url, nil
 }
@@ -119,7 +120,7 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, obj
 	ctx := context.Background()
 	contentType := file.Header.Get("Content-Type")
 
-	bucketName := getEnv("MINIO_MEDIA_BUCKET", "lokask-media")
+	bucketName := middleware.GetEnv("MINIO_MEDIA_BUCKET", "lokask-media")
 
 	if err := m.CreateIfNotExist(ctx, bucketName); err != nil {
 		log.Printf("[ERR][MINIO] Bucket created failed: %v", err)
@@ -133,7 +134,7 @@ func (m *MinioClient) UploadFile(file *multipart.FileHeader, ownerID string, obj
 		return "", err
 	}
 
-	publicURL := getEnv("MINIO_PUBLIC_URL", "http://localhost:9000")
+	publicURL := middleware.GetEnv("MINIO_PUBLIC_URL", "http://localhost:9000")
 	url := fmt.Sprintf("%s/%s/%s", publicURL, bucketName, objectKey)
 
 	return url, nil
@@ -156,7 +157,7 @@ func (m *MinioClient) UploadBlogCover(file *multipart.FileHeader, blogID string)
 
 	ctx := context.Background()
 	contentType := file.Header.Get("Content-Type")
-	bucketName := getEnv("MINIO_MEDIA_BUCKET", "lokask-media")
+	bucketName := middleware.GetEnv("MINIO_MEDIA_BUCKET", "lokask-media")
 
 	if err := m.CreateIfNotExist(ctx, bucketName); err != nil {
 		log.Printf("[ERR][MINIO] Bucket creation failed: %v", err)
@@ -222,11 +223,4 @@ func (m *MinioClient) CreateIfNotExist(ctx context.Context, bucketName string) e
 		log.Printf("[LOG][MINIO] Auto-created bucket %s successfully.\n", bucketName)
 	}
 	return nil
-}
-
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
 }
