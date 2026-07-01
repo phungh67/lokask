@@ -3,31 +3,20 @@
 package handler
 
 import (
-	"asklocal/internal/middleware"
-	"asklocal/internal/storage"
-	"context"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gofiber/fiber/v2"
+	"github.com/minio/minio-go/v7"
 )
 
-func MediaProxyHandler(c *fiber.Ctx, s storage.FileStorage) error {
-	// get object key
-	key := c.Params("key")
-	if key == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Bad request",
-		})
+type FileStorageHandler struct {
+	S3Client    *s3.Client
+	MinioClient *minio.Client
+	Bucket      string
+}
+
+func NewFileStorageHandler(s3Client *s3.Client, minioClient *minio.Client, bucket string) *FileStorageHandler {
+	return &FileStorageHandler{
+		S3Client:    s3Client,
+		MinioClient: minioClient,
+		Bucket:      bucket,
 	}
-
-	// setup parameter
-	bucketName := middleware.GetEnv("AWS_S3_MEDIA_BUCKET", "deun1-general-purpose-bucket")
-	input := &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(key),
-	}
-
-	result, err := s.GetObject(context.TODO(), input)
-
 }
