@@ -3,20 +3,15 @@
 package handler
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/minio/minio-go/v7"
+	"asklocal/internal/storage"
 )
 
-type FileStorageHandler struct {
-	S3Client    *s3.Client
-	MinioClient *minio.Client
-	Bucket      string
+type StorageHandler struct {
+	Storage storage.FileStorage
 }
 
-func NewFileStorageHandler(s3Client *s3.Client, minioClient *minio.Client, bucket string) *FileStorageHandler {
-	return &FileStorageHandler{
-		S3Client:    s3Client,
-		MinioClient: minioClient,
-		Bucket:      bucket,
+func NewStorageHandler(s storage.FileStorage) *StorageHandler {
+	return &StorageHandler{
+		Storage: s,
 	}
 }
