@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/storage"
 	"fmt"
+	"log"
 	"mime"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,7 @@ func NewMediaHandler(storage storage.FileStorage) *MediaHandler {
 }
 
 func (h *MediaHandler) ServeMedia(c *fiber.Ctx) error {
+	log.Printf("[DEBUG] ServeMedia triggered for path: %s", c.Path())
 	objectKey := c.Params("*")
 	if objectKey == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

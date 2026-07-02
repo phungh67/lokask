@@ -267,13 +267,19 @@ func (h *ConsultantHandler) UploadMedia(c *fiber.Ctx) error {
 		}
 	}
 
+	var frontendURLs []string
+	for _, rawKey := range uploadedURLs {
+		frontendURL, _ := helper.BuildMediaURL(rawKey)
+		frontendURLs = append(frontendURLs, frontendURL)
+	}
+
 	response := fiber.Map{
 		"message": "Successfully uploaded media.",
 	}
 
-	if len(uploadedURLs) > 0 {
-		response["media_url"] = uploadedURLs[0]
-		response["media_urls"] = uploadedURLs
+	if len(frontendURLs) > 0 {
+		response["media_url"] = frontendURLs[0]
+		response["media_urls"] = frontendURLs
 	}
 
 	return c.JSON(response)
