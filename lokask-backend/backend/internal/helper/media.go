@@ -15,3 +15,15 @@ func BuildMediaURL(key string) (string, error) {
 
 	return "/media/" + key, nil
 }
+
+func ExtractMediaKey(frontendURL string) string {
+	if frontendURL == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(frontendURL, "http") {
+		return frontendURL
+	}
+
+	return strings.TrimPrefix(frontendURL, "/api/v1/media/")
+}
