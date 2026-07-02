@@ -74,6 +74,7 @@ func main() {
 
 	// Setup Components
 	// proxyHandler := handler.NewProxyHandler() // proxy handler, fix images error in browsers
+	mediaHandler := handler.NewMediaHandler(storageService)
 
 	// consultant
 	consultantRepo := repository.NewConsultantRepository(db)
@@ -136,6 +137,9 @@ func main() {
 
 	// get extra
 	api.Get("/niches", consultantHandler.GetNiches)
+
+	//
+	api.Get("/media/*", mediaHandler.ServeMedia)
 
 	authGroup := api.Group("/auth", authLimiter)
 	// post (auth)
