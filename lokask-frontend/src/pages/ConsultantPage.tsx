@@ -43,6 +43,7 @@ const ConsultantPage = () => {
 
   const [isWishlisted, setIsWishlisted] = useState(false);
 
+  // 🟢 Lightbox Gallery States
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -67,6 +68,7 @@ const ConsultantPage = () => {
     enabled: !!consultant?.userId,
   });
 
+  // 🟢 Keyboard Navigation for Lightbox
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isGalleryOpen) return;
@@ -120,6 +122,7 @@ const ConsultantPage = () => {
 
   const remainingImagesCount = Math.max(0, fetchedImages.length - 3);
 
+  // 🟢 Lightbox Handlers
   const openGallery = (index: number) => {
     if (index === 0 || fetchedImages.length > index) {
       setCurrentImageIndex(index);
@@ -282,6 +285,7 @@ const ConsultantPage = () => {
               </button>
             </div>
 
+            {/* 🟢 INTERACTIVE Gallery Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-12">
               {/* Main Image */}
               <div
@@ -325,6 +329,7 @@ const ConsultantPage = () => {
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                   )}
 
+                  {/* 🟢 Clickable overlay for remaining images */}
                   {remainingImagesCount > 0 && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px] transition-colors hover:bg-black/50">
                       <div className="bg-white/95 text-zinc-900 px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
@@ -585,10 +590,11 @@ const ConsultantPage = () => {
         open={showPrompt}
         onOpenChange={setShowPrompt}
         message={promptMessage}
-        defaultStep="login"
+        defaultStep="signup"
         defaultRole="traveller"
       />
 
+      {/* 🟢 FULLSCREEN LIGHTBOX COMPONENT */}
       {isGalleryOpen && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
           {/* Top Bar Navigation */}
