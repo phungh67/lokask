@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/middleware"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
 	"path/filepath"
@@ -18,6 +19,7 @@ type FileStorage interface {
 	UploadProfilePicture(file *multipart.FileHeader, userID string) (string, error)
 	UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error)
 	UploadBlogCover(file *multipart.FileHeader, blogID string) (string, error)
+	DownloadFile(ctx context.Context, key string) (io.ReadCloser, error)
 	DeleteFile(ctx context.Context, key string) error
 }
 
@@ -67,9 +69,7 @@ func (s *S3Client) UploadProfilePicture(file *multipart.FileHeader, userID strin
 		return "", err
 	}
 
-	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, s.Region, objectKey)
-
-	return url, nil
+	return objectKey, nil
 }
 
 func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, objectKey string) (string, error) {
@@ -94,8 +94,7 @@ func (s *S3Client) UploadFile(file *multipart.FileHeader, ownerID string, object
 		return "", err
 	}
 
-	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, s.Region, objectKey)
-	return url, nil
+	return objectKey, nil
 }
 
 func (s *S3Client) UploadBlogCover(file *multipart.FileHeader, blogID string) (string, error) {
@@ -146,4 +145,23 @@ func (s *S3Client) DeleteFile(ctx context.Context, key string) error {
 	}
 
 	return nil
+}
+
+func (s *S3Client) DownloadFile(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	bucketName := middleware.GetEnv("AWS_S3_MEDIA_BUCKET", "lokask-media")
+	if bucketName == "" {
+		return nil, fmt.Errorf("AWS_S3_MEDIA_BUCKET environment variable is not set.")
+	}
+
+	input := &s3.GetObjectInput{
+		Bucket: &bucketName,
+		Key:    &objectKey,
+	}
+
+	result, err := s.Client.GetObject(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Body, nil
 }

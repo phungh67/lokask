@@ -4,6 +4,7 @@ import (
 	"asklocal/internal/middleware"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
 	"os"
@@ -174,6 +175,25 @@ func (m *MinioClient) UploadBlogCover(file *multipart.FileHeader, blogID string)
 	}
 
 	return objectKey, nil
+}
+
+func (m *MinioClient) DownloadFile(ctx context.Context, key string) (io.ReadCloser, error) {
+	bucketName := middleware.GetEnv("MINIO_MEDIA_BUCKET", "lokask-media")
+
+	object, err := m.Client.GetObject(ctx, bucketName, key, minio.GetObjectOptions{})
+	if err != nil {
+		log.Printf("[MINIO] Failed to initiate download for key %s: %v", key, err)
+		return nil, err
+	}
+
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		log.Printf("[MINIO] File not found or inaccessible: %s | %v", key, err)
+		return nil, err
+	}
+
+	return object, nil
 }
 
 func (m *MinioClient) DeleteFile(ctx context.Context, key string) error {
