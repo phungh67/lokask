@@ -28,7 +28,6 @@ func (h *UserHandler) UploadAvatar(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"message": "No file uploaded",
-			"error":   err.Error(),
 		})
 	}
 
@@ -47,7 +46,6 @@ func (h *UserHandler) UploadAvatar(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "DB uploaded failed",
-			"error":   err.Error(),
 		})
 	}
 
@@ -56,7 +54,6 @@ func (h *UserHandler) UploadAvatar(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Failed to update user profile",
-			"error":   err.Error(),
 		})
 	}
 

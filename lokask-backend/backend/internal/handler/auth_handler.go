@@ -226,8 +226,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		uID, err := uuid.Parse(user.ID)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
-				"error":   "Internal ID conversion error",
-				"details": err.Error(),
+				"error": "Internal ID conversion error",
 			})
 		}
 
@@ -237,19 +236,19 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 
 		if err := h.ConsultantRepo.CreateConsultantTx(tx, consultant); err != nil {
-			log.Printf("Consultant creation failed: %v", err)
+			log.Printf("[ERROR][AUTH] Consultant creation failed: %v", err)
 			return c.Status(500).JSON(fiber.Map{
-				"error":  "Failed to create consultant profile",
-				"detail": err.Error(),
+				"error": "Failed to create consultant profile",
 			})
 		}
 	}
 
 	// commit (if we went to this, probably 90% we are safe)
 	if err := tx.Commit(); err != nil {
+		log.Printf("[ERROR][AUTH] Error transaction: %v", err)
+
 		return c.Status(500).JSON(fiber.Map{
-			"error":  "Failed to commit transaction",
-			"detail": err.Error(),
+			"error": "Failed to commit transaction",
 		})
 	}
 
