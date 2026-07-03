@@ -116,7 +116,7 @@ const ExploreLocals = () => {
                 </p>
               </div>
 
-              {/* 🟢 Added Explore Articles Button next to Filters */}
+              {/* 🟢 Explore Articles Button */}
               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
                 <Link to="/articles">
                   <Button className="h-9 bg-[#C56A49] hover:bg-[#A3553A] text-white transition-colors">
@@ -149,108 +149,120 @@ const ExploreLocals = () => {
               consultants
             </div>
 
-            {isLoading ? (
-              <div className="flex justify-center py-20">
-                <Loader2 className="animate-spin text-[#C56A49]" />
-              </div>
-            ) : error ? (
-              <div className="text-center py-20 text-red-500 font-medium">
-                Failed to load data.
-              </div>
-            ) : (
-              <>
+            {/* 🟢 BUG FIX: Replaced fragments with a stable container and key-tracked divs */}
+            <div className="relative min-h-[400px]">
+              {isLoading && (
                 <div
-                  className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 transition-opacity ${isFetching ? "opacity-50" : "opacity-100"}`}
+                  key="loading"
+                  className="absolute inset-0 flex justify-center items-start pt-20 bg-[#F5F3F0]/50 z-10"
                 >
-                  {consultants.map((c: any) => (
-                    <ConsultantCardCompact key={c.id} consultant={c} />
-                  ))}
+                  <Loader2 className="animate-spin text-[#C56A49] w-8 h-8" />
                 </div>
+              )}
 
-                <div className="mt-12 flex justify-center border-t border-[#DED9D3] pt-8">
-                  <Pagination>
-                    <PaginationContent className="gap-2">
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          className={cn(
-                            "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
-                            page === 1
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer",
-                          )}
-                        />
-                      </PaginationItem>
+              {error && !isLoading && (
+                <div
+                  key="error"
+                  className="text-center py-20 text-red-500 font-medium"
+                >
+                  Failed to load data.
+                </div>
+              )}
 
-                      {(() => {
-                        const pages = [];
+              {!isLoading && !error && (
+                <div
+                  key="content"
+                  className="w-full animate-in fade-in duration-300"
+                >
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 transition-opacity ${isFetching ? "opacity-50" : "opacity-100"}`}
+                  >
+                    {consultants.map((c: any) => (
+                      <ConsultantCardCompact key={c.id} consultant={c} />
+                    ))}
+                  </div>
 
-                        // 1. Show 2 previous pages + current page
-                        const start = Math.max(1, page - 2);
-                        for (let i = start; i <= page; i++) {
-                          pages.push(i);
-                        }
-
-                        return (
-                          <>
-                            {pages.map((p) => (
-                              <PaginationItem key={p}>
-                                <PaginationLink
-                                  isActive={page === p}
-                                  onClick={() => setPage(p)}
-                                  className={cn(
-                                    "w-10 h-10 rounded-lg flex items-center justify-center font-medium transition-colors cursor-pointer",
-                                    page === p
-                                      ? "bg-[#F9FAFB] border border-[#D1D5DC] text-[#1D2939]"
-                                      : "text-[#475467] hover:bg-gray-50",
-                                  )}
-                                >
-                                  {p}
-                                </PaginationLink>
-                              </PaginationItem>
-                            ))}
-
-                            {/* 2. Show Ellipsis if current page is not near the end */}
-                            {page < totalPages - 1 && (
-                              <PaginationItem>
-                                <PaginationEllipsis className="text-[#475467]" />
-                              </PaginationItem>
+                  <div className="mt-12 flex justify-center border-t border-[#DED9D3] pt-8">
+                    <Pagination>
+                      <PaginationContent className="gap-2">
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            className={cn(
+                              "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
+                              page === 1
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer",
                             )}
+                          />
+                        </PaginationItem>
 
-                            {/* 3. Show Last Page */}
-                            {page < totalPages && (
-                              <PaginationItem>
-                                <PaginationLink
-                                  isActive={false}
-                                  onClick={() => setPage(totalPages)}
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center font-medium text-[#475467] hover:bg-gray-50 transition-colors cursor-pointer"
-                                >
-                                  {totalPages}
-                                </PaginationLink>
-                              </PaginationItem>
-                            )}
-                          </>
-                        );
-                      })()}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() =>
-                            setPage((p) => Math.min(totalPages, p + 1))
+                        {(() => {
+                          const pages = [];
+                          const start = Math.max(1, page - 2);
+                          for (let i = start; i <= page; i++) {
+                            pages.push(i);
                           }
-                          className={cn(
-                            "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
-                            page === totalPages
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer",
-                          )}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+
+                          return (
+                            <>
+                              {pages.map((p) => (
+                                <PaginationItem key={p}>
+                                  <PaginationLink
+                                    isActive={page === p}
+                                    onClick={() => setPage(p)}
+                                    className={cn(
+                                      "w-10 h-10 rounded-lg flex items-center justify-center font-medium transition-colors cursor-pointer",
+                                      page === p
+                                        ? "bg-[#F9FAFB] border border-[#D1D5DC] text-[#1D2939]"
+                                        : "text-[#475467] hover:bg-gray-50",
+                                    )}
+                                  >
+                                    {p}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              ))}
+
+                              {page < totalPages - 1 && (
+                                <PaginationItem>
+                                  <PaginationEllipsis className="text-[#475467]" />
+                                </PaginationItem>
+                              )}
+
+                              {page < totalPages && (
+                                <PaginationItem>
+                                  <PaginationLink
+                                    isActive={false}
+                                    onClick={() => setPage(totalPages)}
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center font-medium text-[#475467] hover:bg-gray-50 transition-colors cursor-pointer"
+                                  >
+                                    {totalPages}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )}
+                            </>
+                          );
+                        })()}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() =>
+                              setPage((p) => Math.min(totalPages, p + 1))
+                            }
+                            className={cn(
+                              "h-10 px-4 rounded-lg border border-[#D1D5DC] text-[#475467] font-medium transition-colors hover:bg-gray-50",
+                              page === totalPages
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer",
+                            )}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
