@@ -34,7 +34,7 @@ export interface Niche {
 export interface CityOption {
     id: number;
     name: string;
-    country_code: string;
+    country: string;
 }
 
 // prototype for an unified form of returned object
@@ -44,7 +44,7 @@ export const mapConsultant = (c: any): Consultant => ({
     name: c.full_name || c.name || "User",
     displayName: c.displayName || c.display_name || c.name || c.full_name || "User",
     city: c.city_name || c.city || "",
-    country: c.country_code || c.country || "",
+    country: c.country || c.country || "",
 
     tag: c.tags && c.tags.length > 0 ? c.tags[0] : "Local",
     tags: Array.isArray(c.tags) ? c.tags : [],
