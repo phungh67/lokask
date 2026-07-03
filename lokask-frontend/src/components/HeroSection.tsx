@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Play, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { getConsultants } from "@/lib/consultants";
+import { getConsultants, getCities } from "@/lib/consultants";
 import { getBucketImageUrl } from "@/lib/utils";
 
 import SearchBar from "./SearchBar";
@@ -50,12 +50,21 @@ const HeroSection = () => {
     queryFn: () => getConsultants({ limit: 100 }),
   });
 
+  const { data: cities } = useQuery({ queryKey: ["cities"], queryFn: getCities });
+
   const displayedConsultants = response?.data?.slice(0, 5) || [];
 
   // handler hero section
   const handleHeroSearch = (filters: { where: string; who: string }) => {
     const params = new URLSearchParams();
-    if (filters.where) params.append("city", filters.where);
+    if (filters.where) {
+      const city = cities?.find(c => c.name.toLowerCase() === filters.where.toLowerCase());
+      if (city) {
+        params.append("city_id", city.id.toString());
+      } else {
+        params.append("country", filters.where);
+      }
+    }
     if (filters.who) params.append("niche", filters.who);
     
     navigate(`/consultants?${params.toString()}`);

@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const ExploreLocals = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentCountry = searchParams.get("country") || undefined;
   const currentNiche = searchParams.get("niche") || undefined;
   const cityIdStr = searchParams.get("city_id");
@@ -94,6 +94,13 @@ const ExploreLocals = () => {
                 <ExploreSidebar
                   initialFilters={sidebarFilters}
                   onApply={(newFilters) => {
+                    const params = new URLSearchParams(searchParams);
+
+                    if (newFilters.cityId) {
+                      params.set("city_id", newFilters.cityId.toString());
+                      params.delete("country");
+                    }
+                    setSearchParams(params);
                     setSidebarFilters(newFilters);
                     setPage(1);
                     window.scrollTo({ top: 0, behavior: "smooth" });
