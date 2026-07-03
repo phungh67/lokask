@@ -116,7 +116,13 @@ const DashboardChatRoom = ({
     try {
       await sendMessage(activeConversationId, content);
     } catch (error: any) {
-      setCurrentMessages((prev) => prev.filter((m) => m.id !== tempId));
+      const realMessage = await sendMessage(activeConversationId, content);
+
+      setCurrentMessages((prev) => 
+        prev.map((msg) => 
+          msg.id === tempId ? { ...msg, id: realMessage.id } : msg
+        )
+      );
 
       const errorStr = JSON.stringify(error).toLowerCase();
       const isSessionError = errorStr.includes("expired") || errorStr.includes("package") || error.status === 403 || error.status === 404;

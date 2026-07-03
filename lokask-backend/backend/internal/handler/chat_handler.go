@@ -110,7 +110,7 @@ func ChatWebSocket(c *websocket.Conn) {
 	}
 }
 
-func BroadcastChatMessage(conversationID string, messagePayload interface{}) {
+func BroadcastChatMessage(conversationID string, messagePayload interface{}, senderID string) {
 	ChatHub.mu.RLock()
 	room := ChatHub.Rooms[conversationID]
 	ChatHub.mu.RUnlock()
@@ -123,6 +123,10 @@ func BroadcastChatMessage(conversationID string, messagePayload interface{}) {
 	defer room.mu.RUnlock()
 
 	for clientID, conn := range room.Clients {
+		if clientID == senderID {
+			continue
+		}
+
 		err := conn.WriteJSON(messagePayload)
 		if err != nil {
 			log.Printf("[ERROR][CHAT] Failed to deliver messages for users %s: %v", clientID, err)
@@ -339,7 +343,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		"type":       "text",
 	}
 
-	go BroadcastChatMessage(convID.String(), wsPayload)
+	go BroadcastChatMessage(convID.String(), wsPayload, myID.String())
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",
