@@ -11,17 +11,14 @@ interface SearchBarProps {
 export default function SearchBar({ onSearch }: SearchBarProps) {
   const navigate = useNavigate();
   
-  // 1. Core States
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
-  const [selectedWhen, setSelectedWhen] = useState<string>(""); // Placeholder for future date picker
-  const [selectedWho, setSelectedWho] = useState<string>(""); // Mapping this to 'niche'
+  const [selectedWhen, setSelectedWhen] = useState<string>("");
+  const [selectedWho, setSelectedWho] = useState<string>("");
   
-  // 2. Dropdown UI State
   const [activeDropdown, setActiveDropdown] = useState<"country" | "city" | "when" | "who" | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
-  // 3. Data Fetching
   const { data: cities } = useQuery<CityOption[]>({
     queryKey: ["cities"],
     queryFn: getCities,
@@ -32,21 +29,17 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
     queryFn: getNiches,
   });
 
-  // 4. Cascading Logic
   const availableCountries = useMemo(() => {
     if (!cities) return [];
-    // Extract unique country codes from the cities array
     return Array.from(new Set(cities.map(c => c.country_code))).sort();
   }, [cities]);
 
   const availableCities = useMemo(() => {
     if (!cities) return [];
-    // If a country is selected, only show cities in that country
     if (selectedCountry) return cities.filter(c => c.country_code === selectedCountry);
     return cities;
   }, [cities, selectedCountry]);
 
-  // 5. Click-Outside Handler to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (barRef.current && !barRef.current.contains(event.target as Node)) {
@@ -59,17 +52,16 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
   // 6. Navigation / Search Trigger
   const handleSearch = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the dropdowns from toggling when clicking search
+    e.stopPropagation();
     
     const params = new URLSearchParams();
     
     if (selectedCountry) params.set("country", selectedCountry);
-    // 🟢 BUG FIX: Ensure city_id is properly stringified to hit your Go Backend
     if (selectedCityId) params.set("city_id", selectedCityId.toString());
     if (selectedWho) params.set("niche", selectedWho);
     
     setActiveDropdown(null);
-    navigate(`/explore?${params.toString()}`);
+    navigate(`/consultants?${params.toString()}`);
   };
 
   const getCityName = () => {
@@ -79,10 +71,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
   return (
     <div className="relative w-full" ref={barRef}>
-      {/* THE PILL CONTAINER */}
       <div className="flex items-center bg-white rounded-full shadow-md border border-gray-200 h-16 hover:shadow-lg transition-shadow">
         
-        {/* FIELD 1: COUNTRY */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === "country" ? null : "country")}
           className={`flex-[1.2] flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "country" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
@@ -95,7 +85,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
         <div className="h-8 w-[1px] bg-gray-200" />
 
-        {/* FIELD 2: CITY */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === "city" ? null : "city")}
           className={`flex-[1.2] flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "city" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
@@ -108,7 +97,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
         <div className="h-8 w-[1px] bg-gray-200" />
 
-        {/* FIELD 3: WHEN */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === "when" ? null : "when")}
           className={`flex-1 flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "when" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
@@ -121,7 +109,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
         <div className="h-8 w-[1px] bg-gray-200" />
 
-        {/* FIELD 4: WHO & SEARCH BUTTON */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === "who" ? null : "who")}
           className={`flex-[1.5] flex items-center justify-between pl-6 pr-2 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "who" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
@@ -140,8 +127,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           </button>
         </div>
       </div>
-
-      {/* --- DROPDOWN MENUS --- */}
       
       {/* Country Dropdown */}
       {activeDropdown === "country" && (
@@ -158,8 +143,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
               key={country} 
               onClick={() => { 
                 setSelectedCountry(country); 
-                setSelectedCityId(null); // Reset city when changing country
-                setActiveDropdown("city"); // Auto-advance to city selection
+                setSelectedCityId(null);
+                setActiveDropdown("city");
               }} 
               className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
             >
@@ -169,7 +154,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* City Dropdown */}
       {activeDropdown === "city" && (
         <div className="absolute top-20 left-[20%] w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-50 max-h-[400px] overflow-y-auto">
           <div className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase tracking-wider">Select City</div>
@@ -184,9 +168,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
               key={city.id} 
               onClick={() => { 
                 setSelectedCityId(city.id); 
-                // Auto-fill country if they picked a city while country was empty
                 if (!selectedCountry) setSelectedCountry(city.country_code); 
-                setActiveDropdown("who"); // Auto-advance to Who/Niche
+                setActiveDropdown("who");
               }} 
               className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
             >
@@ -196,7 +179,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* Who/Niche Dropdown */}
       {activeDropdown === "who" && (
         <div className="absolute top-20 right-0 w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-50 max-h-[400px] overflow-y-auto">
            <div className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase tracking-wider">Specialty</div>
@@ -218,7 +200,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* When Dropdown Placeholder */}
       {activeDropdown === "when" && (
         <div className="absolute top-20 left-[50%] w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-6 z-50 text-center">
            <p className="text-sm text-gray-500">Date picker integration coming soon!</p>
