@@ -90,9 +90,15 @@ func main() {
 		Storage: storageService,
 	}
 
+	// notifier
+	notiRepo := repository.NewNotificationRepository(db)
+	notiHandler := &handler.NotificationHandler{
+		Repo: notiRepo,
+	}
+
 	// message
 	chatRepo := repository.NewChatRepository(db)
-	chatHandler := &handler.ChatHandler{Repo: chatRepo, Mailer: mailService}
+	chatHandler := &handler.ChatHandler{Repo: chatRepo, Notifier: notiRepo, Mailer: mailService}
 
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
@@ -168,6 +174,11 @@ func main() {
 
 	// message api group. of course, protected
 	protected.Get("/auth/me", authHandler.GetMe)
+	// notify
+	protected.Get("/notifications", notiHandler.GetMyNotification)
+	protected.Put("/notifications/:id/read", notiHandler.MarkRead)
+	protected.Put("/notifications", notiHandler.MarkAllRead)
+	// chat
 	protected.Post("/conversations", chatHandler.StartChat)
 	protected.Get("/conversations", chatHandler.GetInbox)
 	// protected.Get("/conversations/:id/session", chatHandler.GetSession)
@@ -193,6 +204,9 @@ func main() {
 
 	// websocket chat
 	app.Use("/ws/chat", middleware.Protect(), websocket.New(handler.ChatWebSocket))
+
+	// websocket notifier
+	app.Use("/ws/notifications", middleware.Protect(), websocket.New(handler.NotificationWebSocket))
 
 	// start server
 	port := getEnv("PORT", "8080")

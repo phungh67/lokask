@@ -16,8 +16,9 @@ import (
 )
 
 type ChatHandler struct {
-	Repo   *repository.ChatRepository
-	Mailer *mailer.MailService
+	Repo     *repository.ChatRepository
+	Notifier *repository.NotificationRepository
+	Mailer   *mailer.MailService
 }
 
 type ChatRoom struct {
@@ -285,6 +286,18 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		} else if err != nil {
 			log.Printf("[WARN][MAILER] Could not fetch receiver info: %v", err)
 			return
+		}
+
+		refID := conversationID
+		err = h.Notifier.CreateNotification(
+			bgCtx,
+			uuid.MustParse(info.ReceiverID),
+			"new_message",
+			&refID,
+			message,
+		)
+		if err != nil {
+			log.Printf("[ERROR][NOTI] Failed to save notification: %v", err)
 		}
 
 		// broadcast notification
