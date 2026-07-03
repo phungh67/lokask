@@ -89,17 +89,23 @@ func (h *ConsultantHandler) UpdateProfile(c *fiber.Ctx) error {
 }
 
 func (h *ConsultantHandler) List(c *fiber.Ctx) error {
-	cityFilter := c.Query("city")
+	var cityID *int
+	if idStr := c.Query("city_id"); idStr != "" {
+		if id, err := strconv.Atoi(idStr); err == nil {
+			cityID = &id
+		}
+	}
 	countryFilter := c.Query("country")
 	nicheFilter := c.Query("niche")
 
-	pageStr := c.Query("page")
 	page := 1
-	if val, err := strconv.Atoi(pageStr); err == nil && val > 0 {
-		page = val
+	if pageStr := c.Query("page"); pageStr != "" {
+		if val, err := strconv.Atoi(pageStr); err == nil && val > 0 {
+			page = val
+		}
 	}
 
-	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityFilter, countryFilter, nicheFilter, page, 12)
+	consultants, totalCount, err := h.Repo.ListConsultants(c.Context(), cityID, countryFilter, nicheFilter, page, 12)
 	if err != nil {
 		log.Printf("[ERROR] Error when querying consultants: %v", err)
 		return c.Status(500).JSON(fiber.Map{

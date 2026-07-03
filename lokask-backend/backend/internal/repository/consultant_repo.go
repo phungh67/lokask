@@ -251,8 +251,7 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 
 // consultant per page
 // ListConsultants fetches list for Explore page
-func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string, country string, niche string, page int, limit int) ([]domain.ConsultantProfile, int, error) {
-	// sanitize input page
+func (r *ConsultantRepository) ListConsultants(ctx context.Context, cityID *int, countryCode string, niche string, page int, limit int) ([]domain.ConsultantProfile, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -264,7 +263,6 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	}
 	offset := (page - 1) * limit
 
-	// query to calculate the total number of returned results
 	baseSql := `
 		FROM consultants c
     	JOIN users u ON c.user_id = u.id
@@ -275,19 +273,18 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	`
 
 	filterSql := ""
-
-	args := []interface{}{}
+	var args []interface{}
 	argId := 1
 
-	if city != "" {
-		filterSql += fmt.Sprintf(" AND ci.name ILIKE $%d", argId)
-		args = append(args, "%"+city+"%")
+	if cityID != nil {
+		filterSql += fmt.Sprintf(" AND c.city_id = $%d", argId)
+		args = append(args, *cityID)
 		argId++
 	}
 
-	if country != "" {
+	if countryCode != "" {
 		filterSql += fmt.Sprintf(" AND ci.country_code ILIKE $%d", argId)
-		args = append(args, country)
+		args = append(args, countryCode)
 		argId++
 	}
 
@@ -304,17 +301,21 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 		return nil, 0, err
 	}
 
-	// updated Query #1: reflect new React FrontEnd
-	// updated Query #2: using short name for smarter display
+	if totalCount == 0 {
+		return []domain.ConsultantProfile{}, 0, nil
+	}
+
 	dataSql := `
     SELECT DISTINCT 
         c.id, 
+        c.user_id,
         u.full_name, 
 		COALESCE(NULLIF(u.alias, ''), array_to_string((string_to_array(u.full_name, ' '))[1:2], ' ')) as display_name,
         COALESCE(u.avatar_url, '') as avatar_url,
 		COALESCE(c.bio, '') as bio,
         COALESCE(c.quote, '') as quote,        
         COALESCE(c.cover_url, '') as cover_url, 
+        COALESCE(c.gallery_images, '{}') as gallery_images,
         COALESCE(c.helped_count, 0) as helped_count,                        
         COALESCE(c.hourly_rate, 0)::FLOAT as hourly_rate,
         COALESCE(c.rating_avg, 0)::FLOAT as rating_avg, 
@@ -324,7 +325,6 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
         c.created_at
 	` + baseSql + filterSql + fmt.Sprintf(" ORDER BY rating_avg DESC, c.id ASC LIMIT $%d OFFSET $%d", argId, argId+1)
 
-	// Add limit and offset to args for the data query
 	dataArgs := append(args, limit, offset)
 
 	rows, err := r.DB.QueryxContext(ctx, dataSql, dataArgs...)
@@ -334,54 +334,62 @@ func (r *ConsultantRepository) ListConsultants(ctx context.Context, city string,
 	defer rows.Close()
 
 	var consultants []domain.ConsultantProfile
+	var consultantIDs []uuid.UUID
+
 	for rows.Next() {
 		var p domain.ConsultantProfile
 		if err := rows.StructScan(&p); err != nil {
 			return nil, 0, err
 		}
 
-		// construct URL
-		avatarURL, _ := helper.BuildMediaURL(p.AvatarURL)
-		if avatarURL != "" {
+		if avatarURL, _ := helper.BuildMediaURL(p.AvatarURL); avatarURL != "" {
 			p.AvatarURL = avatarURL
 		}
-
-		coverURL, _ := helper.BuildMediaURL(p.CoverURL)
-		if coverURL != "" {
+		if coverURL, _ := helper.BuildMediaURL(p.CoverURL); coverURL != "" {
 			p.CoverURL = coverURL
-		}
-
-		// Fetch tags (Acceptable N+1 for small limits)
-		var tags []string
-		tagQuery := `
-            SELECT n.display_name 
-            FROM consultant_niches cn
-            JOIN niches n ON cn.niche_id = n.id
-            WHERE cn.consultant_id = $1
-        `
-		_ = r.DB.SelectContext(ctx, &tags, tagQuery, p.ID)
-
-		if tags == nil {
-			p.Tags = []string{}
-			p.Tag = "Local"
-		} else {
-			p.Tags = tags
-			p.Tag = "Local"
-			if len(tags) > 0 {
-				p.Tag = tags[0]
-			}
 		}
 
 		galleryImages := make([]string, 0, len(p.GalleryImages))
 		for _, image := range p.GalleryImages {
-			imageURL, _ := helper.BuildMediaURL(image)
-			if imageURL != "" {
+			if imageURL, _ := helper.BuildMediaURL(image); imageURL != "" {
 				galleryImages = append(galleryImages, imageURL)
 			}
 		}
-
 		p.GalleryImages = galleryImages
+
+		consultantIDs = append(consultantIDs, p.ID)
 		consultants = append(consultants, p)
+	}
+
+	if len(consultantIDs) > 0 {
+		type TagRow struct {
+			ConsultantID uuid.UUID `db:"consultant_id"`
+			DisplayName  string    `db:"display_name"`
+		}
+
+		var tagRows []TagRow
+		tagQuery := `
+            SELECT cn.consultant_id, n.display_name 
+            FROM consultant_niches cn
+            JOIN niches n ON cn.niche_id = n.id
+            WHERE cn.consultant_id = ANY($1)
+        `
+		_ = r.DB.SelectContext(ctx, &tagRows, tagQuery, pq.Array(consultantIDs))
+
+		tagMap := make(map[uuid.UUID][]string)
+		for _, tr := range tagRows {
+			tagMap[tr.ConsultantID] = append(tagMap[tr.ConsultantID], tr.DisplayName)
+		}
+
+		for i, c := range consultants {
+			if tags, exists := tagMap[c.ID]; exists && len(tags) > 0 {
+				consultants[i].Tags = tags
+				consultants[i].Tag = tags[0]
+			} else {
+				consultants[i].Tags = []string{}
+				consultants[i].Tag = "Local"
+			}
+		}
 	}
 
 	return consultants, totalCount, nil

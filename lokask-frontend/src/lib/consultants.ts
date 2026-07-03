@@ -6,7 +6,7 @@ import { Blog } from "@/types/blog";
 interface ConsultantFilters {
     page?: number;
     limit?: number;
-    city?: string;
+    city_id?: number;
     country?: string;
     niche?: string[];
     languages?: string[];
@@ -34,7 +34,7 @@ export interface Niche {
 export interface CityOption {
     id: number;
     name: string;
-    country: string;
+    country_code: string;
 }
 
 // prototype for an unified form of returned object
@@ -119,7 +119,7 @@ export async function getConsultants(filters?: ConsultantFilters): Promise<Pagin
         params.append("country", "VN");
     }
 
-    if (filters?.city) params.append("city", filters.city);
+    if (filters.city_id) params.append("city_id", filters.city_id.toString());
     if (filters?.niche?.length) params.append("niche", filters.niche.join(","));
     if (filters?.languages?.length) params.append("languages", filters.languages.join(","));
     if (filters?.page) params.append("page", filters.page.toString());
@@ -145,9 +145,10 @@ export async function getConsultantByUserId(userId: string): Promise<Consultant>
     return mapConsultant(data);
 }
 
-export async function getNiches(): Promise<Niche[]> {
-    const data = await fetchJson<Niche[]>("/niches");
-    return data || [];
+export async function getNiches(): Promise<string[]> {
+    const niches = await fetchJson<Niche[]>("/niches");
+    
+    return (niches || []).map((niche) => niche.display_name);
 }
 
 export async function getCities(): Promise<CityOption[]> {
