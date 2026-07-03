@@ -24,6 +24,7 @@ import {
   getConsultantById,
   getConsultants,
   getConsultantBlogs,
+  getCities,
 } from "@/lib/consultants";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@/context/ChatContext";
@@ -54,10 +55,15 @@ const ConsultantPage = () => {
   });
 
   // 2. Fetch related consultants
+  const { data: cities } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
+  const targetCityId = cities?.find((c) => c.name === consultant?.city)?.id;
   const { data: relatedResponse } = useQuery({
-    queryKey: ["consultants", "related", consultant?.city],
-    queryFn: () => getConsultants({ city: consultant?.city }),
-    enabled: !!consultant?.city,
+    queryKey: ["related-consultants", targetCityId],
+    queryFn: () => getConsultants({ city_id: targetCityId, limit: 4 }),
+    enabled: !!targetCityId,
   });
 
   // 3. Fetch blogs
