@@ -6,10 +6,11 @@ import { MapPin, Search, DollarSign, Globe, Loader2 } from "lucide-react";
 import { StarIcon } from "@/components/ui/star";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { getNiches, getLanguages } from "@/lib/consultants";
+import { getNiches, getLanguages, getCities } from "@/lib/consultants";
 
 export interface FilterState {
   location: string;
+  cityId?: number;
   niches: string[];
   priceRange: number[];
   minRating: number | null;
@@ -47,7 +48,10 @@ export const ExploreSidebar = ({
   onClear,
 }: SidebarProps) => {
   const [localFilters, setLocalFilters] = useState<FilterState>(initialFilters);
-
+  const { data: cities } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
   const labelClassName =
     "text-[#101828] text-[18px] font-semibold leading-[28px] tracking-[-0.439px]";
 
@@ -63,6 +67,17 @@ export const ExploreSidebar = ({
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
   });
   const ratings = [4.5, 4.0, 3.5, 3.0];
+
+  const handleApply = () => {
+    const city = cities?.find(
+      (c) => c.name.toLowerCase() === localFilters.location.toLowerCase(),
+    );
+
+    onApply({
+      ...localFilters,
+      cityId: city ? city.id : undefined,
+    });
+  };
 
   return (
     <div className="w-[320px] bg-white rounded-[14px] border border-[#E5E7EB] p-6 flex flex-col gap-12 font-body sticky top-[121px]">
@@ -127,6 +142,7 @@ export const ExploreSidebar = ({
       </div>
 
       {/* Expertise Section */}
+      {/* Expertise Section */}
       <div className="flex flex-col gap-3">
         <h3 className={labelClassName}>Expertise</h3>
         <div className="flex flex-col gap-2">
@@ -135,28 +151,32 @@ export const ExploreSidebar = ({
               <Loader2 className="w-4 h-4 animate-spin" /> Loading expertise...
             </div>
           ) : (
-            dbNiches?.map((n) => (
-              <div
-                key={n.id}
-                className="flex items-center gap-2 cursor-pointer group"
-                onClick={() =>
-                  setLocalFilters((prev) => ({
-                    ...prev,
-                    niches: prev.niches.includes(n.display_name)
-                      ? prev.niches.filter((i) => i !== n.display_name)
-                      : [...prev.niches, n.display_name],
-                  }))
-                }
-              >
-                <CustomCheckbox
-                  active={localFilters.niches.includes(n.display_name)}
-                  onClick={() => {}}
-                />
-                <span className="text-[#4A5565] text-[18px] font-normal leading-[28px]">
-                  {n.display_name}
-                </span>
-              </div>
-            ))
+            dbNiches?.map(
+              (
+                nicheName, // 'n' is now just the string name
+              ) => (
+                <div
+                  key={nicheName} // Use the string as the key
+                  className="flex items-center gap-2 cursor-pointer group"
+                  onClick={() =>
+                    setLocalFilters((prev) => ({
+                      ...prev,
+                      niches: prev.niches.includes(nicheName)
+                        ? prev.niches.filter((i) => i !== nicheName)
+                        : [...prev.niches, nicheName],
+                    }))
+                  }
+                >
+                  <CustomCheckbox
+                    active={localFilters.niches.includes(nicheName)}
+                    onClick={() => {}}
+                  />
+                  <span className="text-[#4A5565] text-[18px] font-normal leading-[28px]">
+                    {nicheName} {/* Display the string directly */}
+                  </span>
+                </div>
+              ),
+            )
           )}
         </div>
       </div>
@@ -283,7 +303,7 @@ export const ExploreSidebar = ({
 
       {/* Apply Button */}
       <Button
-        onClick={() => onApply(localFilters)}
+        onClick={handleApply}
         className="w-full h-[44px] bg-[#C56A49] rounded-[10px] text-white font-bold hover:bg-[#C56A49]/90 font-display"
       >
         Apply filter

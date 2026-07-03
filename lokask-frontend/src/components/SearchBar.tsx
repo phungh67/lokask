@@ -4,7 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCities, getNiches, CityOption } from "@/lib/consultants";
 
-export default function SearchBar() {
+interface SearchBarProps {
+  onSearch: (filters: { where: string; who: string }) => void;
+}
+
+export default function SearchBar({ onSearch }: SearchBarProps) {
   const navigate = useNavigate();
   
   // 1. Core States
