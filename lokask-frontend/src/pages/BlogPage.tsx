@@ -1,7 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
-import { getBlogById, getConsultantByUserId, getConsultants } from "@/lib/consultants";
+import {
+  getBlogById,
+  getConsultantByUserId,
+  getConsultants,
+  getCities,
+} from "@/lib/consultants";
 import ConsultantBannerCompact from "@/components/ConsultantBannerCompact";
 import ConsultantBannerFull from "@/components/ConsultantBanner";
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
@@ -15,10 +20,15 @@ import Footer from "@/components/Footer";
 const BlogPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showPrompt, setShowPrompt, promptMessage, requireAuth } = useAuthPrompt();
+  const { showPrompt, setShowPrompt, promptMessage, requireAuth } =
+    useAuthPrompt();
 
   // blog
-  const { data: blog, isLoading: isBlogLoading, error: blogError } = useQuery({
+  const {
+    data: blog,
+    isLoading: isBlogLoading,
+    error: blogError,
+  } = useQuery({
     queryKey: ["blog", id],
     queryFn: () => getBlogById(id!),
     enabled: !!id,
@@ -28,14 +38,19 @@ const BlogPage = () => {
   const { data: consultant, isLoading: isConsultantLoading } = useQuery({
     queryKey: ["consultant-by-user", blog?.authorId],
     queryFn: () => getConsultantByUserId(blog!.authorId),
-    enabled: !!blog?.authorId, 
+    enabled: !!blog?.authorId,
   });
 
   // same consultants from that city
+  const { data: cities } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
+  const targetCityId = cities?.find((c) => c.name === consultant?.city)?.id;
   const { data: relatedResponse } = useQuery({
-    queryKey: ["consultants", "related", consultant?.city],
-    queryFn: () => getConsultants({ city: consultant?.city }),
-    enabled: !!consultant?.city,
+    queryKey: ["related-consultants", targetCityId],
+    queryFn: () => getConsultants({ city_id: targetCityId, limit: 4 }),
+    enabled: !!targetCityId,
   });
 
   const relatedConsultants = Array.isArray(relatedResponse)
@@ -59,8 +74,13 @@ const BlogPage = () => {
       <div className="min-h-screen flex flex-col bg-[#F9F8F6]">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold text-zinc-900 mb-4">Article not found</h1>
-          <button onClick={() => navigate(-1)} className="text-[#C77752] hover:underline">
+          <h1 className="text-2xl font-bold text-zinc-900 mb-4">
+            Article not found
+          </h1>
+          <button
+            onClick={() => navigate(-1)}
+            className="text-[#C77752] hover:underline"
+          >
             ← Go back
           </button>
         </div>
@@ -76,7 +96,6 @@ const BlogPage = () => {
       <main className="flex-1">
         {/* Container for Article Content (Constrained Width) */}
         <div className="max-w-[800px] mx-auto px-6 pt-8 pb-12">
-          
           {/* Top Navigation */}
           <div className="mb-8">
             <button
@@ -93,11 +112,11 @@ const BlogPage = () => {
             <span className="inline-block px-3 py-1 bg-[#FCE8E0] text-[#C77752] text-xs font-medium rounded-full mb-6">
               {blog.category || "Art & Culture"}
             </span>
-            
+
             <h1 className="text-4xl md:text-5xl font-display font-bold text-zinc-900 leading-[1.1] mb-6 tracking-tight">
               {blog.title}
             </h1>
-            
+
             <p className="text-lg md:text-xl text-zinc-500 leading-relaxed">
               {blog.summary}
             </p>
@@ -106,7 +125,7 @@ const BlogPage = () => {
           {/* Compact Consultant Banner (Top) */}
           <div className="mb-10">
             <ConsultantBannerCompact
-              consultantId={consultant?.id || ""} 
+              consultantId={consultant?.id || ""}
               authorName={blog.authorName}
               authorAvatar={blog.authorAvatar}
               category={blog.category}
@@ -119,9 +138,9 @@ const BlogPage = () => {
           {/* Hero Image */}
           {blog.coverImageUrl && (
             <div className="w-full aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden bg-zinc-200 mb-12">
-              <img 
-                src={blog.coverImageUrl} 
-                alt={blog.title} 
+              <img
+                src={blog.coverImageUrl}
+                alt={blog.title}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -139,7 +158,7 @@ const BlogPage = () => {
             <h3 className="text-2xl font-bold text-zinc-900 mb-6 font-display">
               More from {blog.authorName.split(" ")[0]}
             </h3>
-            
+
             {isConsultantLoading ? (
               <div className="h-48 rounded-[32px] bg-zinc-100 animate-pulse flex items-center justify-center">
                 <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
@@ -156,7 +175,6 @@ const BlogPage = () => {
 
         {consultant && (
           <div className="w-full bg-white border-t border-zinc-200">
-            
             {/* Direct Ask CTA */}
             <section className="w-full pt-20 pb-12">
               <div className="w-full px-6 flex flex-col items-center justify-start gap-4 max-w-[1400px] mx-auto">
@@ -169,7 +187,8 @@ const BlogPage = () => {
 
                 <div className="max-w-[448px] pb-4 flex flex-col items-center">
                   <p className="text-center text-[#737373] text-[16px] leading-[24px]">
-                    Send a message to start planning your authentic local experience.
+                    Send a message to start planning your authentic local
+                    experience.
                   </p>
                 </div>
 
@@ -184,7 +203,10 @@ const BlogPage = () => {
                       requireAuth(
                         () =>
                           navigate("/dashboard", {
-                            state: { intent: "startChat", targetId: consultant.id },
+                            state: {
+                              intent: "startChat",
+                              targetId: consultant.id,
+                            },
                           }),
                         { actionType: "ask", consultantName: consultant.name },
                       );
@@ -203,12 +225,13 @@ const BlogPage = () => {
                 <div className="max-w-[1400px] mx-auto px-6">
                   <LocalsCarousel
                     title={`Other locals in ${consultant.city}`}
-                    consultants={relatedConsultants.filter((c: any) => c.id !== consultant.id)}
+                    consultants={relatedConsultants.filter(
+                      (c: any) => c.id !== consultant.id,
+                    )}
                   />
                 </div>
               </section>
             )}
-            
           </div>
         )}
       </main>

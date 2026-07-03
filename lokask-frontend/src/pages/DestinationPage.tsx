@@ -2,23 +2,22 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import ConsultantCardCompact from "@/components/ConsultantCardCompact";
 import { useQuery } from "@tanstack/react-query";
-import { getConsultants } from "@/lib/consultants";
+import { getConsultants, getCities } from "@/lib/consultants";
 import { Consultant } from "@/types/consultant";
 import { PaginatedConsultants } from "@/lib/consultants";
 
-const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string }> =
-  {
-    thailand: {
-      name: "Thailand",
-      imageUrl:
-        "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
-    },
-    paris: {
-      name: "Paris",
-      imageUrl:
-        "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
-    },
-  };
+const DESTINATION_METADATA: Record<string, { name: string; imageUrl: string; countryCode?: string; cityName?: string }> = {
+  thailand: {
+    name: "Thailand",
+    imageUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&auto=format&fit=crop",
+    countryCode: "TH",
+  },
+  paris: {
+    name: "Paris",
+    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop",
+    cityName: "Paris",
+  },
+};
 
 const DestinationPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -36,11 +35,19 @@ const DestinationPage = () => {
     };
   }
 
-  const { data: paginationResults, isLoading } = useQuery({
-    queryKey: ["fixed-consultant-data", "city", "Hanoi"],
-    queryFn: () => getConsultants({ city: "Hanoi" }),
-    enabled: !!destination,
+  const { data: cities } = useQuery({ queryKey: ["cities"], queryFn: getCities });
+  const targetCityId = cities?.find(c => c.name.toLowerCase() === destination?.cityName?.toLowerCase())?.id;
+
+  const { data: paginationResults, isLoading, error } = useQuery({
+    queryKey: ["consultants", destination?.name, targetCityId],
+    queryFn: () => getConsultants({ 
+      country: destination?.countryCode,
+      city_id: targetCityId,
+      limit: 8 
+    }),
+    enabled: !!destination && (!!destination.countryCode || !!targetCityId),
   });
+
 
   const displayConsultants: Consultant[] = paginationResults?.data || [];
 
