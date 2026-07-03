@@ -20,6 +20,15 @@ import { cn } from "@/lib/utils";
 
 const ExploreLocals = () => {
   const [searchParams] = useSearchParams();
+  const currentCountry = searchParams.get("country") || undefined;
+  const currentNiche = searchParams.get("niche") || undefined;
+  const cityIdStr = searchParams.get("city_id");
+  const currentCityId = cityIdStr ? parseInt(cityIdStr, 10) : undefined;
+
+  const currentPageStr = searchParams.get("page");
+  const currentPage = currentPageStr ? parseInt(currentPageStr, 10) : 1;
+  const itemsPerPage = 12;
+
   const [showFilters, setShowFilters] = useState(true);
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
@@ -29,7 +38,7 @@ const ExploreLocals = () => {
   const [sidebarFilters, setSidebarFilters] = useState<FilterState>({
     location: searchParams.get("city") || "",
     niches: searchParams.get("niche") ? [searchParams.get("niche")!] : [],
-    priceRange: [0, 100], 
+    priceRange: [0, 100],
     minRating: null,
     languages: [],
   });
@@ -40,15 +49,22 @@ const ExploreLocals = () => {
     isFetching,
     error,
   } = useQuery({
-    queryKey: ["consultants", "explore", sidebarFilters, page],
+    queryKey: [
+      "consultants",
+      currentCountry,
+      currentCityId,
+      page,
+      sidebarFilters,
+    ],
     queryFn: () =>
       getConsultants({
-        page,
+        page: page,
         limit: ITEMS_PER_PAGE,
-        city: sidebarFilters.location,
+        country: currentCountry,
+        city_id: currentCityId,
         niche: sidebarFilters.niches,
         languages: sidebarFilters.languages,
-        maxPrice: sidebarFilters.priceRange[1], 
+        maxPrice: sidebarFilters.priceRange[1],
         minRating: sidebarFilters.minRating || undefined,
       }),
   });
@@ -239,12 +255,12 @@ const ExploreLocals = () => {
         </div>
       </div>
 
-      <BlogQuickViewDialog 
-        blog={selectedBlog} 
-        open={!!selectedBlog} 
+      <BlogQuickViewDialog
+        blog={selectedBlog}
+        open={!!selectedBlog}
         onOpenChange={(isOpen) => {
           if (!isOpen) setSelectedBlog(null);
-        }} 
+        }}
       />
     </div>
   );

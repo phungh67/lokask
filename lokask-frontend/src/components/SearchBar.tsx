@@ -1,287 +1,225 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Calendar, MapPin } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getNiches, getCities, Niche, CityOption } from "@/lib/consultants";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getCities, getNiches, CityOption } from "@/lib/consultants";
 
-const FALLBACK_NICHES = [
-  "Foodie & Local Cuisines",
-  "History & Architecture",
-  "Nature & Outdoors",
-  "Nightlife & Entertainment",
-  "Shopping & Fashion",
-  "Photography & Arts",
-];
-
-interface SearchBarProps {
-  onSearch: (filters: { where: string; who: string; when?: string }) => void;
-}
-
-const SearchBar = ({ onSearch }: SearchBarProps) => {
-  const [where, setWhere] = useState("");
-  const [when, setWhen] = useState("");
-  const [who, setWho] = useState("");
+export default function SearchBar() {
+  const navigate = useNavigate();
   
-  const [isWhereOpen, setIsWhereOpen] = useState(false);
-  const [isWhoOpen, setIsWhoOpen] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  // 1. Core States
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [selectedWhen, setSelectedWhen] = useState<string>(""); // Placeholder for future date picker
+  const [selectedWho, setSelectedWho] = useState<string>(""); // Mapping this to 'niche'
+  
+  // 2. Dropdown UI State
+  const [activeDropdown, setActiveDropdown] = useState<"country" | "city" | "when" | "who" | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  const [niches, setNiches] = useState<string[]>([]);
-  const [cities, setCities] = useState<CityOption[]>([]);
+  // 3. Data Fetching
+  const { data: cities } = useQuery<CityOption[]>({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
 
+  const { data: niches } = useQuery<string[]>({
+    queryKey: ["niches"],
+    queryFn: getNiches,
+  });
+
+  // 4. Cascading Logic
+  const availableCountries = useMemo(() => {
+    if (!cities) return [];
+    // Extract unique country codes from the cities array
+    return Array.from(new Set(cities.map(c => c.country_code))).sort();
+  }, [cities]);
+
+  const availableCities = useMemo(() => {
+    if (!cities) return [];
+    // If a country is selected, only show cities in that country
+    if (selectedCountry) return cities.filter(c => c.country_code === selectedCountry);
+    return cities;
+  }, [cities, selectedCountry]);
+
+  // 5. Click-Outside Handler to close dropdowns
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [nichesData, citiesData] = await Promise.all([
-          getNiches(),
-          getCities(),
-        ]);
-        setNiches(nichesData.map((n: Niche) => n.display_name));
-        setCities(citiesData);
-      } catch (error) {
-        console.error("Failed to load search parameters from API", error);
-        setNiches(FALLBACK_NICHES);
+    function handleClickOutside(event: MouseEvent) {
+      if (barRef.current && !barRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
       }
-    };
-    fetchData();
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearchClick = () => {
-    onSearch({ where, who, when });
+  // 6. Navigation / Search Trigger
+  const handleSearch = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the dropdowns from toggling when clicking search
+    
+    const params = new URLSearchParams();
+    
+    if (selectedCountry) params.set("country", selectedCountry);
+    // 🟢 BUG FIX: Ensure city_id is properly stringified to hit your Go Backend
+    if (selectedCityId) params.set("city_id", selectedCityId.toString());
+    if (selectedWho) params.set("niche", selectedWho);
+    
+    setActiveDropdown(null);
+    navigate(`/explore?${params.toString()}`);
   };
 
-  const selectedCountry = cities.find(loc => loc.name === where)?.country || "Vietnam";
+  const getCityName = () => {
+    const city = cities?.find(c => c.id === selectedCityId);
+    return city ? city.name : "Add city";
+  };
 
   return (
-    <div className="w-full">
-      {/* Desktop Search Bar */}
-      <div className="hidden md:flex items-stretch bg-card rounded-full shadow-medium border border-border/50 transition-shadow hover:shadow-strong relative z-10">
+    <div className="relative w-full" ref={barRef}>
+      {/* THE PILL CONTAINER */}
+      <div className="flex items-center bg-white rounded-full shadow-md border border-gray-200 h-16 hover:shadow-lg transition-shadow">
         
-        {/* WHERE */}
+        {/* FIELD 1: COUNTRY */}
         <div 
-          className={cn(
-            "search-segment flex-1 border-r border-border/50 cursor-pointer transition-all rounded-l-full px-6 py-2 relative",
-            focusedField === 'where' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
-          )}
-          onClick={() => setIsWhereOpen(!isWhereOpen)}
-          onBlur={() => {
-            setFocusedField(null);
-            setTimeout(() => setIsWhereOpen(false), 150);
-          }}
-          tabIndex={0}
-          onFocus={() => setFocusedField('where')}
+          onClick={() => setActiveDropdown(activeDropdown === "country" ? null : "country")}
+          className={`flex-[1.2] flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "country" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
         >
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-            Where
-            <MapPin size={12} className="text-[#C77752]" />
-          </label>
-          <span className="text-sm font-medium truncate block mt-0.5">
-            {where ? (
-              <span>
-                {where} <span className="text-muted-foreground font-normal">- {selectedCountry}</span>
-              </span>
-            ) : (
-              <span className="text-foreground/40">Select a city...</span>
-            )}
+          <span className="text-xs font-extrabold text-gray-800">Country</span>
+          <span className={`text-sm truncate ${selectedCountry ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+            {selectedCountry || "Anywhere"}
           </span>
-
-          {/* City Dropdown */}
-          {isWhereOpen && (
-            <div className="absolute top-full left-0 w-[280px] mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
-              {cities.map(({ id, name, country }) => (
-                <button
-                  key={id}
-                  className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors hover:bg-muted cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setWhere(name);
-                    setIsWhereOpen(false);
-                  }}
-                >
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium">{name}</span>
-                    <span className="text-muted-foreground text-xs">- {country}</span>
-                  </div>
-                </button>
-              ))}
-              <div className="w-full text-left px-4 py-3 mt-1 border-t border-border/50 text-sm flex items-center justify-between opacity-50 cursor-default">
-                <span className="font-medium italic">More are coming soon...</span>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* WHEN */}
+        <div className="h-8 w-[1px] bg-gray-200" />
+
+        {/* FIELD 2: CITY */}
         <div 
-          className={cn(
-            "search-segment flex-1 border-r border-border/50 cursor-pointer transition-all px-6 py-2",
-            focusedField === 'when' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
-          )}
+          onClick={() => setActiveDropdown(activeDropdown === "city" ? null : "city")}
+          className={`flex-[1.2] flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "city" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
         >
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1" htmlFor="search-when">
-            When
-            <Calendar size={12} className="text-muted-foreground" />
-          </label>
-          <input
-            id="search-when"
-            type="date"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            onFocus={() => setFocusedField('when')}
-            onBlur={() => setFocusedField(null)}
-            className="text-sm font-medium bg-transparent outline-none w-full mt-0.5 text-foreground cursor-pointer [color-scheme:light]"
-          />
+          <span className="text-xs font-extrabold text-gray-800">City</span>
+          <span className={`text-sm truncate ${selectedCityId ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+            {getCityName()}
+          </span>
         </div>
 
-        {/* WHO */}
-        <div 
-          className={cn(
-            "search-segment flex-1 cursor-pointer relative transition-all rounded-r-full px-6 py-2",
-            focusedField === 'who' ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''
-          )}
-          onClick={() => setIsWhoOpen(!isWhoOpen)}
-          onBlur={() => {
-            setFocusedField(null);
-            setTimeout(() => setIsWhoOpen(false), 150);
-          }}
-          tabIndex={0}
-          onFocus={() => setFocusedField('who')}
-        >
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-            Who
-            <ChevronDown size={12} className={cn("text-muted-foreground transition-transform", isWhoOpen ? 'rotate-180' : '')} />
-          </span>
-          <span className="text-sm font-medium truncate block mt-0.5">
-            {who || <span className="text-foreground/40">Type of local consultant</span>}
-          </span>
+        <div className="h-8 w-[1px] bg-gray-200" />
 
-          {/* Niche Dropdown */}
-          {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 animate-fade-in max-h-[300px] overflow-y-auto">
-              {niches.map((option) => (
-                <button
-                  key={option}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setWho(option);
-                    setIsWhoOpen(false);
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* FIELD 3: WHEN */}
+        <div 
+          onClick={() => setActiveDropdown(activeDropdown === "when" ? null : "when")}
+          className={`flex-1 flex flex-col justify-center px-6 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "when" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
+        >
+          <span className="text-xs font-extrabold text-gray-800">When</span>
+          <span className={`text-sm truncate ${selectedWhen ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+            {selectedWhen || "Any week"}
+          </span>
         </div>
 
-        {/* Search Button */}
-        <button onClick={handleSearchClick}
-          className="flex items-center justify-center w-12 h-12 my-1 mr-1 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-          aria-label="Search for local consultants"
+        <div className="h-8 w-[1px] bg-gray-200" />
+
+        {/* FIELD 4: WHO & SEARCH BUTTON */}
+        <div 
+          onClick={() => setActiveDropdown(activeDropdown === "who" ? null : "who")}
+          className={`flex-[1.5] flex items-center justify-between pl-6 pr-2 h-full rounded-full cursor-pointer transition-colors ${activeDropdown === "who" ? "bg-white shadow-lg" : "hover:bg-gray-100"}`}
         >
-          <Search size={20} />
-        </button>
+          <div className="flex flex-col justify-center overflow-hidden mr-2">
+            <span className="text-xs font-extrabold text-gray-800">Who</span>
+            <span className={`text-sm truncate ${selectedWho ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+              {selectedWho || "Any specialty"}
+            </span>
+          </div>
+          <button 
+            onClick={handleSearch}
+            className="h-12 w-12 bg-primary rounded-full flex items-center justify-center text-white hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all shrink-0"
+          >
+            <Search className="w-5 h-5 stroke-[2.5px]" />
+          </button>
+        </div>
       </div>
 
-      {/* 📱 MOBILE SEARCH BAR */}
-      <div className="md:hidden flex flex-col gap-3 bg-card rounded-2xl shadow-medium border border-border/50 p-4">
-        
-        {/* Mobile Where */}
-        <div className="space-y-1 relative">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-            Where <MapPin size={10} className="text-[#C77752]"/>
-          </label>
-          <button
-            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm text-left flex items-center justify-between"
-            onClick={() => setIsWhereOpen(!isWhereOpen)}
+      {/* --- DROPDOWN MENUS --- */}
+      
+      {/* Country Dropdown */}
+      {activeDropdown === "country" && (
+        <div className="absolute top-20 left-0 w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-50">
+          <div className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase tracking-wider">Select Region</div>
+          <button 
+            onClick={() => { setSelectedCountry(""); setSelectedCityId(null); setActiveDropdown("city"); }} 
+            className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
           >
-            <span className={where ? 'text-foreground font-medium' : 'text-foreground/40'}>
-              {where ? (
-                <span>{where} <span className="text-muted-foreground font-normal">- {selectedCountry}</span></span>
-              ) : "Select a city..."}
-            </span>
-            <ChevronDown size={16} className={cn("text-muted-foreground transition-transform", isWhereOpen ? 'rotate-180' : '')} />
+            Anywhere
           </button>
-
-          {isWhereOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 max-h-[250px] overflow-y-auto">
-              {cities.map(({ id, name, country }) => (
-                <button
-                  key={id}
-                  className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors hover:bg-muted cursor-pointer"
-                  onClick={() => {
-                    setWhere(name);
-                    setIsWhereOpen(false);
-                  }}
-                >
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium">{name}</span>
-                    <span className="text-muted-foreground text-xs">- {country}</span>
-                  </div>
-                </button>
-              ))}
-              <div className="w-full text-left px-4 py-3 mt-1 border-t border-border/50 text-sm flex items-center justify-between opacity-50 cursor-default">
-                <span className="font-medium italic">More are coming soon...</span>
-              </div>
-            </div>
-          )}
+          {availableCountries.map(country => (
+            <button 
+              key={country} 
+              onClick={() => { 
+                setSelectedCountry(country); 
+                setSelectedCityId(null); // Reset city when changing country
+                setActiveDropdown("city"); // Auto-advance to city selection
+              }} 
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
+            >
+              {country}
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* Mobile When */}
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1" htmlFor="mobile-when">
-            When <Calendar size={10} />
-          </label>
-          <input
-            id="mobile-when"
-            type="date"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 [color-scheme:light]"
-          />
-        </div>
-
-        {/* Mobile Who */}
-        <div className="space-y-1 relative">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Who</label>
-          <button
-            className="w-full px-4 py-3 bg-muted/50 rounded-xl text-sm text-left flex items-center justify-between"
-            onClick={() => setIsWhoOpen(!isWhoOpen)}
+      {/* City Dropdown */}
+      {activeDropdown === "city" && (
+        <div className="absolute top-20 left-[20%] w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-50 max-h-[400px] overflow-y-auto">
+          <div className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase tracking-wider">Select City</div>
+          <button 
+            onClick={() => { setSelectedCityId(null); setActiveDropdown("who"); }} 
+            className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
           >
-            <span className={who ? 'text-foreground font-medium' : 'text-foreground/40'}>
-              {who || "Type of local consultant"}
-            </span>
-            <ChevronDown size={16} className={cn("text-muted-foreground transition-transform", isWhoOpen ? 'rotate-180' : '')} />
+            All Cities
           </button>
-
-          {isWhoOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-strong border border-border/50 py-2 z-50 max-h-[200px] overflow-y-auto">
-              {niches.map((option) => (
-                <button
-                  key={option}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                  onClick={() => {
-                    setWho(option);
-                    setIsWhoOpen(false);
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
+          {availableCities.map(city => (
+            <button 
+              key={city.id} 
+              onClick={() => { 
+                setSelectedCityId(city.id); 
+                // Auto-fill country if they picked a city while country was empty
+                if (!selectedCountry) setSelectedCountry(city.country_code); 
+                setActiveDropdown("who"); // Auto-advance to Who/Niche
+              }} 
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
+            >
+              {city.name} <span className="text-gray-400 text-xs ml-1">({city.country_code})</span>
+            </button>
+          ))}
         </div>
+      )}
 
-        <button onClick={handleSearchClick}
-          className="w-full py-3 rounded-full bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity mt-2"
-          aria-label="Search for local consultants"
-        >
-          <Search size={18} />
-          Search
-        </button>
-      </div>
+      {/* Who/Niche Dropdown */}
+      {activeDropdown === "who" && (
+        <div className="absolute top-20 right-0 w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-50 max-h-[400px] overflow-y-auto">
+           <div className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase tracking-wider">Specialty</div>
+           <button 
+             onClick={() => { setSelectedWho(""); setActiveDropdown(null); }} 
+             className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
+           >
+             Anyone
+           </button>
+           {niches?.map(niche => (
+            <button 
+              key={niche} 
+              onClick={() => { setSelectedWho(niche); setActiveDropdown(null); }} 
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
+            >
+              {niche}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* When Dropdown Placeholder */}
+      {activeDropdown === "when" && (
+        <div className="absolute top-20 left-[50%] w-[300px] bg-white rounded-3xl shadow-[0_8px_28px_rgba(0,0,0,0.1)] border border-gray-100 p-6 z-50 text-center">
+           <p className="text-sm text-gray-500">Date picker integration coming soon!</p>
+        </div>
+      )}
     </div>
   );
-};
-
-export default SearchBar;
+}
