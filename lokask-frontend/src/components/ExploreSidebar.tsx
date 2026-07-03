@@ -142,7 +142,6 @@ export const ExploreSidebar = ({
       </div>
 
       {/* Expertise Section */}
-      {/* Expertise Section */}
       <div className="flex flex-col gap-3">
         <h3 className={labelClassName}>Expertise</h3>
         <div className="flex flex-col gap-2">
