@@ -309,41 +309,6 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			"created_at":      time.Now().Format(time.RFC3339),
 		}
 		BroadcastNotification(info.ReceiverID, notifPayload)
-
-		// mailer
-		var recentCount int
-		countQuery := `
-			SELECT COUNT(*) 
-			FROM messages 
-			WHERE conversation_id = $1 
-			  AND sender_id = $2 
-			  AND created_at >= NOW() - INTERVAL '30 minutes'
-		`
-		err := h.Repo.DB.GetContext(bgCtx, &recentCount, countQuery, conversationID, senderID)
-		if err != nil {
-			log.Printf("[WARN][MAILER] Failed to check recent messages: %v", err)
-			return
-		}
-
-		if recentCount > 1 {
-			log.Printf("[INFO][MAILER] Skipped: Sender %s already sent a message within the last 8 hours.", senderID)
-			return
-		}
-
-		if info.ReceiverEmail != "" {
-			preview := message
-			if len(preview) > 50 {
-				preview = preview[:47] + "..."
-			}
-
-			mailErr := h.Mailer.SendMessageNotification(info.ReceiverEmail, info.ReceiverName, info.SenderName, preview)
-			if mailErr != nil {
-				log.Printf("[ERROR][MAILER] Failed to send to %s: %v", info.ReceiverEmail, mailErr)
-			} else {
-				log.Printf("[INFO][MAILER] Successfully sent notification to %s", info.ReceiverEmail)
-			}
-		}
-
 	}(myID, convID, req.Content)
 
 	// @TODO current not sure about the ID of the message if it fit with
