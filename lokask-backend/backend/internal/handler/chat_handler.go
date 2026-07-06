@@ -238,7 +238,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			WHERE c.id = $1 AND (c.traveler_id = $2 OR cons.user_id = $2)
 		)`, convID, myID)
 
-	log.Printf("[INFO] MyID: %s, conversation: %s", myID, convID)
+	// [INFO][NOTI] Successfullylog.Printf("[INFO] MyID: %s, conversation: %s", myID, convID)
 
 	if err != nil || !isParticipant {
 		return c.Status(403).JSON(fiber.Map{"error": "Forbidden: Not a participant of this conversation", "detail": err.Error()})
@@ -310,7 +310,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		}
 		BroadcastNotification(info.ReceiverID, notifPayload)
 		// DEBUG
-		log.Printf("[INFO][NOTI] Successfully created and send notificaiton for conversation %s at %s", conversationID.String(), time.Now().Format(time.RFC3339))
+		// log.Printf("[INFO][NOTI] Successfully created and send notificaiton for conversation %s at %s", conversationID.String(), time.Now().Format(time.RFC3339))
 	}(myID, convID, req.Content)
 
 	// @TODO current not sure about the ID of the message if it fit with
