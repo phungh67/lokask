@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"asklocal/internal/middleware"
 	"asklocal/internal/repository"
 	"asklocal/internal/storage"
+	"asklocal/internal/worker"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -103,6 +103,9 @@ func main() {
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
 	bookHandler := handler.NewBookingHandler(bookRepo, consultantRepo, db)
+
+	// cron service
+	worker.StartUnreadMessageCron(db, mailService)
 
 	// auth handler
 	authHandler := &handler.AuthHandler{
@@ -220,25 +223,4 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-// handler proxy for CORs
-func proxyImageHandler(c *fiber.Ctx) error {
-	url := c.Query("url")
-	if url == "" {
-		return c.Status(400).SendString("Missing url parameter")
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return c.Status(500).SendString("Failed to fetch image")
-	}
-	defer resp.Body.Close()
-
-	contentType := resp.Header.Get("Content-Type")
-	if contentType != "" {
-		c.Set("Content-Type", contentType)
-	}
-
-	return c.SendStream(resp.Body)
 }
