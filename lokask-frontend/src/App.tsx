@@ -20,8 +20,9 @@ import ConsultantDashboard from "./pages/dashboard/ConsultantDashboard";
 import BlogPage from "./pages/BlogPage";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
-import ChoosePackagePage from "./pages/ChoosePackagePage"; 
+import ChoosePackagePage from "./pages/ChoosePackagePage";
 import ResetPassword from "./pages/ResetPassword";
+import { NotificationProvider } from "./context/NotificationContext";
 
 const queryClient = new QueryClient();
 
@@ -32,38 +33,46 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            {/* public Pages */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/explore-locals" element={<ExploreLocals />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/destinations/:slug" element={<DestinationPage />} />
-              {/* consultant */}
-              <Route path="/consultant/:id" element={<ConsultantPage />} />
-              <Route path="/become-local" element={<BecomeLocal />} />
-              <Route path="/consultants" element={<ExploreLocals />} />
-            </Route>
+          <NotificationProvider>
+            <Routes>
+              {/* public Pages */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/explore-locals" element={<ExploreLocals />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route
+                  path="/destinations/:slug"
+                  element={<DestinationPage />}
+                />
+                {/* consultant */}
+                <Route path="/consultant/:id" element={<ConsultantPage />} />
+                <Route path="/become-local" element={<BecomeLocal />} />
+                <Route path="/consultants" element={<ExploreLocals />} />
+              </Route>
 
-            <Route path="/consultant/:id/packages" element={<ChoosePackagePage />} />
+              <Route
+                path="/consultant/:id/packages"
+                element={<ChoosePackagePage />}
+              />
 
-            {/* auth & dashboard */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/signup/traveller" element={<SignupTraveller />} />
-            <Route path="/signup/consultant" element={<SignupConsultant />} />
-            <Route path="/dashboard" element={<ConsultantDashboard />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+              {/* auth & dashboard */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/signup/traveller" element={<SignupTraveller />} />
+              <Route path="/signup/consultant" element={<SignupConsultant />} />
+              <Route path="/dashboard" element={<ConsultantDashboard />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Calling */}
-            <Route path="/call/:roomId" element={<CallPage />} />
+              {/* Calling */}
+              <Route path="/call/:roomId" element={<CallPage />} />
 
-            <Route path="/blog/:id" element={<BlogPage />} />
+              <Route path="/blog/:id" element={<BlogPage />} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
 
-          <ChatWidget />
+            <ChatWidget />
+          </NotificationProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ChatProvider>
