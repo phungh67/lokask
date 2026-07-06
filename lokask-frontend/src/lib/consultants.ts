@@ -103,7 +103,7 @@ export const mapBlog = (b: any): Blog => ({
 });
 
 // Helper to generate a placeholder if the avatar is missing
-const getAvatar = (url: string, name: string) => {
+export const getAvatar = (url: string, name: string) => {
     if (url && url.trim() !== "") return url;
     // return a pre generated answer 
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&background=random&color=fff`;

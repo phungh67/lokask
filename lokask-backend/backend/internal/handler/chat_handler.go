@@ -264,6 +264,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			ReceiverEmail string `db:"receiver_email"`
 			ReceiverName  string `db:"receiver_name"`
 			SenderName    string `db:"sender_name"`
+			SenderAvatar  string `db:"sender_avatar"`
 		}
 
 		query := `
@@ -272,6 +273,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
                 receiver.email AS receiver_email,
                 receiver.full_name AS receiver_name,
                 sender.full_name AS sender_name
+				COALESCE(sender.avatar_url, '') AS sender_avatar
             FROM conversations c
             JOIN users sender ON sender.id = $1
             JOIN consultants cons ON c.consultant_id = cons.id
@@ -305,6 +307,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			"type":            "new_message",
 			"conversation_id": conversationID.String(),
 			"sender_name":     info.SenderName,
+			"sender_avatar":   info.SenderAvatar,
 			"preview":         message,
 			"created_at":      time.Now().Format(time.RFC3339),
 		}
