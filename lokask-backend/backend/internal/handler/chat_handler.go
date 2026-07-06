@@ -16,8 +16,9 @@ import (
 )
 
 type ChatHandler struct {
-	Repo   *repository.ChatRepository
-	Mailer *mailer.MailService
+	Repo     *repository.ChatRepository
+	Notifier *repository.NotificationRepository
+	Mailer   *mailer.MailService
 }
 
 type ChatRoom struct {
@@ -30,8 +31,17 @@ type ChatHubStruct struct {
 	mu    sync.RWMutex
 }
 
+type UserHubStruct struct {
+	Clients map[string]*websocket.Conn
+	mu      sync.RWMutex
+}
+
 var ChatHub = ChatHubStruct{
 	Rooms: make(map[string]*ChatRoom),
+}
+
+var UserHub = UserHubStruct{
+	Clients: make(map[string]*websocket.Conn),
 }
 
 // helper function to get user ID
@@ -60,6 +70,7 @@ func ChatWebSocket(c *websocket.Conn) {
 		return
 	}
 
+	// register in the chat hub
 	ChatHub.mu.Lock()
 	if ChatHub.Rooms[conversationID] == nil {
 		ChatHub.Rooms[conversationID] = &ChatRoom{
@@ -100,7 +111,7 @@ func ChatWebSocket(c *websocket.Conn) {
 	}
 }
 
-func BroadcastChatMessage(conversationID string, messagePayload interface{}) {
+func BroadcastChatMessage(conversationID string, messagePayload interface{}, senderID string) {
 	ChatHub.mu.RLock()
 	room := ChatHub.Rooms[conversationID]
 	ChatHub.mu.RUnlock()
@@ -113,10 +124,60 @@ func BroadcastChatMessage(conversationID string, messagePayload interface{}) {
 	defer room.mu.RUnlock()
 
 	for clientID, conn := range room.Clients {
+		if clientID == senderID {
+			continue
+		}
+
 		err := conn.WriteJSON(messagePayload)
 		if err != nil {
 			log.Printf("[ERROR][CHAT] Failed to deliver messages for users %s: %v", clientID, err)
 		}
+	}
+}
+
+func NotificationWebSocket(c *websocket.Conn) {
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		log.Println("[ERROR][NOTIF] Unauthorized WebSocket connection")
+		c.Close()
+		return
+	}
+
+	UserHub.mu.Lock()
+	UserHub.Clients[userID] = c
+	UserHub.mu.Unlock()
+
+	log.Printf("[INFO][NOTIF] User %s connected to global notifications", userID)
+
+	defer func() {
+		UserHub.mu.Lock()
+		delete(UserHub.Clients, userID)
+		UserHub.mu.Unlock()
+
+		c.Close()
+		log.Printf("[INFO][NOTIF] User %s disconnected from global notifications", userID)
+	}()
+
+	for {
+		_, _, err := c.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
+}
+
+func BroadcastNotification(targetUserID string, payload interface{}) {
+	UserHub.mu.RLock()
+	conn, exists := UserHub.Clients[targetUserID]
+	UserHub.mu.RUnlock()
+
+	if !exists {
+		return
+	}
+
+	err := conn.WriteJSON(payload)
+	if err != nil {
+		log.Printf("[ERROR][NOTIF] Failed to deliver notification to user %s: %v", targetUserID, err)
 	}
 }
 
@@ -197,6 +258,59 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	go func(senderID, conversationID uuid.UUID, message string) {
 		bgCtx := context.Background()
 
+		// construct the payload for notification system
+		var info struct {
+			ReceiverID    string `db:"receiver_id"`
+			ReceiverEmail string `db:"receiver_email"`
+			ReceiverName  string `db:"receiver_name"`
+			SenderName    string `db:"sender_name"`
+		}
+
+		query := `
+            SELECT
+				receiver.id AS receiver_id,
+                receiver.email AS receiver_email,
+                receiver.full_name AS receiver_name,
+                sender.full_name AS sender_name
+            FROM conversations c
+            JOIN users sender ON sender.id = $1
+            JOIN consultants cons ON c.consultant_id = cons.id
+            JOIN users receiver ON (receiver.id = c.traveler_id OR receiver.id = cons.user_id) AND receiver.id != $1
+            WHERE c.id = $2
+        `
+
+		// check self chat
+		err = h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
+		if err == sql.ErrNoRows {
+			return
+		} else if err != nil {
+			log.Printf("[WARN][MAILER] Could not fetch receiver info: %v", err)
+			return
+		}
+
+		refID := conversationID
+		err = h.Notifier.CreateNotification(
+			bgCtx,
+			uuid.MustParse(info.ReceiverID),
+			"new_message",
+			&refID,
+			message,
+		)
+		if err != nil {
+			log.Printf("[ERROR][NOTI] Failed to save notification: %v", err)
+		}
+
+		// broadcast notification
+		notifPayload := fiber.Map{
+			"type":            "new_message",
+			"conversation_id": conversationID.String(),
+			"sender_name":     info.SenderName,
+			"preview":         message,
+			"created_at":      time.Now().Format(time.RFC3339),
+		}
+		BroadcastNotification(info.ReceiverID, notifPayload)
+
+		// mailer
 		var recentCount int
 		countQuery := `
 			SELECT COUNT(*) 
@@ -213,32 +327,6 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 
 		if recentCount > 1 {
 			log.Printf("[INFO][MAILER] Skipped: Sender %s already sent a message within the last 8 hours.", senderID)
-			return
-		}
-
-		var info struct {
-			ReceiverEmail string `db:"receiver_email"`
-			ReceiverName  string `db:"receiver_name"`
-			SenderName    string `db:"sender_name"`
-		}
-
-		query := `
-            SELECT 
-                receiver.email AS receiver_email,
-                receiver.full_name AS receiver_name,
-                sender.full_name AS sender_name
-            FROM conversations c
-            JOIN users sender ON sender.id = $1
-            JOIN consultants cons ON c.consultant_id = cons.id
-            JOIN users receiver ON (receiver.id = c.traveler_id OR receiver.id = cons.user_id) AND receiver.id != $1
-            WHERE c.id = $2
-        `
-
-		err = h.Repo.DB.GetContext(bgCtx, &info, query, senderID, conversationID)
-		if err == sql.ErrNoRows {
-			return // Self-chat, abort
-		} else if err != nil {
-			log.Printf("[WARN][MAILER] Could not fetch receiver info: %v", err)
 			return
 		}
 
@@ -268,7 +356,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		"type":       "text",
 	}
 
-	go BroadcastChatMessage(convID.String(), wsPayload)
+	go BroadcastChatMessage(convID.String(), wsPayload, myID.String())
 
 	return c.JSON(fiber.Map{
 		"status":    "sent",
