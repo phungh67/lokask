@@ -272,7 +272,7 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 				receiver.id AS receiver_id,
                 receiver.email AS receiver_email,
                 receiver.full_name AS receiver_name,
-                sender.full_name AS sender_name
+                sender.full_name AS sender_name,
 				COALESCE(sender.avatar_url, '') AS sender_avatar
             FROM conversations c
             JOIN users sender ON sender.id = $1
