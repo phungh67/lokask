@@ -136,7 +136,7 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 		return err
 	}
 
-	log.Printf("[DEBUG] TravelerID: %s, consultantID: %s", conv.TravelerID.String(), conv.ConsultantID.String())
+	// log.Printf("[DEBUG] TravelerID: %s, consultantID: %s", conv.TravelerID.String(), conv.ConsultantID.String())
 
 	// isSelfChat := conv.TravelerID == conv.ConsultantID
 	// session, err := r.sessionValidation(ctx, conversationID)
