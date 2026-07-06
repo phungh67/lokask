@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"asklocal/internal/config"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,12 +35,12 @@ func Protect() fiber.Handler {
 		}
 
 		key := "session:" + token
-		fmt.Printf("[INFO] MIDDLEWARE: Looking for Key [%s]\n", key)
+		// fmt.Printf("[INFO] MIDDLEWARE: Looking for Key [%s]\n", key)
 
 		// get data from redis
 		userID, err := config.RedisClient.Get(c.Context(), key).Result()
 		if err != nil {
-			fmt.Printf("[INFO] MIDDLEWARE ERROR: Key not found. Error: %v\n", err)
+			log.Printf("[INFO] MIDDLEWARE ERROR: Key not found. Error: %v\n", err)
 			return c.Status(401).JSON(fiber.Map{
 				"error": "Session expired",
 			})

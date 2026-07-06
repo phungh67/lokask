@@ -84,7 +84,7 @@ func ChatWebSocket(c *websocket.Conn) {
 	room.Clients[userID] = c
 	room.mu.Unlock()
 
-	log.Printf("[INFO][CHAT] User %s connected to chat stream of conversation %s", userID, conversationID)
+	// log.Printf("[INFO][CHAT] User %s connected to chat stream of conversation %s", userID, conversationID)
 
 	defer func() {
 		room.mu.Lock()
@@ -98,7 +98,7 @@ func ChatWebSocket(c *websocket.Conn) {
 		room.mu.Unlock()
 
 		c.Close()
-		log.Printf("[INFO][CHAT] User %s disconnected to chat stream of conversation %s", userID, conversationID)
+		// log.Printf("[INFO][CHAT] User %s disconnected to chat stream of conversation %s", userID, conversationID)
 	}()
 
 	for {
@@ -309,6 +309,8 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 			"created_at":      time.Now().Format(time.RFC3339),
 		}
 		BroadcastNotification(info.ReceiverID, notifPayload)
+		// DEBUG
+		log.Printf("[INFO][NOTI] Successfully created and send notificaiton for conversation %s at %s", conversationID.String(), time.Now().Format(time.RFC3339))
 	}(myID, convID, req.Content)
 
 	// @TODO current not sure about the ID of the message if it fit with
