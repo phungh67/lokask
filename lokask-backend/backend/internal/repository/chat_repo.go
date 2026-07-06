@@ -33,9 +33,9 @@ type Message struct {
 	SenderID       uuid.UUID `db:"sender_id" json:"sender_id"`
 	Content        string    `db:"content" json:"content"`
 	CreatedAt      time.Time `db:"created_at" json:"created_at"`
-	// must have, othewise, error would be caused
-	IsRead bool `db:"is_read" json:"is_read"`
-	IsMe   bool `db:"-" json:"is_me"` // Helper for frontend
+	IsRead         bool      `db:"is_read" json:"is_read"`
+	EmailSent      bool      `db:"email_sent" json:"-"`
+	IsMe           bool      `db:"-" json:"is_me"` // Helper for frontend
 }
 
 type ChatRepository struct {

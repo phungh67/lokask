@@ -347,9 +347,9 @@ func (h *ChatHandler) GetHistory(c *fiber.Ctx) error {
 
 	msgs, err := h.Repo.GetMessages(convID)
 	if err != nil {
+		log.Printf("[ERROR][CHAT] Failed to fetch message: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":  "Failed to fetch messages",
-			"detail": err.Error(),
+			"error": "Internal server error.",
 		})
 	}
 
