@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { AuthStorage } from "@/lib/storage";
 import NotificationBanner from "@/components/notification/NotificationBanner";
 import { useWebSocket } from "@/lib/websocket"; 
+import { getAvatar } from "@/lib/consultants";
 interface NotificationPayload {
   id: string;
   type: "new_message" | "new_booking";
@@ -41,6 +42,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       id: payload.id || Date.now().toString(),
       type: payload.type,
       senderName: payload.sender_name,
+      senderAvatar: getAvatar(payload.sender_avatar, payload.sender_name),
       preview: payload.preview,
       conversation_id: payload.conversation_id,
     };
