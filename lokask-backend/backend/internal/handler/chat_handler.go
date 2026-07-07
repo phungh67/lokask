@@ -147,7 +147,7 @@ func NotificationWebSocket(c *websocket.Conn) {
 	UserHub.Clients[userID] = c
 	UserHub.mu.Unlock()
 
-	log.Printf("[INFO][NOTIF] User %s connected to global notifications", userID)
+	// log.Printf("[INFO][NOTIF] User %s connected to global notifications", userID)
 
 	defer func() {
 		UserHub.mu.Lock()
@@ -155,7 +155,7 @@ func NotificationWebSocket(c *websocket.Conn) {
 		UserHub.mu.Unlock()
 
 		c.Close()
-		log.Printf("[INFO][NOTIF] User %s disconnected from global notifications", userID)
+		// log.Printf("[INFO][NOTIF] User %s disconnected from global notifications", userID)
 	}()
 
 	for {
@@ -252,8 +252,12 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid content"})
 	}
 
-	if err := h.Repo.CreateMessage(ctx, convID, myID, req.Content); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "detail": err.Error()})
+	msgID, createdAt, err := h.Repo.CreateMessage(ctx, convID, myID, req.Content)
+	if err != nil {
+		log.Printf("[ERROR][CHAT] Error when sending message: %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to send message",
+		})
 	}
 
 	go func(senderID, conversationID uuid.UUID, message string) {
@@ -320,18 +324,19 @@ func (h *ChatHandler) SendMessage(c *fiber.Ctx) error {
 	// @TODO current not sure about the ID of the message if it fit with
 	// previous payload in the DB
 	wsPayload := fiber.Map{
-		"id":         uuid.New().String(),
+		"id":         msgID.String(),
 		"content":    req.Content,
 		"sender_id":  myID.String(),
-		"created_at": time.Now().Format(time.RFC3339),
+		"created_at": createdAt.Format(time.RFC3339),
 		"type":       "text",
 	}
 
 	go BroadcastChatMessage(convID.String(), wsPayload, myID.String())
 
 	return c.JSON(fiber.Map{
-		"status":    "sent",
-		"sender_id": myID,
+		"status":     "sent",
+		"sender_id":  myID,
+		"message_id": msgID,
 	})
 }
 

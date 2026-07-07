@@ -128,12 +128,15 @@ func (r *ChatRepository) GetChatSession(ctx context.Context, conversationID uuid
 }
 
 // create message method
-func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.UUID, senderID uuid.UUID, content string) error {
+func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.UUID, senderID uuid.UUID, content string) (uuid.UUID, time.Time, error) {
+	var msgID uuid.UUID
+	var createdAt time.Time
+
 	// get the conversation first
 	var conv Conversation
 	err := r.DB.GetContext(ctx, &conv, "SELECT * FROM conversations WHERE id = $1", conversationID)
 	if err != nil {
-		return err
+		return uuid.Nil, time.Time{}, err
 	}
 
 	// log.Printf("[DEBUG] TravelerID: %s, consultantID: %s", conv.TravelerID.String(), conv.ConsultantID.String())
@@ -143,7 +146,7 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 
 	tx, err := r.DB.BeginTxx(ctx, nil)
 	if err != nil {
-		return err
+		return uuid.Nil, time.Time{}, err
 	}
 	defer tx.Rollback()
 
@@ -162,20 +165,30 @@ func (r *ChatRepository) CreateMessage(ctx context.Context, conversationID uuid.
 	// }
 
 	// Insert Message
-	_, err = tx.ExecContext(ctx, `INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)`,
-		conversationID, senderID, content)
+	insertQuery := `
+		INSERT INTO messages (conversation_id, sender_id, content) 
+		VALUES ($1, $2, $3)
+		RETURNING id, created_at
+	`
+
+	err = tx.QueryRowContext(ctx, insertQuery, conversationID, senderID, content).Scan(&msgID, &createdAt)
 	if err != nil {
-		return err
+		return uuid.Nil, time.Time{}, err
 	}
 
 	// Update Conversation "Last Message" (for inbox sorting)
-	_, err = tx.ExecContext(ctx, `UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2`,
-		content, conversationID)
+	updateQuery := `
+		UPDATE conversations 
+		SET last_message = $1, last_message_at = $2 
+		WHERE id = $3
+	`
+	_, err = tx.ExecContext(ctx, updateQuery, content, createdAt, conversationID)
 	if err != nil {
-		return err
+		return uuid.Nil, time.Time{}, err
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	return msgID, createdAt, err
 }
 
 // get message of chat
