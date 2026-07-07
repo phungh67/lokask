@@ -14,13 +14,15 @@ import (
 type BookingHandler struct {
 	BookingRepo    *repository.BookingRepository
 	Consultantrepo *repository.ConsultantRepository
+	Notifier       *repository.NotificationRepository
 	DB             *sqlx.DB
 }
 
-func NewBookingHandler(bRepo *repository.BookingRepository, cRepo *repository.ConsultantRepository, db *sqlx.DB) *BookingHandler {
+func NewBookingHandler(bRepo *repository.BookingRepository, cRepo *repository.ConsultantRepository, notifier *repository.NotificationRepository, db *sqlx.DB) *BookingHandler {
 	return &BookingHandler{
 		BookingRepo:    bRepo,
 		Consultantrepo: cRepo,
+		Notifier:       notifier,
 		DB:             db,
 	}
 }
@@ -60,8 +62,8 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 
 	// input booking
 	booking := &domain.BookingEntry{
-		ConsultantID: consultantID.String(),
-		UserID:       travelerID.String(),
+		ConsultantID: consultantID,
+		UserID:       travelerID,
 		StartTime:    startTime,
 		EndTime:      endTime,
 		TotalPrice:   req.TotalPrice,
@@ -87,6 +89,42 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 
 	if err := tx.Commit(); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to finalize booking"})
+	}
+
+	// noti
+	var info struct {
+		ConsultantUserID string `db:"user_id"`
+		TravelerName     string `db:"full_name"`
+	}
+
+	query := `
+    	SELECT c.user_id, u.full_name 
+    	FROM consultants c, users u 
+    	WHERE c.id = $1 AND u.id = $2
+	`
+
+	err = h.DB.GetContext(c.UserContext(), &info, query, consultantID, travelerID)
+
+	if err == nil {
+		refID := booking.ID
+		content := "You have a new booking request from " + info.TravelerName
+
+		_ = h.Notifier.CreateNotification(
+			c.UserContext(),
+			uuid.MustParse(info.ConsultantUserID),
+			"new_booking",
+			&refID,
+			content,
+		)
+
+		notifPayload := fiber.Map{
+			"type":         "new_booking",
+			"reference_id": booking.ID.String(),
+			"sender_name":  info.TravelerName,
+			"preview":      content,
+			"created_at":   time.Now().Format(time.RFC3339),
+		}
+		BroadcastNotification(info.ConsultantUserID, notifPayload)
 	}
 
 	return c.Status(201).JSON(booking)
@@ -212,6 +250,44 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 	err = h.BookingRepo.UpdateBookingStatus(c.Context(), bookingID, req.Status)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update booking"})
+	}
+
+	if req.Status == "confirmed" {
+		var info struct {
+			TravelerUserID string `db:"traveler_id"`
+			ConsultantName string `db:"full_name"`
+		}
+		query := `
+			SELECT 
+            	b.user_id AS traveler_id, 
+            	u_cons.full_name AS consultant_name
+        	FROM bookings b
+        	JOIN consultants c ON b.consultant_id = c.id
+        	JOIN users u_cons ON c.user_id = u_cons.id
+        	WHERE b.id = $1
+		`
+
+		err = h.DB.GetContext(c.UserContext(), &info, query, bookingID)
+
+		refID := bookingID
+		content := info.ConsultantName + " has confirmed your booking!"
+
+		_ = h.Notifier.CreateNotification(
+			c.UserContext(),
+			uuid.MustParse(info.TravelerUserID),
+			"booking_confirmed",
+			&refID,
+			content,
+		)
+
+		notifPayload := fiber.Map{
+			"type":         "new_booking",
+			"reference_id": bookingID.String(),
+			"sender_name":  info.ConsultantName,
+			"preview":      content,
+			"created_at":   time.Now().Format(time.RFC3339),
+		}
+		BroadcastNotification(info.TravelerUserID, notifPayload)
 	}
 
 	return c.JSON(fiber.Map{"status": req.Status})

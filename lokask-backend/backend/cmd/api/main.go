@@ -102,7 +102,7 @@ func main() {
 
 	// booking
 	bookRepo := repository.NewBookingRepository(db)
-	bookHandler := handler.NewBookingHandler(bookRepo, consultantRepo, db)
+	bookHandler := handler.NewBookingHandler(bookRepo, consultantRepo, notiRepo, db)
 
 	// cron service
 	worker.StartUnreadMessageCron(db, mailService)
