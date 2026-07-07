@@ -147,7 +147,7 @@ func NotificationWebSocket(c *websocket.Conn) {
 	UserHub.Clients[userID] = c
 	UserHub.mu.Unlock()
 
-	log.Printf("[INFO][NOTIF] User %s connected to global notifications", userID)
+	// log.Printf("[INFO][NOTIF] User %s connected to global notifications", userID)
 
 	defer func() {
 		UserHub.mu.Lock()
@@ -155,7 +155,7 @@ func NotificationWebSocket(c *websocket.Conn) {
 		UserHub.mu.Unlock()
 
 		c.Close()
-		log.Printf("[INFO][NOTIF] User %s disconnected from global notifications", userID)
+		// log.Printf("[INFO][NOTIF] User %s disconnected from global notifications", userID)
 	}()
 
 	for {

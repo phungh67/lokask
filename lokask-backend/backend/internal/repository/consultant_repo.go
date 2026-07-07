@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -196,7 +195,7 @@ func (r *ConsultantRepository) GetProfileByUserID(ctx context.Context, userID uu
 		return nil, err
 	}
 
-	log.Printf("DEBUG: Profile ID: %v, Name: %s, DisplayName: %s\n", profile.ID, profile.Name, profile.DisplayName)
+	// log.Printf("DEBUG: Profile ID: %v, Name: %s, DisplayName: %s\n", profile.ID, profile.Name, profile.DisplayName)
 
 	if len(profile.Languages) == 0 {
 		profile.Languages = []string{"English"}

@@ -126,6 +126,7 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 			"created_at":   time.Now().Format(time.RFC3339),
 		}
 		BroadcastNotification(info.ConsultantUserID, notifPayload)
+		log.Printf("[INFO][BOOK] New booking was created, send to %s", info.ConsultantUserID)
 	}
 
 	return c.Status(201).JSON(booking)
@@ -290,8 +291,9 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 				"created_at":   time.Now().Format(time.RFC3339),
 			}
 			BroadcastNotification(info.TravelerUserID, notifPayload)
+			log.Printf("[INFO][BOOK] Update info for the book from %s", info.TravelerUserID)
 		} else {
-			log.Printf("[WARN][BOOKING] Failed to fetch info for confirmation notification: %v", err)
+			log.Printf("[WARN][BOOK] Failed to fetch info for confirmation notification: %v", err)
 		}
 	}
 
