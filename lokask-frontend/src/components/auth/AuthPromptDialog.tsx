@@ -489,7 +489,7 @@ const AuthPromptDialog = ({
               </SelectTrigger>
               <SelectContent>
                 {availableCities.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
+                  <SelectItem key={c.id || Math.random()} value={c.id?.toString() || ""}>
                     {c.name}, {c.country}
                   </SelectItem>
                 ))}
