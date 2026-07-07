@@ -437,7 +437,9 @@ const AuthPromptDialog = ({
           onClick={() => {
             // Safeguard: Ensure city is picked first
             if (selectedRole === "consultant" && !cityId) {
-              toast.error("Please select a city from the list before continuing with Google.");
+              toast.error(
+                "Please select a city from the list before continuing with Google.",
+              );
               return;
             }
             loginWithGoogle();
@@ -457,7 +459,9 @@ const AuthPromptDialog = ({
             <span className="w-full border-t border-border/60" />
           </div>
           <div className="relative flex justify-center text-xs uppercase font-medium">
-            <span className="bg-background px-4 text-muted-foreground">or sign up with email</span>
+            <span className="bg-background px-4 text-muted-foreground">
+              or sign up with email
+            </span>
           </div>
         </div>
 
@@ -488,11 +492,13 @@ const AuthPromptDialog = ({
                 <SelectValue placeholder="Which city do you want to consult?" />
               </SelectTrigger>
               <SelectContent>
-                {availableCities.map((c) => (
-                  <SelectItem key={c.id || Math.random()} value={c.id?.toString() || ""}>
-                    {c.name}, {c.country}
-                  </SelectItem>
-                ))}
+                {(availableCities || [])
+                  .filter((option) => option && option.id != null)
+                  .map((option) => (
+                    <SelectItem key={option.id} value={option.id.toString()}>
+                      {option.name}, {option.country}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
