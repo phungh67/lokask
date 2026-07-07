@@ -4,9 +4,11 @@ import { AuthStorage } from "@/lib/storage";
 import NotificationBanner from "@/components/notification/NotificationBanner";
 import { useWebSocket } from "@/lib/websocket"; 
 import { getAvatar } from "@/lib/consultants";
+import { toast } from "@/hooks/use-toast"; 
+
 interface NotificationPayload {
   id: string;
-  type: "new_message" | "new_booking";
+  type: "new_message" | "new_booking" | "booking_confirmed";
   senderName: string;
   senderAvatar?: string;
   preview: string;
@@ -27,7 +29,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const isDashboardRoute = location.pathname.startsWith("/consultant/dashboard") || 
                            location.pathname.startsWith("/dashboard");
 
-  // 1. Memoize the WebSocket URL so it only recalculates if the token changes
   const wsUrl = useMemo(() => {
     const token = AuthStorage.getToken();
     if (!token) return null;
@@ -36,8 +37,18 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     return `${wsProtocol}//${window.location.host}/ws/notifications?token=${token}`;
   }, []);
 
-  // 2. Create the callback to handle the parsed JSON payload from your hook
   const handleIncomingNotification = useCallback((payload: any) => {
+    
+    if (payload.type === "new_booking" || payload.type === "booking_confirmed") {
+      toast({
+        title: payload.type === "new_booking" ? "New Booking Request" : "Booking Confirmed",
+        description: payload.preview,
+        className: "border-primary bg-primary/5", 
+      });
+      
+      return; 
+    }
+
     const newNotification: NotificationPayload = {
       id: payload.id || Date.now().toString(),
       type: payload.type,
@@ -50,7 +61,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     setNotifications((prev) => [...prev, newNotification]);
   }, []);
 
-  // 3. Consume your centralized hook
   useWebSocket(wsUrl, handleIncomingNotification);
 
   const dismissNotification = useCallback((id: string) => {

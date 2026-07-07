@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 interface NotificationBannerProps {
   notification: {
     id: string;
-    type: "new_message" | "new_booking";
+    type: "new_message" | "new_booking" | "booking_confirmed";
     senderName: string;
     senderAvatar?: string;
     preview: string;
