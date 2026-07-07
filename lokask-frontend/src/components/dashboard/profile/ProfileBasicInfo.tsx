@@ -100,7 +100,7 @@ const ProfileBasicInfo = ({
           <SelectContent>
             {/* Map over the real DB cities fetched by the parent component */}
             {(availableCities || []).map((option) => (
-              <SelectItem key={option.id} value={option.id.toString()}>
+              <SelectItem key={option.id || Math.random()} value={option.id?.toString() || ""}>
                 {option.name}, {option.country}
               </SelectItem>
             ))}
