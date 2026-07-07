@@ -90,7 +90,14 @@ const BookingsPanel = ({
   }, [bookings, activeStatus, searchQuery]);
 
   const handleStatusUpdate = async (newStatus: "confirmed" | "cancelled") => {
-    if (!selectedBooking) return;
+    if (!selectedBooking || !selectedBooking.id) {
+      toast({
+        title: "Missing ID",
+        description: "This booking is missing its ID from the database. Please refresh.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       await updateBookingStatus(selectedBooking.id, newStatus);
