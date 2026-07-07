@@ -1,11 +1,15 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type BookingEntry struct {
-	ID           string `db:"id" json:"id"`
-	ConsultantID string `db:"consultant_id" json:"consultant_id"`
-	UserID       string `db:"user_id" json:"user_id"`
+	ID           uuid.UUID `db:"id" json:"id"`
+	ConsultantID uuid.UUID `db:"consultant_id" json:"consultant_id"`
+	UserID       uuid.UUID `db:"user_id" json:"user_id"`
 
 	// Time slots
 	StartTime time.Time `db:"start_time" json:"start_time"`

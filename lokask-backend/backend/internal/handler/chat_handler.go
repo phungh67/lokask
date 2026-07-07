@@ -166,6 +166,7 @@ func NotificationWebSocket(c *websocket.Conn) {
 	}
 }
 
+// @TODO: make it into global function for further use (kind of interface, or mutable func)
 func BroadcastNotification(targetUserID string, payload interface{}) {
 	UserHub.mu.RLock()
 	conn, exists := UserHub.Clients[targetUserID]
