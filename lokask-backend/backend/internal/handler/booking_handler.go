@@ -3,6 +3,7 @@ package handler
 import (
 	"asklocal/internal/domain"
 	"asklocal/internal/repository"
+	"log"
 	"strings"
 	"time"
 
@@ -255,7 +256,7 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 	if req.Status == "confirmed" {
 		var info struct {
 			TravelerUserID string `db:"traveler_id"`
-			ConsultantName string `db:"full_name"`
+			ConsultantName string `db:"consultant_name"`
 		}
 		query := `
 			SELECT 
@@ -269,25 +270,29 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 
 		err = h.DB.GetContext(c.UserContext(), &info, query, bookingID)
 
-		refID := bookingID
-		content := info.ConsultantName + " has confirmed your booking!"
+		if err == nil {
+			refID := bookingID
+			content := info.ConsultantName + " has confirmed your booking!"
 
-		_ = h.Notifier.CreateNotification(
-			c.UserContext(),
-			uuid.MustParse(info.TravelerUserID),
-			"booking_confirmed",
-			&refID,
-			content,
-		)
+			_ = h.Notifier.CreateNotification(
+				c.UserContext(),
+				uuid.MustParse(info.TravelerUserID),
+				"booking_confirmed",
+				&refID,
+				content,
+			)
 
-		notifPayload := fiber.Map{
-			"type":         "new_booking",
-			"reference_id": bookingID.String(),
-			"sender_name":  info.ConsultantName,
-			"preview":      content,
-			"created_at":   time.Now().Format(time.RFC3339),
+			notifPayload := fiber.Map{
+				"type":         "new_booking",
+				"reference_id": bookingID.String(),
+				"sender_name":  info.ConsultantName,
+				"preview":      content,
+				"created_at":   time.Now().Format(time.RFC3339),
+			}
+			BroadcastNotification(info.TravelerUserID, notifPayload)
+		} else {
+			log.Printf("[WARN][BOOKING] Failed to fetch info for confirmation notification: %v", err)
 		}
-		BroadcastNotification(info.TravelerUserID, notifPayload)
 	}
 
 	return c.JSON(fiber.Map{"status": req.Status})
