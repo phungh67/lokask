@@ -98,12 +98,13 @@ const ProfileBasicInfo = ({
             <SelectValue placeholder="Select your city" />
           </SelectTrigger>
           <SelectContent>
-            {/* Map over the real DB cities fetched by the parent component */}
-            {(availableCities || []).map((option) => (
-              <SelectItem key={option.id || Math.random()} value={option.id?.toString() || ""}>
-                {option.name}, {option.country}
-              </SelectItem>
-            ))}
+            {(availableCities || [])
+              .filter((option) => option && option.id != null)
+              .map((option) => (
+                <SelectItem key={option.id} value={option.id.toString()}>
+                  {option.name}, {option.country}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
