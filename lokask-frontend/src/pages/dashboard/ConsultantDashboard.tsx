@@ -3,17 +3,22 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import InboxPanel from "@/components/dashboard/InboxPanel";
-import DashboardChatRoom from "@/components/dashboard/ChatRoom"; 
+import DashboardChatRoom from "@/components/dashboard/ChatRoom";
 import ProfilePanel from "@/components/dashboard/ProfilePanel";
 import BookingsPanel from "@/components/dashboard/BookingsPanel";
 import BlogPanel from "@/components/dashboard/BlogPanel";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle, MessageSquare, Calendar, User, FileText, ArrowLeft } from "lucide-react";
 import {
-  getInbox,
-  startChat,
-} from "@/lib/chat";
+  AlertCircle,
+  MessageSquare,
+  Calendar,
+  User,
+  FileText,
+  ArrowLeft,
+} from "lucide-react";
+import { getInbox, startChat } from "@/lib/chat";
+import { getConsultantByUserId } from "@/lib/consultants";
 import { Consultant } from "@/types/consultant";
 import { AuthStorage } from "@/lib/storage";
 
@@ -92,16 +97,18 @@ const ConsultantDashboard = () => {
   });
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-  
-  const [conversations, setConversations] = useState<any[]>([]);
 
-  // 🟢 2. Removed currentMessages state and polling interval here
+  const [conversations, setConversations] = useState<any[]>([]);
 
   const [userRole, setUserRole] = useState<string | null>(null);
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
-  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
+  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
+    null,
+  );
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   useEffect(() => {
@@ -112,19 +119,26 @@ const ConsultantDashboard = () => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;
 
-      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
+      if (
+        !state ||
+        (!state.targetId && !state.openChatWith) ||
+        isProfileLoading
+      )
+        return;
 
       const targetConsultantId = state.targetId || state.openChatWith;
 
       if (state.intent === "startChat" || targetConsultantId) {
         const existingConv = conversations.find(
-          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId,
+          (c) =>
+            c.consultantId === targetConsultantId ||
+            c.id === targetConsultantId,
         );
 
         if (existingConv) {
           setActiveConversationId(existingConv.id);
           setActiveSection("inbox");
-          setIsMobileChatOpen(true); 
+          setIsMobileChatOpen(true);
           window.history.replaceState({}, document.title);
         } else if (targetConsultantId && accountUserId) {
           try {
@@ -137,7 +151,7 @@ const ConsultantDashboard = () => {
             });
             setActiveConversationId(mappedNewConv.id);
             setActiveSection("inbox");
-            setIsMobileChatOpen(true); 
+            setIsMobileChatOpen(true);
             window.history.replaceState({}, document.title);
           } catch (error) {
             console.error("Failed to start new chat:", error);
@@ -152,7 +166,13 @@ const ConsultantDashboard = () => {
     };
 
     handleIncomingChatIntent();
-  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
+  }, [
+    location.state,
+    conversations,
+    isProfileLoading,
+    accountUserId,
+    consultantProfile,
+  ]);
 
   useEffect(() => {
     const loadIdentity = async () => {
@@ -167,17 +187,13 @@ const ConsultantDashboard = () => {
       try {
         const user = storedUser;
         setUserRole(user.role);
-        setAccountUserId(user.id); 
+        setAccountUserId(user.id);
 
         if (user.role === "consultant") {
-          const response = await fetch(`/api/v1/users/${user.id}/consultant`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          if (response.ok) {
-            const consultantData = await response.json();
-            setConsultantProfile(consultantData); 
-          } else {
+          try {
+            const consultantData = await getConsultantByUserId(user.id);
+            setConsultantProfile(consultantData);
+          } catch (error) {
             setConsultantProfile({
               ...fallbackProfile,
               id: user.id,
@@ -231,20 +247,27 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
+  }, [
+    consultantProfile,
+    accountUserId,
+    isProfileLoading,
+    activeConversationId,
+  ]);
 
   // 🟢 3. Added handleInboxMessageUpdate so the child ChatRoom can instantly update the side-panel text
   const handleInboxMessageUpdate = (convId: string, newMsg: any) => {
-    setConversations((prev) => prev.map((conv) => {
-      if (conv.id === convId) {
-        return {
-          ...conv,
-          lastMessage: newMsg.content,
-          time: newMsg.timestamp,
-        };
-      }
-      return conv;
-    }));
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === convId) {
+          return {
+            ...conv,
+            lastMessage: newMsg.content,
+            time: newMsg.timestamp,
+          };
+        }
+        return conv;
+      }),
+    );
   };
 
   if (isProfileLoading || !consultantProfile) {
@@ -265,8 +288,13 @@ const ConsultantDashboard = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-[#F5F2EE] overflow-hidden">
-      
-      <div className={isMobileChatOpen && activeSection === "inbox" ? "hidden md:block" : "block"}>
+      <div
+        className={
+          isMobileChatOpen && activeSection === "inbox"
+            ? "hidden md:block"
+            : "block"
+        }
+      >
         <DashboardHeader onLogout={handleLogout} />
       </div>
 
@@ -280,11 +308,14 @@ const ConsultantDashboard = () => {
           />
         </div>
 
-        <main className={`flex-1 flex overflow-hidden bg-white relative ${showMobileBottomNav ? 'pb-[64px] md:pb-0' : ''}`}>
-          
+        <main
+          className={`flex-1 flex overflow-hidden bg-white relative ${showMobileBottomNav ? "pb-[64px] md:pb-0" : ""}`}
+        >
           {activeSection === "inbox" && (
             <div className="flex-1 flex w-full h-full relative">
-              <div className={`w-full md:w-[350px] md:border-r md:flex flex-col h-full bg-white ${isMobileChatOpen ? 'hidden' : 'flex'}`}>
+              <div
+                className={`w-full md:w-[350px] md:border-r md:flex flex-col h-full bg-white ${isMobileChatOpen ? "hidden" : "flex"}`}
+              >
                 <InboxPanel
                   conversations={conversations}
                   activeConversationId={activeConversationId}
@@ -295,17 +326,19 @@ const ConsultantDashboard = () => {
                 />
               </div>
 
-              <div className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? 'flex w-full absolute md:relative inset-0 md:inset-auto z-20 md:z-auto' : 'hidden'}`}>
+              <div
+                className={`flex-1 flex-col h-full bg-white md:flex ${isMobileChatOpen ? "flex w-full absolute md:relative inset-0 md:inset-auto z-20 md:z-auto" : "hidden"}`}
+              >
                 <div className="md:hidden flex items-center p-3 border-b border-border/50 bg-white shadow-sm shrink-0">
-                  <button 
-                    onClick={() => setIsMobileChatOpen(false)} 
+                  <button
+                    onClick={() => setIsMobileChatOpen(false)}
                     className="flex items-center text-[#4A5565] hover:text-[#101828] transition-colors"
                   >
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     <span className="font-medium text-sm">Back to Inbox</span>
                   </button>
                 </div>
-                
+
                 {/* 🟢 4. Render the newly extracted Chat Room component here */}
                 {foundConversation ? (
                   <DashboardChatRoom
@@ -327,13 +360,13 @@ const ConsultantDashboard = () => {
           )}
 
           {activeSection === "bookings" && (
-             <div className="flex-1 flex w-full h-full overflow-hidden">
-               <BookingsPanel
-                 consultantId={consultantProfile.id}
-                 userId={accountUserId}
-                 userRole={userRole}
-               />
-             </div>
+            <div className="flex-1 flex w-full h-full overflow-hidden">
+              <BookingsPanel
+                consultantId={consultantProfile.id}
+                userId={accountUserId}
+                userRole={userRole}
+              />
+            </div>
           )}
 
           {activeSection === "profile" && (
@@ -359,37 +392,48 @@ const ConsultantDashboard = () => {
 
       {showMobileBottomNav && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-[64px] pb-safe z-50">
-          <button 
-            onClick={() => { setActiveSection("inbox"); setIsMobileChatOpen(false); }} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'inbox' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+          <button
+            onClick={() => {
+              setActiveSection("inbox");
+              setIsMobileChatOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "inbox" ? "text-[#C77752]" : "text-[#6A7282]"}`}
           >
             <MessageSquare className="w-5 h-5" />
-            <span className="text-[10px] font-semibold tracking-wide">Inbox</span>
+            <span className="text-[10px] font-semibold tracking-wide">
+              Inbox
+            </span>
           </button>
-          
-          <button 
-            onClick={() => setActiveSection("bookings")} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'bookings' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+
+          <button
+            onClick={() => setActiveSection("bookings")}
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "bookings" ? "text-[#C77752]" : "text-[#6A7282]"}`}
           >
             <Calendar className="w-5 h-5" />
-            <span className="text-[10px] font-semibold tracking-wide">Bookings</span>
+            <span className="text-[10px] font-semibold tracking-wide">
+              Bookings
+            </span>
           </button>
-          
-          <button 
-            onClick={() => setActiveSection("profile")} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'profile' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+
+          <button
+            onClick={() => setActiveSection("profile")}
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "profile" ? "text-[#C77752]" : "text-[#6A7282]"}`}
           >
             <User className="w-5 h-5" />
-            <span className="text-[10px] font-semibold tracking-wide">Profile</span>
+            <span className="text-[10px] font-semibold tracking-wide">
+              Profile
+            </span>
           </button>
-          
+
           {userRole === "consultant" && (
-            <button 
-              onClick={() => setActiveSection("articles")} 
-              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === 'articles' ? 'text-[#C77752]' : 'text-[#6A7282]'}`}
+            <button
+              onClick={() => setActiveSection("articles")}
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "articles" ? "text-[#C77752]" : "text-[#6A7282]"}`}
             >
               <FileText className="w-5 h-5" />
-              <span className="text-[10px] font-semibold tracking-wide">Articles</span>
+              <span className="text-[10px] font-semibold tracking-wide">
+                Articles
+              </span>
             </button>
           )}
         </nav>

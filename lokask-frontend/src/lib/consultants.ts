@@ -39,7 +39,7 @@ export interface CityOption {
 
 // prototype for an unified form of returned object
 export const mapConsultant = (c: any): Consultant => ({
-    id: String(c.id),
+    id: c.id ? String(c.id) : "",
     userId: c.user_id ? String(c.user_id) : (c.userId ? String(c.userId) : ""),
     name: c.full_name || c.name || "User",
     displayName: c.displayName || c.display_name || c.name || c.full_name || "User",
