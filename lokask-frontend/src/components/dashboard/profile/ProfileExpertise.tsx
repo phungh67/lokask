@@ -15,19 +15,18 @@ import {
 } from "@/components/ui/tooltip";
 import TagInput from "./TagInput";
 
-// 🟢 Define the shape of the niche data matching your Go backend /niches endpoint
 export interface NicheOption {
   id: number;
   display_name: string;
 }
 
 interface ProfileExpertiseProps {
-  mainNicheId: number | "";        // 🟢 Replaces the old string mainTag
-  availableNiches: NicheOption[];  // 🟢 Replaces the hardcoded mainTagOptions
-  tags: string[];                  // Maps to your postgres text[]
-  languages: string[];             // Maps to your postgres text[]
-  responseTime: string;            // Maps to your varchar
-  
+  mainNicheId: number | "";
+  availableNiches: NicheOption[];
+  tags: string[];
+  languages: string[];
+  responseTime: string;
+
   onMainNicheChange: (id: number) => void;
   onTagsChange: (tags: string[]) => void;
   onLanguagesChange: (languages: string[]) => void;
@@ -52,21 +51,22 @@ const ProfileExpertise = ({
         <Label className="text-sm font-medium text-muted-foreground">
           Main Expertise
         </Label>
-        <Select 
-          // 🟢 Convert integer ID to string for the Select component
-          value={mainNicheId ? mainNicheId.toString() : ""} 
+        <Select
+          value={mainNicheId ? mainNicheId.toString() : ""}
           onValueChange={(value) => onMainNicheChange(parseInt(value, 10))}
         >
           <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Select your main expertise" />
           </SelectTrigger>
           <SelectContent>
-            {/* 🟢 Safely map over the database-driven array */}
-            {(availableNiches || []).map((niche) => (
-              <SelectItem key={niche.id || Math.random()} value={niche.id?.toString() || ""}>
-                {niche.display_name}
-              </SelectItem>
-            ))}
+            {/* Filter out any niches missing an ID before mapping */}
+            {(availableNiches || [])
+              .filter((niche) => niche && niche.id != null)
+              .map((niche) => (
+                <SelectItem key={niche.id} value={niche.id.toString()}>
+                  {niche.display_name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
