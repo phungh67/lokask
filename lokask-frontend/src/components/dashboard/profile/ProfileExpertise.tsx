@@ -63,7 +63,7 @@ const ProfileExpertise = ({
           <SelectContent>
             {/* 🟢 Safely map over the database-driven array */}
             {(availableNiches || []).map((niche) => (
-              <SelectItem key={niche.id} value={niche.id.toString()}>
+              <SelectItem key={niche.id || Math.random()} value={niche.id?.toString() || ""}>
                 {niche.display_name}
               </SelectItem>
             ))}
