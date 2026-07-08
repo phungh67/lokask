@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ChatProvider } from "@/context/ChatContext";
 import ChatWidget from "./components/chat/ChatWidget";
-import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import ExploreLocals from "./pages/ExploreLocals";
 import HowItWorks from "./pages/HowItWorks";
@@ -35,7 +34,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <NotificationProvider>
-            <Navbar />
             <Routes>
               {/* public Pages */}
               <Route element={<Layout />}>
