@@ -254,7 +254,7 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update booking"})
 	}
 
-	if req.Status == "confirmed" {
+	if req.Status == "confirmed" || req.Status == "cancelled" {
 		var info struct {
 			TravelerUserID string `db:"traveler_id"`
 			ConsultantName string `db:"consultant_name"`
@@ -273,12 +273,21 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 
 		if err == nil {
 			refID := bookingID
-			content := info.ConsultantName + " has confirmed your booking!"
+			var content string
+			var notiType string
+
+			if req.Status == "confirmed" {
+				content = info.ConsultantName + " has confirmed your booking."
+				notiType = "booking_confirmed"
+			} else {
+				content = info.ConsultantName + " has cancelled your booking."
+				notiType = "booking_cancelled"
+			}
 
 			_ = h.Notifier.CreateNotification(
 				c.UserContext(),
 				uuid.MustParse(info.TravelerUserID),
-				"booking_confirmed",
+				notiType,
 				&refID,
 				content,
 			)
