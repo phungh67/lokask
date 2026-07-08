@@ -293,7 +293,7 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 			)
 
 			notifPayload := fiber.Map{
-				"type":         "new_booking",
+				"type":         notiType,
 				"reference_id": bookingID.String(),
 				"sender_name":  info.ConsultantName,
 				"preview":      content,
