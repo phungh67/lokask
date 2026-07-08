@@ -13,6 +13,7 @@ interface DashboardChatRoomProps {
   conversationData: any; 
   onTriggerPurchase: () => void;
   onMessageUpdate?: (conversationId: string, message: any) => void;
+  canCall: boolean;
 }
 
 const DashboardChatRoom = ({
@@ -21,6 +22,7 @@ const DashboardChatRoom = ({
   consultantProfile,
   userRole,
   conversationData,
+  canCall,
   onTriggerPurchase,
   onMessageUpdate
 }: DashboardChatRoomProps) => {
@@ -155,6 +157,7 @@ const DashboardChatRoom = ({
         onTriggerPurchase={onTriggerPurchase}
         onScheduleCall={() => {}}
         onCancelCall={() => {}}
+        canCall={canCall}
       />
     </div>
   );
