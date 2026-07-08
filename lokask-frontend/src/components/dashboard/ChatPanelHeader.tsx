@@ -14,7 +14,7 @@ interface ChatPanelHeaderProps {
   consultantId: string;
   onScheduleCall?: (callData: any) => void;
   onOpenInfo?: () => void;
-  activeBookingId: string | null;
+  activeBooking: any | null;
 }
 
 const ChatPanelHeader = ({
@@ -22,7 +22,7 @@ const ChatPanelHeader = ({
   consultantId,
   onScheduleCall,
   onOpenInfo,
-  activeBookingId,
+  activeBooking,
 }: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
@@ -44,11 +44,13 @@ const ChatPanelHeader = ({
       .toUpperCase();
   };
 
+const canVoiceCall = activeBooking?.service_type === "voice_call";
+  const canVideoCall = activeBooking?.service_type === "video_call";
+
   const openCallWindow = (type: string) => {
-    if (!activeBookingId) return;
-    const url = `/call/${activeBookingId}?type=${type}`;
-    const windowFeatures =
-      "width=1200,height=800,left=100,top=100,menubar=no,toolbar=no,location=no,status=no";
+    if (!activeBooking?.id) return;
+    const url = `/call/${activeBooking.id}?type=${type}`;
+    const windowFeatures = "width=1200,height=800,left=100,top=100,menubar=no,toolbar=no,location=no,status=no";
     window.open(url, "LokaskCallRoom", windowFeatures);
   };
 
@@ -57,11 +59,7 @@ const ChatPanelHeader = ({
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar className="h-10 w-10 border border-border/50">
-            <AvatarImage
-              src={otherUser.avatar}
-              alt={otherUser.name}
-              className="object-cover"
-            />
+            <AvatarImage src={otherUser.avatar} alt={otherUser.name} className="object-cover" />
             <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
           </Avatar>
           {otherUser.isOnline && (
@@ -69,62 +67,53 @@ const ChatPanelHeader = ({
           )}
         </div>
         <div>
-          <h2 className="font-semibold text-sm text-foreground">
-            {otherUser.name}
-          </h2>
+          <h2 className="font-semibold text-sm text-foreground">{otherUser.name}</h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {otherUser.isOnline ? (
-              <span className="text-green-600 font-medium">Online</span>
-            ) : (
-              "Offline"
-            )}
+            {otherUser.isOnline ? <span className="text-green-600 font-medium">Online</span> : "Offline"}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-1">
-        {/* Bound openCallWindow to Phone */}
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={!activeBookingId}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          disabled={!canVoiceCall} 
           onClick={() => openCallWindow("voice_call")}
           className={`h-9 w-9 rounded-full transition-all ${
-            activeBookingId
-              ? "text-primary hover:text-primary hover:bg-primary/10"
+            canVoiceCall 
+              ? "text-primary hover:text-primary hover:bg-primary/10" 
               : "text-muted-foreground/30 cursor-not-allowed"
           }`}
         >
           <Phone className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-
-        {/* Bound openCallWindow to Video */}
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={!activeBookingId}
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          disabled={!canVideoCall} 
           onClick={() => openCallWindow("video_call")}
           className={`h-9 w-9 rounded-full transition-all ${
-            activeBookingId
-              ? "text-primary hover:text-primary hover:bg-primary/10"
+            canVideoCall 
+              ? "text-primary hover:text-primary hover:bg-primary/10" 
               : "text-muted-foreground/30 cursor-not-allowed"
           }`}
         >
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-
+        
         <ScheduleCallDialog
           consultantId={consultantId}
           travellerName={otherUser.name}
           hourlyRate={otherUser.hourlyRate || 50}
         />
-
-        <Button
-          variant="ghost"
-          size="icon"
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
           onClick={onOpenInfo}
-          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full"
-        >
+          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full">
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>
       </div>

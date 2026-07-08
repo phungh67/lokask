@@ -305,7 +305,6 @@ const ConsultantDashboard = () => {
     (c) => c.id === activeConversationId,
   );
 
-  // 🟢 1. Find the actual booking object instead of a boolean
   const activeBooking = useMemo(() => {
     if (!foundConversation || bookings.length === 0 || !accountUserId)
       return null;
@@ -328,15 +327,13 @@ const ConsultantDashboard = () => {
       }
 
       const isConfirmed = b.status === "confirmed";
+
       const endTime = new Date(b.end_time);
       const isNotExpired = endTime >= now;
 
       return isCorrectParticipants && isConfirmed && isNotExpired;
     });
   }, [bookings, foundConversation, accountUserId, userRole, consultantProfile]);
-
-  // 🟢 2. Extract the ID safely
-  const activeBookingId = activeBooking?.id || null;
 
   if (isProfileLoading || !consultantProfile) {
     return (
@@ -412,7 +409,7 @@ const ConsultantDashboard = () => {
                     conversationData={foundConversation}
                     onTriggerPurchase={() => setShowPurchaseDialog(true)}
                     onMessageUpdate={handleInboxMessageUpdate}
-                    activeBookingId={activeBookingId} // 🟢 3. Pass the active booking ID
+                    activeBooking={activeBooking || null}
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">

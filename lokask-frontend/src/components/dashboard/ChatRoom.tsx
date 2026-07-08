@@ -13,7 +13,7 @@ interface DashboardChatRoomProps {
   conversationData: any; 
   onTriggerPurchase: () => void;
   onMessageUpdate?: (conversationId: string, message: any) => void;
-  activeBookingId: string | null;
+  activeBooking: any | null;
 }
 
 const DashboardChatRoom = ({
@@ -22,7 +22,7 @@ const DashboardChatRoom = ({
   consultantProfile,
   userRole,
   conversationData,
-  activeBookingId,
+  activeBooking,
   onTriggerPurchase,
   onMessageUpdate
 }: DashboardChatRoomProps) => {
@@ -157,7 +157,7 @@ const DashboardChatRoom = ({
         onTriggerPurchase={onTriggerPurchase}
         onScheduleCall={() => {}}
         onCancelCall={() => {}}
-        activeBookingId={activeBookingId}
+        activeBooking={activeBooking}
       />
     </div>
   );
