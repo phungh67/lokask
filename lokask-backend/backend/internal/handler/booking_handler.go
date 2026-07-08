@@ -96,10 +96,11 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 	var info struct {
 		ConsultantUserID string `db:"user_id"`
 		TravelerName     string `db:"full_name"`
+		TravelerAvatar   string `db:"avatar_url"`
 	}
 
 	query := `
-    	SELECT c.user_id, u.full_name 
+    	SELECT c.user_id, u.full_name, COALESCE(u.avatar_url, '') AS avatar_url
     	FROM consultants c, users u 
     	WHERE c.id = $1 AND u.id = $2
 	`
@@ -119,11 +120,12 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 		)
 
 		notifPayload := fiber.Map{
-			"type":         "new_booking",
-			"reference_id": booking.ID.String(),
-			"sender_name":  info.TravelerName,
-			"preview":      content,
-			"created_at":   time.Now().Format(time.RFC3339),
+			"type":          "new_booking",
+			"reference_id":  booking.ID.String(),
+			"sender_name":   info.TravelerName,
+			"sender_avatar": info.TravelerAvatar,
+			"preview":       content,
+			"created_at":    time.Now().Format(time.RFC3339),
 		}
 		BroadcastNotification(info.ConsultantUserID, notifPayload)
 		log.Printf("[INFO][BOOK] New booking was created, send to %s", info.ConsultantUserID)
@@ -256,13 +258,15 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 
 	if req.Status == "confirmed" || req.Status == "cancelled" {
 		var info struct {
-			TravelerUserID string `db:"traveler_id"`
-			ConsultantName string `db:"consultant_name"`
+			TravelerUserID   string `db:"traveler_id"`
+			ConsultantName   string `db:"consultant_name"`
+			ConsultantAvatar string `db:"consultant_avatar"`
 		}
 		query := `
 			SELECT 
             	b.user_id AS traveler_id, 
-            	u_cons.full_name AS consultant_name
+            	u_cons.full_name AS consultant_name,
+				COALESCE(u_cons.avatar_url, '') AS consultant_avatar
         	FROM bookings b
         	JOIN consultants c ON b.consultant_id = c.id
         	JOIN users u_cons ON c.user_id = u_cons.id
@@ -293,11 +297,12 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 			)
 
 			notifPayload := fiber.Map{
-				"type":         notiType,
-				"reference_id": bookingID.String(),
-				"sender_name":  info.ConsultantName,
-				"preview":      content,
-				"created_at":   time.Now().Format(time.RFC3339),
+				"type":          notiType,
+				"reference_id":  bookingID.String(),
+				"sender_name":   info.ConsultantName,
+				"sender_avatar": info.ConsultantAvatar,
+				"preview":       content,
+				"created_at":    time.Now().Format(time.RFC3339),
 			}
 			BroadcastNotification(info.TravelerUserID, notifPayload)
 			log.Printf("[INFO][BOOK] Update info for the book from %s", info.TravelerUserID)
