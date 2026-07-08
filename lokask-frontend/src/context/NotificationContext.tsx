@@ -1,73 +1,149 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AuthStorage } from "@/lib/storage";
 import NotificationBanner from "@/components/notification/NotificationBanner";
 import { useWebSocket } from "@/lib/websocket";
 import { getAvatar } from "@/lib/consultants";
 
+// For the transient floating banners
 interface NotificationPayload {
   id: string;
-  type:
-    | "new_message"
-    | "new_booking"
-    | "booking_confirmed"
-    | "booking_cancelled";
+  type: "new_message" | "new_booking" | "booking_confirmed" | "booking_cancelled";
   senderName: string;
   senderAvatar?: string;
   preview: string;
   conversation_id?: string;
 }
 
+// For the persistent dropdown history
+export interface AppNotification {
+  id: string;
+  type: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  reference_id?: string;
+}
+
 interface NotificationContextType {
-  notifications: NotificationPayload[];
-  dismissNotification: (id: string) => void;
+  notifications: AppNotification[]; // Dropdown History
+  unreadCount: number;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  dismissBanner: (id: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-  const [notifications, setNotifications] = useState<NotificationPayload[]>([]);
+  // --- SPLIT STATES ---
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [activeBanners, setActiveBanners] = useState<NotificationPayload[]>([]);
+  
   const location = useLocation();
-
   const isDashboardRoute =
     location.pathname.startsWith("/consultant/dashboard") ||
     location.pathname.startsWith("/dashboard");
 
+  // 1. Fetch Historical Notifications from DB on Mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const token = AuthStorage.getToken();
+      if (!token) return;
+      
+      try {
+        const res = await fetch("/api/v1/notifications", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data || []);
+          setUnreadCount((data || []).filter((n: any) => !n.is_read).length);
+        }
+      } catch (error) {
+        console.error("Failed to load notification history", error);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
   const wsUrl = useMemo(() => {
     const token = AuthStorage.getToken();
     if (!token) return null;
-
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${wsProtocol}//${window.location.host}/ws/notifications?token=${token}`;
   }, []);
 
+  // 2. Handle Incoming Real-Time WebSocket Events
   const handleIncomingNotification = useCallback((payload: any) => {
-    const newNotification: NotificationPayload = {
-      id: payload.id || Date.now().toString(),
+    const id = payload.id || Date.now().toString();
+    
+    // A. Add to Dropdown History
+    const historyItem: AppNotification = {
+      id,
       type: payload.type,
-      senderName: payload.sender_name,
+      content: payload.preview || payload.content,
+      is_read: false,
+      created_at: payload.created_at || new Date().toISOString(),
+      reference_id: payload.reference_id || payload.conversation_id,
+    };
+
+    setNotifications((prev) => [historyItem, ...prev]);
+    setUnreadCount((prev) => prev + 1);
+
+    // B. Add to Floating Banners
+    const bannerItem: NotificationPayload = {
+      id,
+      type: payload.type as "new_message" | "new_booking" | "booking_confirmed" | "booking_cancelled",
+      senderName: payload.sender_name || "System",
       senderAvatar: getAvatar(payload.sender_avatar, payload.sender_name),
       preview: payload.preview,
       conversation_id: payload.conversation_id,
     };
 
-    setNotifications((prev) => [...prev, newNotification]);
+    setActiveBanners((prev) => [...prev, bannerItem]);
   }, []);
 
   useWebSocket(wsUrl, handleIncomingNotification);
 
-  const dismissNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
-
-  const handleNotificationClick = (notification: NotificationPayload) => {
-    if (notification.type === "new_message" && notification.conversation_id) {
-      window.location.href = `/dashboard?chat=${notification.conversation_id}`;
-    }
-    dismissNotification(notification.id);
+  // 3. Mark As Read API Calls
+  const markAsRead = async (id: string) => {
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    
+    const token = AuthStorage.getToken();
+    fetch(`/api/v1/notifications/${id}/read`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` }
+    });
   };
 
-  const visibleNotifications = notifications.filter((notif) => {
+  const markAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+
+    const token = AuthStorage.getToken();
+    fetch(`/api/v1/notifications`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  };
+
+  // 4. Dismiss Banner (Removes from screen, keeps in history dropdown)
+  const dismissBanner = useCallback((id: string) => {
+    setActiveBanners((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const handleBannerClick = (banner: NotificationPayload) => {
+    if (banner.type === "new_message" && banner.conversation_id) {
+      window.location.href = `/dashboard?chat=${banner.conversation_id}`;
+    }
+    dismissBanner(banner.id);
+  };
+
+  const visibleBanners = activeBanners.filter((notif) => {
     if (isDashboardRoute) {
       return ["new_booking", "booking_confirmed", "booking_cancelled"].includes(notif.type);
     }
@@ -75,21 +151,19 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   });
 
   return (
-    <NotificationContext.Provider value={{ notifications, dismissNotification }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, dismissBanner }}>
       {children}
 
       <div className="fixed bottom-0 right-0 z-[9999] p-4 flex flex-col gap-2 pointer-events-none">
-        {visibleNotifications.map((notif) => (
-          <div key={notif.id} className="pointer-events-auto">
+        {visibleBanners.map((banner) => (
+          <div key={banner.id} className="pointer-events-auto animate-in slide-in-from-right-8 duration-300">
             <NotificationBanner
               notification={{
-                ...notif,
-                senderAvatar:
-                  notif.senderAvatar ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.senderName)}&background=random`,
+                ...banner,
+                senderAvatar: banner.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(banner.senderName)}&background=random`,
               }}
-              onClose={dismissNotification}
-              onClick={handleNotificationClick}
+              onClose={dismissBanner}
+              onClick={handleBannerClick}
             />
           </div>
         ))}
