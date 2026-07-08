@@ -14,9 +14,10 @@ interface ChatPanelHeaderProps {
   consultantId: string; 
   onScheduleCall?: (callData: any) => void;
   onOpenInfo?: () => void;
+  canCall: boolean;
 }
 
-const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo, canCall }: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
       <div className="h-[73px] px-6 flex items-center border-b border-border/40 bg-white shrink-0">
@@ -54,10 +55,33 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo }
       </div>
 
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full">
+        {/* Updated Phone Button with dynamic logic */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          disabled={!canCall} 
+          onClick={() => canCall && console.log("Initiating Phone Call...")}
+          className={`h-9 w-9 rounded-full transition-all ${
+            canCall 
+              ? "text-primary hover:text-primary hover:bg-primary/10" 
+              : "text-muted-foreground/30 cursor-not-allowed"
+          }`}
+        >
           <Phone className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full">
+        
+        {/* Updated Video Button with dynamic logic */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          disabled={!canCall} 
+          onClick={() => canCall && console.log("Initiating Video Call...")}
+          className={`h-9 w-9 rounded-full transition-all ${
+            canCall 
+              ? "text-primary hover:text-primary hover:bg-primary/10" 
+              : "text-muted-foreground/30 cursor-not-allowed"
+          }`}
+        >
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
         

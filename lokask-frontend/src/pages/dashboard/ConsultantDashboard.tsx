@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { getInbox, startChat } from "@/lib/chat";
 import { getConsultantByUserId } from "@/lib/consultants";
+import { getConsultantBookings, getMyTrips } from "@/lib/bookings"; // 🟢 Added import
+import { Booking } from "@/types/booking"; // 🟢 Added import
 import { Consultant } from "@/types/consultant";
 import { AuthStorage } from "@/lib/storage";
 
@@ -84,7 +86,6 @@ const ConsultantDashboard = () => {
       console.error("Logout request failed", e);
     } finally {
       AuthStorage.clearAll();
-
       window.location.href = "/";
     }
   };
@@ -97,83 +98,22 @@ const ConsultantDashboard = () => {
   });
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const [conversations, setConversations] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]); // 🟢 Lifted booking state
 
   const [userRole, setUserRole] = useState<string | null>(null);
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
-  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
-    null,
-  );
+  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   useEffect(() => {
     AuthStorage.setDashboardSection(activeSection);
   }, [activeSection]);
 
-  useEffect(() => {
-    const handleIncomingChatIntent = async () => {
-      const state = location.state as DashboardLocationState;
-
-      if (
-        !state ||
-        (!state.targetId && !state.openChatWith) ||
-        isProfileLoading
-      )
-        return;
-
-      const targetConsultantId = state.targetId || state.openChatWith;
-
-      if (state.intent === "startChat" || targetConsultantId) {
-        const existingConv = conversations.find(
-          (c) =>
-            c.consultantId === targetConsultantId ||
-            c.id === targetConsultantId,
-        );
-
-        if (existingConv) {
-          setActiveConversationId(existingConv.id);
-          setActiveSection("inbox");
-          setIsMobileChatOpen(true);
-          window.history.replaceState({}, document.title);
-        } else if (targetConsultantId && accountUserId) {
-          try {
-            const newConvApi = await startChat(targetConsultantId);
-            const mappedNewConv = mapConversationToDashboard(newConvApi);
-
-            setConversations((prev) => {
-              if (prev.some((c) => c.id === mappedNewConv.id)) return prev;
-              return [mappedNewConv, ...prev];
-            });
-            setActiveConversationId(mappedNewConv.id);
-            setActiveSection("inbox");
-            setIsMobileChatOpen(true);
-            window.history.replaceState({}, document.title);
-          } catch (error) {
-            console.error("Failed to start new chat:", error);
-            toast({
-              title: "Error",
-              description: "Could not start a chat with this expert.",
-              variant: "destructive",
-            });
-          }
-        }
-      }
-    };
-
-    handleIncomingChatIntent();
-  }, [
-    location.state,
-    conversations,
-    isProfileLoading,
-    accountUserId,
-    consultantProfile,
-  ]);
-
+  // Load Identity
   useEffect(() => {
     const loadIdentity = async () => {
       const storedUser = AuthStorage.getUser();
@@ -220,6 +160,7 @@ const ConsultantDashboard = () => {
     loadIdentity();
   }, [navigate]);
 
+  // Load Inbox
   useEffect(() => {
     const loadInbox = async () => {
       if (!accountUserId || !consultantProfile || isProfileLoading) return;
@@ -247,14 +188,77 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [
-    consultantProfile,
-    accountUserId,
-    isProfileLoading,
-    activeConversationId,
-  ]);
+  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
 
-  // 🟢 3. Added handleInboxMessageUpdate so the child ChatRoom can instantly update the side-panel text
+  // 🟢 Fetch Global Bookings for State Sharing
+  useEffect(() => {
+    const loadBookings = async () => {
+      if (!accountUserId || !consultantProfile || isProfileLoading) return;
+
+      try {
+        let data: any;
+        if (userRole === "consultant" && consultantProfile.id) {
+          data = await getConsultantBookings(consultantProfile.id);
+        } else {
+          data = await getMyTrips(accountUserId);
+        }
+        const bookingsArray = Array.isArray(data) ? data : data?.data || [];
+        setBookings(bookingsArray);
+      } catch (error) {
+        console.error("Failed to fetch global bookings", error);
+      }
+    };
+
+    loadBookings();
+  }, [consultantProfile, accountUserId, userRole, isProfileLoading]);
+
+  // Handle Incoming Chat Intent
+  useEffect(() => {
+    const handleIncomingChatIntent = async () => {
+      const state = location.state as DashboardLocationState;
+
+      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
+
+      const targetConsultantId = state.targetId || state.openChatWith;
+
+      if (state.intent === "startChat" || targetConsultantId) {
+        const existingConv = conversations.find(
+          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId,
+        );
+
+        if (existingConv) {
+          setActiveConversationId(existingConv.id);
+          setActiveSection("inbox");
+          setIsMobileChatOpen(true);
+          window.history.replaceState({}, document.title);
+        } else if (targetConsultantId && accountUserId) {
+          try {
+            const newConvApi = await startChat(targetConsultantId);
+            const mappedNewConv = mapConversationToDashboard(newConvApi);
+
+            setConversations((prev) => {
+              if (prev.some((c) => c.id === mappedNewConv.id)) return prev;
+              return [mappedNewConv, ...prev];
+            });
+            setActiveConversationId(mappedNewConv.id);
+            setActiveSection("inbox");
+            setIsMobileChatOpen(true);
+            window.history.replaceState({}, document.title);
+          } catch (error) {
+            console.error("Failed to start new chat:", error);
+            toast({
+              title: "Error",
+              description: "Could not start a chat with this expert.",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+    };
+
+    handleIncomingChatIntent();
+  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
+
   const handleInboxMessageUpdate = (convId: string, newMsg: any) => {
     setConversations((prev) =>
       prev.map((conv) => {
@@ -270,6 +274,25 @@ const ConsultantDashboard = () => {
     );
   };
 
+  const foundConversation = conversations.find(
+    (c) => c.id === activeConversationId,
+  );
+
+  // 🟢 Calculate active booking state dynamically using the shared bookings list
+  const canCall = useMemo(() => {
+    if (!foundConversation || bookings.length === 0) return false;
+    
+    const now = new Date();
+    return bookings.some((b) => {
+      const isTarget = b.consultant_id === foundConversation.consultantId || 
+                       b.consultant_id === foundConversation.consultant_id;
+      const isConfirmed = b.status === "confirmed";
+      const isActive = new Date(b.start_time) <= now && new Date(b.end_time) >= now;
+      
+      return isTarget && isConfirmed && isActive;
+    });
+  }, [bookings, foundConversation]);
+
   if (isProfileLoading || !consultantProfile) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F5F2EE]">
@@ -279,10 +302,6 @@ const ConsultantDashboard = () => {
       </div>
     );
   }
-
-  const foundConversation = conversations.find(
-    (c) => c.id === activeConversationId,
-  );
 
   const showMobileBottomNav = !isMobileChatOpen || activeSection !== "inbox";
 
@@ -339,7 +358,6 @@ const ConsultantDashboard = () => {
                   </button>
                 </div>
 
-                {/* 🟢 4. Render the newly extracted Chat Room component here */}
                 {foundConversation ? (
                   <DashboardChatRoom
                     activeConversationId={activeConversationId!}
@@ -349,6 +367,7 @@ const ConsultantDashboard = () => {
                     conversationData={foundConversation}
                     onTriggerPurchase={() => setShowPurchaseDialog(true)}
                     onMessageUpdate={handleInboxMessageUpdate}
+                    canCall={canCall} // 🟢 Pass the calculated state down
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">
@@ -365,6 +384,8 @@ const ConsultantDashboard = () => {
                 consultantId={consultantProfile.id}
                 userId={accountUserId}
                 userRole={userRole}
+                // Optionally: You can pass `initialBookings={bookings}` to BookingsPanel 
+                // in the future so it doesn't need to fetch a second time!
               />
             </div>
           )}
