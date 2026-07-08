@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -8,6 +8,7 @@ import {
   User,
   Briefcase,
   LayoutDashboard,
+  Bell,
 } from "lucide-react";
 import {
   HoverCard,
@@ -17,6 +18,8 @@ import {
 import AuthPromptDialog from "@/components/auth/AuthPromptDialog";
 import { AuthStorage } from "@/lib/storage";
 import { getMe } from "@/lib/auth";
+import { useNotifications } from "@/context/NotificationContext"; // 🟢 Hooked in
+import { formatDistanceToNow } from "date-fns";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,6 +40,11 @@ const Navbar = () => {
     "initial",
   );
 
+  // 🟢 Notification State
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
   const handleOpenAuth = (
     role: "traveller" | "consultant",
     message: string,
@@ -50,7 +58,6 @@ const Navbar = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      // check local storage for stored credential
       const storedToken = AuthStorage.getToken();
       const storedUser = AuthStorage.getUser();
 
@@ -81,14 +88,23 @@ const Navbar = () => {
 
     checkAuth();
     window.addEventListener("scroll", handleScroll);
-
-    // listener for the authenticated event
     window.addEventListener("auth-changed", checkAuth);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("auth-changed", checkAuth);
     };
+  }, []);
+
+  // 🟢 Click Outside Handler for Notification Dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -98,14 +114,57 @@ const Navbar = () => {
       console.error("Logout request failed");
     } finally {
       AuthStorage.clearAll();
-
       setUser(null);
-
       window.dispatchEvent(new Event("auth-changed"));
-
       window.location.href = "/";
     }
   };
+
+  // 🟢 Reusable Notification Dropdown UI
+  const NotificationDropdownMenu = () => (
+    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-background border border-border/50 rounded-xl shadow-xl z-50 flex flex-col max-h-[70vh] overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200">
+      <div className="p-4 border-b border-border/50 flex justify-between items-center bg-muted/30 shrink-0">
+        <h3 className="font-semibold text-sm">Notifications</h3>
+        {unreadCount > 0 && (
+          <button onClick={markAllAsRead} className="text-xs text-primary hover:underline font-medium">
+            Mark all as read
+          </button>
+        )}
+      </div>
+      
+      <div className="overflow-y-auto flex-1">
+        {notifications.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground flex flex-col items-center">
+            <Bell className="w-8 h-8 mb-3 opacity-20" />
+            No notifications yet
+          </div>
+        ) : (
+          notifications.map((notif) => (
+            <div
+              key={notif.id}
+              onClick={() => {
+                markAsRead(notif.id);
+                setIsNotifOpen(false); // Close on click
+              }}
+              className={`p-4 border-b border-border/30 hover:bg-muted/50 cursor-pointer transition-colors flex gap-3 ${!notif.is_read ? 'bg-primary/5' : ''}`}
+            >
+              <div className="flex-1 space-y-1">
+                <p className={`text-sm leading-tight ${!notif.is_read ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                  {notif.content}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                </p>
+              </div>
+              {!notif.is_read && (
+                <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft w-full border-b border-border/40">
@@ -114,9 +173,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
             <span className="text-2xl font-black font-body tracking-tight">
-              <span className="text-foreground font-extrabold text-4xl">
-                Lok
-              </span>
+              <span className="text-foreground font-extrabold text-4xl">Lok</span>
               <span className="text-primary text-4xl">ask</span>
             </span>
           </Link>
@@ -149,8 +206,23 @@ const Navbar = () => {
               {loading ? (
                 <div className="w-24 h-8 bg-muted animate-pulse rounded-full" />
               ) : user ? (
-                /* Authenticated View: Reusing btn-outline-pill styles */
+                /* Authenticated View */
                 <div className="flex items-center gap-3">
+                  
+                  {/* 🟢 Desktop Notification Bell */}
+                  <div className="relative" ref={notifRef}>
+                    <button
+                      onClick={() => setIsNotifOpen(!isNotifOpen)}
+                      className="btn-outline-pill flex items-center justify-center p-2 relative hover:bg-muted"
+                    >
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 h-2 w-2 bg-destructive border border-background rounded-full animate-in zoom-in" />
+                      )}
+                    </button>
+                    {isNotifOpen && <NotificationDropdownMenu />}
+                  </div>
+
                   <div className="btn-outline-pill border-none bg-primary/10 cursor-default px-4 py-2">
                     <span className="text-sm font-bold text-foreground">
                       Hello, {user.full_name?.split(" ")[0] || "User"}
@@ -185,11 +257,7 @@ const Navbar = () => {
                 <>
                   <button
                     onClick={() =>
-                      handleOpenAuth(
-                        "traveller",
-                        "Welcome back! Please log in.",
-                        "initial",
-                      )
+                      handleOpenAuth("traveller", "Welcome back! Please log in.", "initial")
                     }
                     className="btn-outline-pill"
                   >
@@ -201,31 +269,17 @@ const Navbar = () => {
                       <button className="btn-outline-pill">Sign up</button>
                     </HoverCardTrigger>
                     <HoverCardContent align="end" className="w-64 p-4">
-                      <h3 className="font-bold text-lg mb-3 font-display">
-                        Sign up
-                      </h3>
+                      <h3 className="font-bold text-lg mb-3 font-display">Sign up</h3>
                       <div className="space-y-1">
                         <button
-                          onClick={() =>
-                            handleOpenAuth(
-                              "traveller",
-                              "Join as a Traveller",
-                              "signup",
-                            )
-                          }
+                          onClick={() => handleOpenAuth("traveller", "Join as a Traveller", "signup")}
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left"
                         >
                           <User className="w-5 h-5 text-primary" />
                           <span className="font-medium">As Traveller</span>
                         </button>
                         <button
-                          onClick={() =>
-                            handleOpenAuth(
-                              "consultant",
-                              "Join as a Consultant",
-                              "signup",
-                            )
-                          }
+                          onClick={() => handleOpenAuth("consultant", "Join as a Consultant", "signup")}
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left"
                         >
                           <Briefcase className="w-5 h-5 text-primary" />
@@ -239,13 +293,39 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Mobile Toggle Button */}
-          <button
-            className="md:hidden p-2 text-foreground"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
+          {/* Mobile Right Controls */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* 🟢 Mobile Notification Bell (Always visible if logged in) */}
+            {user && !loading && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className="p-2 text-foreground relative"
+                >
+                  <Bell size={24} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 h-2.5 w-2.5 bg-destructive border-2 border-background rounded-full animate-in zoom-in" />
+                  )}
+                </button>
+                {isNotifOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-[90vw] max-w-sm">
+                    <NotificationDropdownMenu />
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Mobile Toggle Button */}
+            <button
+              className="p-2 text-foreground"
+              onClick={() => {
+                setIsOpen(!isOpen);
+                setIsNotifOpen(false); // Close notifications if opening menu
+              }}
+            >
+              {isOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
         </div>
 
         {isOpen && (
@@ -310,11 +390,7 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsOpen(false);
-                      handleOpenAuth(
-                        "traveller",
-                        "Welcome back! Please log in.",
-                        "initial",
-                      );
+                      handleOpenAuth("traveller", "Welcome back! Please log in.", "initial");
                     }}
                     className="w-full py-3.5 bg-foreground text-background rounded-full font-medium text-base"
                   >
@@ -328,11 +404,7 @@ const Navbar = () => {
                     <button
                       onClick={() => {
                         setIsOpen(false);
-                        handleOpenAuth(
-                          "traveller",
-                          "Join as a Traveller",
-                          "signup",
-                        );
+                        handleOpenAuth("traveller", "Join as a Traveller", "signup");
                       }}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors"
                     >
@@ -342,11 +414,7 @@ const Navbar = () => {
                     <button
                       onClick={() => {
                         setIsOpen(false);
-                        handleOpenAuth(
-                          "consultant",
-                          "Join as a Consultant",
-                          "signup",
-                        );
+                        handleOpenAuth("consultant", "Join as a Consultant", "signup");
                       }}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted w-full text-left transition-colors mt-1"
                     >
