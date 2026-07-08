@@ -310,27 +310,30 @@ const ConsultantDashboard = () => {
       return false;
 
     const now = new Date();
-
-    const otherUserId =
-      foundConversation.otherUser?.id ||
-      (userRole === "consultant"
-        ? foundConversation.travelerId
-        : foundConversation.consultantId);
+    const otherUserId = foundConversation.otherUser?.id;
 
     return bookings.some((b) => {
-      const bookingParties = [b.consultant_id, b.user_id].filter(Boolean);
+      let isCorrectParticipants = false;
 
-      const isMyBooking = bookingParties.includes(accountUserId);
-      const isWithOtherUser = bookingParties.includes(otherUserId);
+      if (userRole === "consultant") {
+        const chatTravelerId = foundConversation.travelerId || otherUserId;
+        isCorrectParticipants =
+          b.consultant_id === consultantProfile?.id &&
+          b.user_id === chatTravelerId;
+      } else {
+        const chatConsultantId = foundConversation.consultantId || otherUserId;
+        isCorrectParticipants =
+          b.user_id === accountUserId && b.consultant_id === chatConsultantId;
+      }
 
       const isConfirmed = b.status === "confirmed";
 
       const endTime = new Date(b.end_time);
       const isNotExpired = endTime >= now;
 
-      return isMyBooking && isWithOtherUser && isConfirmed && isNotExpired;
+      return isCorrectParticipants && isConfirmed && isNotExpired;
     });
-  }, [bookings, foundConversation, accountUserId, userRole]);
+  }, [bookings, foundConversation, accountUserId, userRole, consultantProfile]);
 
   if (isProfileLoading || !consultantProfile) {
     return (
