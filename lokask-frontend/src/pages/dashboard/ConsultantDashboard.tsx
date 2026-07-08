@@ -224,6 +224,9 @@ const ConsultantDashboard = () => {
     };
 
     loadBookings();
+    const intervalId = setInterval(loadBookings, 30000);
+    return () => clearInterval(intervalId);
+    
   }, [consultantProfile, accountUserId, userRole, isProfileLoading]);
 
   // Handle Incoming Chat Intent
