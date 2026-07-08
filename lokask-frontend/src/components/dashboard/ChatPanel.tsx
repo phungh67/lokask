@@ -15,7 +15,7 @@ interface ChatPanelProps {
   session?: any;
   userRole?: string | null;
   onTriggerPurchase?: () => void;
-  canCall: boolean;
+  activeBookingId: string | null;
 }
 
 const ChatPanel = ({
@@ -23,7 +23,7 @@ const ChatPanel = ({
   onSendMessage,
   onScheduleCall,
   onCancelCall,
-  canCall,
+  activeBookingId,
   session,
   userRole,
   onTriggerPurchase
@@ -119,7 +119,7 @@ const ChatPanel = ({
           }}
           onScheduleCall={onScheduleCall}
           onOpenInfo={() => setIsScheduleOpen(true)}
-          canCall={canCall}
+          activeBookingId={activeBookingId}
         />
 
         <div className="flex-1 relative overflow-hidden">

@@ -1,23 +1,29 @@
 import { Phone, Video, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import ScheduleCallDialog from "./chat/ScheduleCallDialog"; 
+import ScheduleCallDialog from "./chat/ScheduleCallDialog";
 
 interface ChatPanelHeaderProps {
   otherUser: {
-    id: string;          
+    id: string;
     name: string;
     avatar: string;
     isOnline?: boolean;
-    hourlyRate?: number; 
+    hourlyRate?: number;
   };
-  consultantId: string; 
+  consultantId: string;
   onScheduleCall?: (callData: any) => void;
   onOpenInfo?: () => void;
-  canCall: boolean;
+  activeBookingId: string | null;
 }
 
-const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo, canCall }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = ({
+  otherUser,
+  consultantId,
+  onScheduleCall,
+  onOpenInfo,
+  activeBookingId,
+}: ChatPanelHeaderProps) => {
   if (!otherUser) {
     return (
       <div className="h-[73px] px-6 flex items-center border-b border-border/40 bg-white shrink-0">
@@ -31,7 +37,19 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo, 
 
   const getInitials = (name: string) => {
     if (!name) return "?";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const openCallWindow = (type: string) => {
+    if (!activeBookingId) return;
+    const url = `/call/${activeBookingId}?type=${type}`;
+    const windowFeatures =
+      "width=1200,height=800,left=100,top=100,menubar=no,toolbar=no,location=no,status=no";
+    window.open(url, "LokaskCallRoom", windowFeatures);
   };
 
   return (
@@ -39,7 +57,11 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo, 
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar className="h-10 w-10 border border-border/50">
-            <AvatarImage src={otherUser.avatar} alt={otherUser.name} className="object-cover" />
+            <AvatarImage
+              src={otherUser.avatar}
+              alt={otherUser.name}
+              className="object-cover"
+            />
             <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
           </Avatar>
           {otherUser.isOnline && (
@@ -47,55 +69,62 @@ const ChatPanelHeader = ({ otherUser, consultantId, onScheduleCall, onOpenInfo, 
           )}
         </div>
         <div>
-          <h2 className="font-semibold text-sm text-foreground">{otherUser.name}</h2>
+          <h2 className="font-semibold text-sm text-foreground">
+            {otherUser.name}
+          </h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {otherUser.isOnline ? <span className="text-green-600 font-medium">Online</span> : "Offline"}
+            {otherUser.isOnline ? (
+              <span className="text-green-600 font-medium">Online</span>
+            ) : (
+              "Offline"
+            )}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-1">
-        {/* Updated Phone Button with dynamic logic */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          disabled={!canCall} 
-          onClick={() => canCall && console.log("Initiating Phone Call...")}
+        {/* Bound openCallWindow to Phone */}
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={!activeBookingId}
+          onClick={() => openCallWindow("voice_call")}
           className={`h-9 w-9 rounded-full transition-all ${
-            canCall 
-              ? "text-primary hover:text-primary hover:bg-primary/10" 
+            activeBookingId
+              ? "text-primary hover:text-primary hover:bg-primary/10"
               : "text-muted-foreground/30 cursor-not-allowed"
           }`}
         >
           <Phone className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-        
-        {/* Updated Video Button with dynamic logic */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          disabled={!canCall} 
-          onClick={() => canCall && console.log("Initiating Video Call...")}
+
+        {/* Bound openCallWindow to Video */}
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={!activeBookingId}
+          onClick={() => openCallWindow("video_call")}
           className={`h-9 w-9 rounded-full transition-all ${
-            canCall 
-              ? "text-primary hover:text-primary hover:bg-primary/10" 
+            activeBookingId
+              ? "text-primary hover:text-primary hover:bg-primary/10"
               : "text-muted-foreground/30 cursor-not-allowed"
           }`}
         >
           <Video className="h-5 w-5" strokeWidth={1.5} />
         </Button>
-        
+
         <ScheduleCallDialog
           consultantId={consultantId}
           travellerName={otherUser.name}
           hourlyRate={otherUser.hourlyRate || 50}
         />
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
+
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onOpenInfo}
-          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full">
+          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full"
+        >
           <Info className="h-5 w-5" strokeWidth={1.5} />
         </Button>
       </div>

@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { getInbox, startChat } from "@/lib/chat";
 import { getConsultantByUserId } from "@/lib/consultants";
-import { getConsultantBookings, getMyTrips } from "@/lib/bookings"; // 🟢 Added import
-import { Booking } from "@/types/booking"; // 🟢 Added import
+import { getConsultantBookings, getMyTrips } from "@/lib/bookings";
+import { Booking } from "@/types/booking";
 import { Consultant } from "@/types/consultant";
 import { AuthStorage } from "@/lib/storage";
 
@@ -204,7 +204,7 @@ const ConsultantDashboard = () => {
     activeConversationId,
   ]);
 
-  // 🟢 Fetch Global Bookings for State Sharing
+  // Fetch Global Bookings for State Sharing
   useEffect(() => {
     const loadBookings = async () => {
       if (!accountUserId || !consultantProfile || isProfileLoading) return;
@@ -305,14 +305,15 @@ const ConsultantDashboard = () => {
     (c) => c.id === activeConversationId,
   );
 
-  const canCall = useMemo(() => {
+  // 🟢 1. Find the actual booking object instead of a boolean
+  const activeBooking = useMemo(() => {
     if (!foundConversation || bookings.length === 0 || !accountUserId)
-      return false;
+      return null;
 
     const now = new Date();
     const otherUserId = foundConversation.otherUser?.id;
 
-    return bookings.some((b) => {
+    return bookings.find((b) => {
       let isCorrectParticipants = false;
 
       if (userRole === "consultant") {
@@ -327,13 +328,15 @@ const ConsultantDashboard = () => {
       }
 
       const isConfirmed = b.status === "confirmed";
-
       const endTime = new Date(b.end_time);
       const isNotExpired = endTime >= now;
 
       return isCorrectParticipants && isConfirmed && isNotExpired;
     });
   }, [bookings, foundConversation, accountUserId, userRole, consultantProfile]);
+
+  // 🟢 2. Extract the ID safely
+  const activeBookingId = activeBooking?.id || null;
 
   if (isProfileLoading || !consultantProfile) {
     return (
@@ -409,7 +412,7 @@ const ConsultantDashboard = () => {
                     conversationData={foundConversation}
                     onTriggerPurchase={() => setShowPurchaseDialog(true)}
                     onMessageUpdate={handleInboxMessageUpdate}
-                    canCall={canCall}
+                    activeBookingId={activeBookingId} // 🟢 3. Pass the active booking ID
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">
@@ -426,8 +429,6 @@ const ConsultantDashboard = () => {
                 consultantId={consultantProfile.id}
                 userId={accountUserId}
                 userRole={userRole}
-                // Optionally: You can pass `initialBookings={bookings}` to BookingsPanel
-                // in the future so it doesn't need to fetch a second time!
               />
             </div>
           )}
