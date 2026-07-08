@@ -63,6 +63,11 @@ const mapConversationToDashboard = (apiConv: any) => {
   return {
     id: apiConv.id,
     otherUser: {
+      id:
+        apiConv.other_user_id ||
+        apiConv.traveler_id ||
+        apiConv.consultant_id ||
+        "",
       name: displayName,
       avatar: displayAvatar,
     },
@@ -98,15 +103,19 @@ const ConsultantDashboard = () => {
   });
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const [conversations, setConversations] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]); // 🟢 Lifted booking state
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
   const [userRole, setUserRole] = useState<string | null>(null);
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
-  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(null);
+  const [consultantProfile, setConsultantProfile] = useState<Consultant | null>(
+    null,
+  );
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   useEffect(() => {
@@ -188,7 +197,12 @@ const ConsultantDashboard = () => {
     };
 
     loadInbox();
-  }, [consultantProfile, accountUserId, isProfileLoading, activeConversationId]);
+  }, [
+    consultantProfile,
+    accountUserId,
+    isProfileLoading,
+    activeConversationId,
+  ]);
 
   // 🟢 Fetch Global Bookings for State Sharing
   useEffect(() => {
@@ -217,13 +231,20 @@ const ConsultantDashboard = () => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;
 
-      if (!state || (!state.targetId && !state.openChatWith) || isProfileLoading) return;
+      if (
+        !state ||
+        (!state.targetId && !state.openChatWith) ||
+        isProfileLoading
+      )
+        return;
 
       const targetConsultantId = state.targetId || state.openChatWith;
 
       if (state.intent === "startChat" || targetConsultantId) {
         const existingConv = conversations.find(
-          (c) => c.consultantId === targetConsultantId || c.id === targetConsultantId,
+          (c) =>
+            c.consultantId === targetConsultantId ||
+            c.id === targetConsultantId,
         );
 
         if (existingConv) {
@@ -257,7 +278,13 @@ const ConsultantDashboard = () => {
     };
 
     handleIncomingChatIntent();
-  }, [location.state, conversations, isProfileLoading, accountUserId, consultantProfile]);
+  }, [
+    location.state,
+    conversations,
+    isProfileLoading,
+    accountUserId,
+    consultantProfile,
+  ]);
 
   const handleInboxMessageUpdate = (convId: string, newMsg: any) => {
     setConversations((prev) =>
@@ -278,20 +305,32 @@ const ConsultantDashboard = () => {
     (c) => c.id === activeConversationId,
   );
 
-  // 🟢 Calculate active booking state dynamically using the shared bookings list
   const canCall = useMemo(() => {
-    if (!foundConversation || bookings.length === 0) return false;
-    
+    if (!foundConversation || bookings.length === 0 || !accountUserId)
+      return false;
+
     const now = new Date();
+
+    const otherUserId =
+      foundConversation.otherUser?.id ||
+      (userRole === "consultant"
+        ? foundConversation.travelerId
+        : foundConversation.consultantId);
+
     return bookings.some((b) => {
-      const isTarget = b.consultant_id === foundConversation.consultantId || 
-                       b.consultant_id === foundConversation.consultant_id;
+      const bookingParties = [b.consultant_id, b.user_id].filter(Boolean);
+
+      const isMyBooking = bookingParties.includes(accountUserId);
+      const isWithOtherUser = bookingParties.includes(otherUserId);
+
       const isConfirmed = b.status === "confirmed";
-      const isActive = new Date(b.start_time) <= now && new Date(b.end_time) >= now;
-      
-      return isTarget && isConfirmed && isActive;
+
+      const endTime = new Date(b.end_time);
+      const isNotExpired = endTime >= now;
+
+      return isMyBooking && isWithOtherUser && isConfirmed && isNotExpired;
     });
-  }, [bookings, foundConversation]);
+  }, [bookings, foundConversation, accountUserId, userRole]);
 
   if (isProfileLoading || !consultantProfile) {
     return (
@@ -367,7 +406,7 @@ const ConsultantDashboard = () => {
                     conversationData={foundConversation}
                     onTriggerPurchase={() => setShowPurchaseDialog(true)}
                     onMessageUpdate={handleInboxMessageUpdate}
-                    canCall={canCall} // 🟢 Pass the calculated state down
+                    canCall={canCall}
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground bg-gray-50/50">
@@ -384,7 +423,7 @@ const ConsultantDashboard = () => {
                 consultantId={consultantProfile.id}
                 userId={accountUserId}
                 userRole={userRole}
-                // Optionally: You can pass `initialBookings={bookings}` to BookingsPanel 
+                // Optionally: You can pass `initialBookings={bookings}` to BookingsPanel
                 // in the future so it doesn't need to fetch a second time!
               />
             </div>
