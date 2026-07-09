@@ -86,6 +86,7 @@ const ConsultantDashboard = () => {
   const state = location.state as DashboardLocationState;
 
   const { notifications, markAsRead } = useNotifications();
+  const latestNotifId = notifications[0]?.id;
 
   const handleLogout = async () => {
     try {
@@ -233,6 +234,7 @@ const ConsultantDashboard = () => {
     accountUserId,
     isProfileLoading,
     activeConversationId,
+    latestNotifId
   ]);
 
   // Fetch Global Bookings for State Sharing
@@ -257,7 +259,7 @@ const ConsultantDashboard = () => {
     loadBookings();
     const intervalId = setInterval(loadBookings, 30000);
     return () => clearInterval(intervalId);
-  }, [consultantProfile, accountUserId, userRole, isProfileLoading]);
+  }, [consultantProfile, accountUserId, userRole, isProfileLoading, latestNotifId]);
 
   // Handle Incoming Chat Intent
   useEffect(() => {
