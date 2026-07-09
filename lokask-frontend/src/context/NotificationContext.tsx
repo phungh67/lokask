@@ -97,6 +97,10 @@ export const NotificationProvider = ({
     };
 
     fetchHistory();
+    
+    window.addEventListener("focus", fetchHistory);
+    return () => window.removeEventListener("focus", fetchHistory);
+
   }, [token]);
 
   const wsUrl = useMemo(() => {
@@ -176,6 +180,9 @@ export const NotificationProvider = ({
   const handleBannerClick = (banner: NotificationPayload) => {
     if (banner.type === "new_message" && banner.conversation_id) {
       window.location.href = `/dashboard?chat=${banner.conversation_id}`;
+    } else if (["new_booking", "booking_confirmed", "booking_cancelled"].includes(banner.type)) {
+      AuthStorage.setDashboardSection("bookings");
+      window.location.href = "/dashboard";
     }
     dismissBanner(banner.id);
   };

@@ -11,6 +11,7 @@ import {
   updateBookingStatus,
   getMyTrips,
 } from "@/lib/bookings";
+import { useNotifications } from "@/context/NotificationContext";
 
 interface BookingsPanelProps {
   consultantId: string;
@@ -23,6 +24,9 @@ const BookingsPanel = ({
   userId,
   userRole,
 }: BookingsPanelProps) => {
+  const { notifications } = useNotifications();
+  const latestNotifId = notifications[0]?.id;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -58,7 +62,7 @@ const BookingsPanel = ({
 
   useEffect(() => {
     loadBookings();
-  }, [consultantId, userId, userRole]);
+  }, [consultantId, userId, userRole, latestNotifId]);
 
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
