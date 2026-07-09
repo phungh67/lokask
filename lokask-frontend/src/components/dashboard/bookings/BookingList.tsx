@@ -3,8 +3,10 @@ import BookingCard from './BookingCard';
 import { Booking } from '@/types/booking';
 import { Loader2, CalendarX, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export type BookingStatusFilter = "upcoming" | "past" | "cancelled" | "all" | "pending" | "confirmed";
+
 interface BookingListProps {
   bookings: Booking[];
   selectedId: string | null;
@@ -23,6 +25,8 @@ export const BookingList: React.FC<BookingListProps> = ({
   onSelect, 
   searchQuery, 
   onSearchChange,
+  activeStatus,
+  onStatusChange,
   isLoading 
 }) => {
 
@@ -37,8 +41,8 @@ export const BookingList: React.FC<BookingListProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-transparent overflow-hidden">
-      {/* Search Header */}
-      <div className="p-4 border-b border-border/40">
+      {/* Search Header & Tabs */}
+      <div className="p-4 border-b border-border/40 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -47,6 +51,24 @@ export const BookingList: React.FC<BookingListProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
+        </div>
+
+        {/* 🟢 THE MISSING TABS */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {["all", "upcoming", "past", "cancelled"].map((status) => (
+            <button
+              key={status}
+              onClick={() => onStatusChange(status as BookingStatusFilter)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-full capitalize whitespace-nowrap transition-all duration-200",
+                activeStatus === status
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-secondary/50 text-secondary-foreground hover:bg-secondary"
+              )}
+            >
+              {status}
+            </button>
+          ))}
         </div>
       </div>
 

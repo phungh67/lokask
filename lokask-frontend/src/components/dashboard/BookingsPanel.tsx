@@ -29,7 +29,7 @@ const BookingsPanel = ({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] =
-    useState<BookingStatusFilter>("upcoming");
+    useState<BookingStatusFilter>("all");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,7 +100,7 @@ const BookingsPanel = ({
           b.consultant_city.toLowerCase().includes(query),
       );
     }
-    
+
     result.sort((a, b) => {
       if (activeStatus === "upcoming") {
         return (
