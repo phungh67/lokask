@@ -179,6 +179,7 @@ export const NotificationProvider = ({
 
   const handleBannerClick = (banner: NotificationPayload) => {
     if (banner.type === "new_message" && banner.conversation_id) {
+      AuthStorage.setDashboardSection("inbox");
       window.location.href = `/dashboard?chat=${banner.conversation_id}`;
     } else if (["new_booking", "booking_confirmed", "booking_cancelled"].includes(banner.type)) {
       AuthStorage.setDashboardSection("bookings");

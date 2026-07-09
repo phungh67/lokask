@@ -4,8 +4,7 @@ import { Booking } from '@/types/booking';
 import { Loader2, CalendarX, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 
-export type BookingStatusFilter = "upcoming" | "pending" | "confirmed" | "completed" | "cancelled";
-
+export type BookingStatusFilter = "upcoming" | "past" | "cancelled" | "all" | "pending" | "confirmed";
 interface BookingListProps {
   bookings: Booking[];
   selectedId: string | null;
