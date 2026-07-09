@@ -28,7 +28,8 @@ const BookingsPanel = ({
   const latestNotifId = notifications[0]?.id;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeStatus, setActiveStatus] = useState<BookingStatusFilter>("upcoming");
+  const [activeStatus, setActiveStatus] =
+    useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +49,6 @@ const BookingsPanel = ({
 
       const bookingsArray = Array.isArray(data) ? data : data?.data || [];
       setBookings(bookingsArray);
-
     } catch (error) {
       toast({
         title: "Error",
@@ -69,14 +69,25 @@ const BookingsPanel = ({
 
     if (activeStatus === "upcoming") {
       result = result.filter((b) => {
-        const isPendingOrConfirmed = b.status === "confirmed" || b.status === "pending";
+        const isPendingOrConfirmed =
+          b.status === "confirmed" || b.status === "pending";
         const bookingDate = new Date(b.start_time);
         const now = new Date();
 
-        const isFutureOrToday = bookingDate > now || isSameDay(bookingDate, now);
-        
+        const isFutureOrToday =
+          bookingDate > now || isSameDay(bookingDate, now);
+
         return isPendingOrConfirmed && isFutureOrToday;
       });
+    } else if (activeStatus === "past") {
+      result = result.filter((b) => {
+        const endDate = new Date(b.end_time);
+        return endDate < new Date() && b.status !== "cancelled";
+      });
+    } else if (activeStatus === "cancelled") {
+      result = result.filter((b) => b.status === "cancelled");
+    } else if (activeStatus === "all") {
+      // 🟢 Keep everything!
     } else {
       result = result.filter((b) => b.status === activeStatus);
     }
@@ -89,6 +100,17 @@ const BookingsPanel = ({
           b.consultant_city.toLowerCase().includes(query),
       );
     }
+    
+    result.sort((a, b) => {
+      if (activeStatus === "upcoming") {
+        return (
+          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        );
+      }
+      return (
+        new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+      );
+    });
 
     return result;
   }, [bookings, activeStatus, searchQuery]);
@@ -97,8 +119,9 @@ const BookingsPanel = ({
     if (!selectedBooking || !selectedBooking.id) {
       toast({
         title: "Missing ID",
-        description: "This booking is missing its ID from the database. Please refresh.",
-        variant: "destructive"
+        description:
+          "This booking is missing its ID from the database. Please refresh.",
+        variant: "destructive",
       });
       return;
     }
@@ -130,9 +153,10 @@ const BookingsPanel = ({
 
   return (
     <div className="flex-1 flex overflow-hidden w-full h-full relative bg-gray-50/30">
-      
       {/* List Panel */}
-      <div className={`w-full md:w-[380px] lg:w-[420px] shrink-0 md:border-r border-border/40 bg-white h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}>
+      <div
+        className={`w-full md:w-[380px] lg:w-[420px] shrink-0 md:border-r border-border/40 bg-white h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}
+      >
         <BookingList
           consultantId={consultantId}
           bookings={filteredBookings}
@@ -147,16 +171,17 @@ const BookingsPanel = ({
       </div>
 
       {/* Details Panel area */}
-      <div className={`flex-1 h-full flex flex-col relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}>
-        
+      <div
+        className={`flex-1 h-full flex flex-col relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}
+      >
         {/* Mobile "Back" Button */}
         {selectedBooking && (
           <div className="md:hidden p-4 bg-white border-b border-border/40 flex items-center shrink-0 shadow-sm z-10">
-            <button 
-              onClick={() => setSelectedBooking(null)} 
+            <button
+              onClick={() => setSelectedBooking(null)}
               className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" /> 
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Bookings
             </button>
           </div>
@@ -179,7 +204,7 @@ const BookingsPanel = ({
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-border/40">
-               <Calendar className="w-6 h-6 text-muted-foreground/50" />
+              <Calendar className="w-6 h-6 text-muted-foreground/50" />
             </div>
             <p className="font-medium">Select a booking to view details</p>
           </div>
