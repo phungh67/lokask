@@ -23,6 +23,7 @@ import { getConsultantBookings, getMyTrips } from "@/lib/bookings";
 import { Booking } from "@/types/booking";
 import { Consultant } from "@/types/consultant";
 import { AuthStorage } from "@/lib/storage";
+import { useNotifications } from "@/context/NotificationContext";
 
 interface DashboardLocationState {
   intent?: string;
@@ -84,6 +85,8 @@ const ConsultantDashboard = () => {
   const location = useLocation();
   const state = location.state as DashboardLocationState;
 
+  const { notifications, markAsRead } = useNotifications();
+
   const handleLogout = async () => {
     try {
       await fetch("/api/v1/auth/logout", { method: "POST" });
@@ -117,6 +120,34 @@ const ConsultantDashboard = () => {
     null,
   );
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+  const hasUnreadMessages = useMemo(() => {
+    return conversations.some((c) => c.unread > 0);
+  }, [conversations]);
+
+  const hasUnreadBookings = useMemo(() => {
+    return notifications.some(
+      (n) =>
+        ["new_booking", "booking_confirmed", "booking_cancelled"].includes(
+          n.type,
+        ) && !n.is_read,
+    );
+  }, [notifications]);
+
+  useEffect(() => {
+    if (activeSection === "bookings" && hasUnreadBookings) {
+      notifications.forEach((n) => {
+        if (
+          ["new_booking", "booking_confirmed", "booking_cancelled"].includes(
+            n.type,
+          ) &&
+          !n.is_read
+        ) {
+          markAsRead(n.id);
+        }
+      });
+    }
+  }, [activeSection, hasUnreadBookings, notifications, markAsRead]);
 
   useEffect(() => {
     AuthStorage.setDashboardSection(activeSection);
@@ -226,7 +257,6 @@ const ConsultantDashboard = () => {
     loadBookings();
     const intervalId = setInterval(loadBookings, 30000);
     return () => clearInterval(intervalId);
-    
   }, [consultantProfile, accountUserId, userRole, isProfileLoading]);
 
   // Handle Incoming Chat Intent
@@ -369,6 +399,8 @@ const ConsultantDashboard = () => {
             activeSection={activeSection}
             onSectionChange={setActiveSection}
             userRole={userRole}
+            hasUnreadMessages={hasUnreadMessages}
+            hasUnreadBookings={hasUnreadBookings}
           />
         </div>
 
@@ -463,7 +495,13 @@ const ConsultantDashboard = () => {
             }}
             className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "inbox" ? "text-[#C77752]" : "text-[#6A7282]"}`}
           >
-            <MessageSquare className="w-5 h-5" />
+            <div className="relative">
+              <MessageSquare className="w-5 h-5" />
+              {/* 🟢 Unread Message Dot */}
+              {hasUnreadMessages && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+              )}
+            </div>
             <span className="text-[10px] font-semibold tracking-wide">
               Inbox
             </span>
@@ -473,7 +511,13 @@ const ConsultantDashboard = () => {
             onClick={() => setActiveSection("bookings")}
             className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${activeSection === "bookings" ? "text-[#C77752]" : "text-[#6A7282]"}`}
           >
-            <Calendar className="w-5 h-5" />
+            <div className="relative">
+              <Calendar className="w-5 h-5" />
+              {/* 🟢 Unread Booking Dot */}
+              {hasUnreadBookings && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+              )}
+            </div>
             <span className="text-[10px] font-semibold tracking-wide">
               Bookings
             </span>
