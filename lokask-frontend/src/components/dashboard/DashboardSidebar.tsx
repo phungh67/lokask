@@ -19,6 +19,8 @@ interface DashboardSidebarProps {
     section: "inbox" | "bookings" | "profile" | "articles",
   ) => void;
   userRole: string | null;
+  hasUnreadMessages?: boolean;
+  hasUnreadBookings?: boolean;
 }
 
 const DashboardSidebar = ({
@@ -26,6 +28,8 @@ const DashboardSidebar = ({
   activeSection,
   onSectionChange,
   userRole,
+  hasUnreadMessages,
+  hasUnreadBookings,
 }: DashboardSidebarProps) => {
   const isConsultant = userRole === "consultant";
 
@@ -110,8 +114,17 @@ const DashboardSidebar = ({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
+                  {/* 🟢 3. Wrapped icon in relative container and added dot logic */}
+                  <div className="relative">
+                    <item.icon className="h-5 w-5" />
+                    {item.id === "inbox" && hasUnreadMessages && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                    )}
+                    {item.id === "bookings" && hasUnreadBookings && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                    )}
+                  </div>
+                  <span>{item.label}</span>
                 </div>
                 {item.restricted && <Lock className="h-3.5 w-3.5 opacity-50" />}
               </button>
@@ -120,7 +133,37 @@ const DashboardSidebar = ({
         </ul>
       </nav>
 
-      {/* ... rest of the footer rendering logic ... */}
+      {/* Footer Navigation */}
+      <div className="border-t border-border mx-4" />
+
+      <div className="p-4">
+        <ul className="space-y-1">
+          {footerItems.map((item) => {
+            if (item.restricted) return null;
+            return (
+              <li key={item.id}>
+                <button
+                  disabled={item.disabled}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    item.disabled && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </div>
+                  {item.badge && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider bg-secondary/80 px-1.5 py-0.5 rounded text-muted-foreground">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </aside>
   );
 };

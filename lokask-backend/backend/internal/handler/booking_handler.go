@@ -44,8 +44,7 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 	profile, err := h.Consultantrepo.GetProfileByID(c.Context(), consultantID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
-			"error":   "Consultant not found",
-			"details": err.Error(),
+			"error": "Consultant not found",
 		})
 	}
 	if profile.UserID == travelerID {
@@ -127,7 +126,12 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 			"preview":       content,
 			"created_at":    time.Now().Format(time.RFC3339),
 		}
-		BroadcastNotification(info.ConsultantUserID, notifPayload)
+
+		go func(targetUserID string, payload fiber.Map) {
+			time.Sleep(200 * time.Millisecond)
+			BroadcastNotification(targetUserID, payload)
+		}(info.ConsultantUserID, notifPayload)
+
 		log.Printf("[INFO][BOOK] New booking was created, send to %s", info.ConsultantUserID)
 	}
 
@@ -142,8 +146,7 @@ func (h *BookingHandler) GetMySchedule(c *fiber.Ctx) error {
 	profile, err := h.Consultantrepo.GetProfileByID(c.Context(), consultantID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
-			"error":   "Consultant not found",
-			"details": err.Error(),
+			"error": "Consultant not found",
 		})
 	}
 
@@ -158,9 +161,9 @@ func (h *BookingHandler) GetMySchedule(c *fiber.Ctx) error {
 	bookings, err := h.BookingRepo.GetConsultantBookings(c.Context(), consultantID)
 
 	if err != nil {
+		log.Printf("[ERROR][BOOK] Could not get booking: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":   "Could not get booking",
-			"details": err.Error(),
+			"error": "Could not get booking",
 		})
 	}
 
@@ -179,9 +182,9 @@ func (h *BookingHandler) PublicGetConsultantSchedule(c *fiber.Ctx) error {
 	bookings, err := h.BookingRepo.GetConsultantBookings(c.Context(), consultantID)
 
 	if err != nil {
+		log.Printf("[ERROR][BOOK] Could not get booking: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":   "Could not get booking",
-			"details": err.Error(),
+			"error": "Could not get booking",
 		})
 	}
 
@@ -195,9 +198,9 @@ func (h *BookingHandler) GetUserTrips(c *fiber.Ctx) error {
 
 	trips, err := h.BookingRepo.GetUserBookings(c.Context(), userID)
 	if err != nil {
+		log.Printf("[ERROR][BOOK] Could not get booking: %v", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":   "Failed to fetch your trips",
-			"details": err.Error(),
+			"error": "Failed to fetch your trips",
 		})
 	}
 
@@ -212,6 +215,7 @@ func (h *BookingHandler) DeleteBooking(c *fiber.Ctx) error {
 	// TODO: checking
 	err := h.BookingRepo.DeleteBooking(c.Context(), bookingID)
 	if err != nil {
+		log.Printf("[ERROR][BOOK] Could not delete booking: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete booking"})
 	}
 
@@ -304,7 +308,12 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 				"preview":       content,
 				"created_at":    time.Now().Format(time.RFC3339),
 			}
-			BroadcastNotification(info.TravelerUserID, notifPayload)
+
+			go func(targetUserID string, payload fiber.Map) {
+				time.Sleep(200 * time.Millisecond)
+				BroadcastNotification(targetUserID, payload)
+			}(info.TravelerUserID, notifPayload)
+
 			log.Printf("[INFO][BOOK] Update info for the book from %s", info.TravelerUserID)
 		} else {
 			log.Printf("[WARN][BOOK] Failed to fetch info for confirmation notification: %v", err)
