@@ -125,7 +125,7 @@ func (r *BookingRepository) IsBookingOwner(ctx context.Context, bookingID uuid.U
 		SELECT EXISTS (
 			SELECT 1 FROM bookings b
 			JOIN consultants c ON b.consultant_id = c.id
-			WHERE b.id = $1 AND c.user_id = $2
+			WHERE b.id = $1 AND (c.user_id = $2 OR b.user_id = $2)
 		)
 	`
 	err := r.DB.QueryRowContext(ctx, query, bookingID, userID).Scan(&exists)

@@ -263,17 +263,24 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 	if req.Status == "confirmed" || req.Status == "cancelled" {
 		var info struct {
 			TravelerUserID   string `db:"traveler_id"`
+			TravelerName     string `db:"traveler_name"`
+			TravelerAvatar   string `db:"traveler_avatar"`
+			ConsultantUserID string `db:"consultant_user_id"`
 			ConsultantName   string `db:"consultant_name"`
 			ConsultantAvatar string `db:"consultant_avatar"`
 		}
 		query := `
-			SELECT 
+			SELECT  
             	b.user_id AS traveler_id, 
+                u_trav.full_name AS traveler_name,
+                COALESCE(u_trav.avatar_url, '') AS traveler_avatar,
+                c.user_id AS consultant_user_id,
             	u_cons.full_name AS consultant_name,
 				COALESCE(u_cons.avatar_url, '') AS consultant_avatar
         	FROM bookings b
         	JOIN consultants c ON b.consultant_id = c.id
         	JOIN users u_cons ON c.user_id = u_cons.id
+            JOIN users u_trav ON b.user_id = u_trav.id
         	WHERE b.id = $1
 		`
 
@@ -281,20 +288,34 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 
 		if err == nil {
 			refID := bookingID
+			var targetUserID string
+			var senderName string
+			var senderAvatar string
 			var content string
 			var notiType string
 
-			if req.Status == "confirmed" {
-				content = info.ConsultantName + " has confirmed your booking."
-				notiType = "booking_confirmed"
+			if userID == info.ConsultantUserID {
+				targetUserID = info.TravelerUserID
+				senderName = info.ConsultantName
+				senderAvatar = info.ConsultantAvatar
+				if req.Status == "confirmed" {
+					content = senderName + " has confirmed your booking."
+					notiType = "booking_confirmed"
+				} else {
+					content = senderName + " has cancelled your booking."
+					notiType = "booking_cancelled"
+				}
 			} else {
-				content = info.ConsultantName + " has cancelled your booking."
+				targetUserID = info.ConsultantUserID
+				senderName = info.TravelerName
+				senderAvatar = info.TravelerAvatar
+				content = senderName + " has cancelled the booking."
 				notiType = "booking_cancelled"
 			}
 
 			_ = h.Notifier.CreateNotification(
 				c.UserContext(),
-				uuid.MustParse(info.TravelerUserID),
+				uuid.MustParse(targetUserID),
 				notiType,
 				&refID,
 				content,
@@ -303,18 +324,18 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 			notifPayload := fiber.Map{
 				"type":          notiType,
 				"reference_id":  bookingID.String(),
-				"sender_name":   info.ConsultantName,
-				"sender_avatar": info.ConsultantAvatar,
+				"sender_name":   senderName,
+				"sender_avatar": senderAvatar,
 				"preview":       content,
 				"created_at":    time.Now().Format(time.RFC3339),
 			}
 
-			go func(targetUserID string, payload fiber.Map) {
+			go func(targetID string, payload fiber.Map) {
 				time.Sleep(200 * time.Millisecond)
-				BroadcastNotification(targetUserID, payload)
-			}(info.TravelerUserID, notifPayload)
+				BroadcastNotification(targetID, payload)
+			}(targetUserID, notifPayload)
 
-			log.Printf("[INFO][BOOK] Update info for the book from %s", info.TravelerUserID)
+			log.Printf("[INFO][BOOK] Update info for the book from %s", targetUserID)
 		} else {
 			log.Printf("[WARN][BOOK] Failed to fetch info for confirmation notification: %v", err)
 		}
