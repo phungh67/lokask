@@ -1,12 +1,16 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { X, MessageCircle, Calendar } from "lucide-react"; // Assuming you use lucide-react
+import { X, MessageCircle, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface NotificationBannerProps {
   notification: {
     id: string;
-    type: "new_message" | "new_booking" | "booking_confirmed" | "booking_cancelled";
+    type:
+      | "new_message"
+      | "new_booking"
+      | "booking_confirmed"
+      | "booking_cancelled";
     senderName: string;
     senderAvatar?: string;
     preview: string;
@@ -15,43 +19,66 @@ interface NotificationBannerProps {
   onClick: (notification: any) => void;
 }
 
-const NotificationBanner = ({ notification, onClose, onClick }: NotificationBannerProps) => {
+const NotificationBanner = ({
+  notification,
+  onClose,
+  onClick,
+}: NotificationBannerProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
   // Trigger slide-in animation on mount
   useEffect(() => {
     setIsVisible(true);
-    // Auto-dismiss after 5 seconds
+    // Auto-dismiss after 7 seconds
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => onClose(notification.id), 300); // Wait for slide-out animation
-    }, 5000);
-    
+    }, 7000);
+
     return () => clearTimeout(timer);
   }, [notification.id, onClose]);
 
   const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+    return (
+      name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase() || "?"
+    );
   };
 
   const isChat = notification.type === "new_message";
 
+  const getLabel = () => {
+    switch (notification.type) {
+      case "new_message":
+        return "New Message";
+      case "booking_confirmed":
+        return "Confirmed";
+      case "booking_cancelled":
+        return "Cancelled";
+      default:
+        return "New Booking";
+    }
+  };
+
   return (
     <div
       className={cn(
-        "fixed bottom-4 right-4 z-50 w-80 sm:w-96 p-3 rounded-xl shadow-lg border border-border bg-card transition-all duration-300 ease-in-out",
-        isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+        "relative w-full sm:w-96 p-3 rounded-xl shadow-lg border border-border bg-card transition-all duration-300 ease-in-out pointer-events-auto",
+        isVisible ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0",
       )}
     >
       <div className="flex items-start gap-3 relative">
         {/* Icon / Avatar Section */}
         <div className="relative shrink-0 mt-1">
           <Avatar className="h-10 w-10 border border-border/50">
-            <AvatarImage src={notification.senderAvatar} alt={notification.senderName} className="object-cover" />
+            <AvatarImage
+              src={notification.senderAvatar}
+              alt={notification.senderName}
+              className="object-cover"
+            />
             <AvatarFallback className="bg-primary/10 text-primary">
               {getInitials(notification.senderName)}
             </AvatarFallback>
@@ -60,25 +87,39 @@ const NotificationBanner = ({ notification, onClose, onClick }: NotificationBann
             {isChat ? (
               <MessageCircle className="h-3 w-3 text-blue-500 fill-blue-500" />
             ) : (
-              <Calendar className="h-3 w-3 text-green-500 fill-green-500" />
+              <Calendar
+                className={cn(
+                  "h-3 w-3",
+                  notification.type === "booking_cancelled"
+                    ? "text-red-500"
+                    : "text-green-500 fill-green-500",
+                )}
+              />
             )}
           </div>
         </div>
 
         {/* Content Section */}
-        <button 
-          onClick={() => onClick(notification)} 
-          className="flex-1 min-w-0 text-left cursor-pointer group"
+        <button
+          onClick={() => onClick(notification)}
+          className="flex-1 min-w-0 text-left cursor-pointer group pr-6"
         >
           <div className="flex items-center justify-between mb-0.5">
             <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
               {notification.senderName}
             </span>
-            <span className="text-[10px] text-muted-foreground shrink-0 uppercase tracking-wider">
-              {isChat ? "New Message" : "New Booking"}
+            <span
+              className={cn(
+                "text-[10px] shrink-0 uppercase tracking-wider font-semibold",
+                notification.type === "booking_cancelled"
+                  ? "text-red-500/80"
+                  : "text-muted-foreground",
+              )}
+            >
+              {getLabel()}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed pr-4">
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
             {notification.preview}
           </p>
         </button>
@@ -90,9 +131,9 @@ const NotificationBanner = ({ notification, onClose, onClick }: NotificationBann
             setIsVisible(false);
             setTimeout(() => onClose(notification.id), 300);
           }}
-          className="absolute top-0 right-0 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+          className="absolute -top-1 -right-1 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
