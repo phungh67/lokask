@@ -46,7 +46,6 @@ export const BookingList: React.FC<BookingListProps> = ({
     );
   }
 
-  // Order the tabs
   const tabOptions: BookingStatusFilter[] = [
     "upcoming",
     "all",
@@ -69,33 +68,25 @@ export const BookingList: React.FC<BookingListProps> = ({
         </div>
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {tabOptions.map((status) => (
-            <button
-              key={status}
-              onClick={() => onStatusChange(status)}
-              className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-full capitalize whitespace-nowrap transition-all duration-200 flex items-center gap-1.5",
-                activeStatus === status
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-secondary/50 text-secondary-foreground hover:bg-secondary",
-              )}
-            >
-              {status}
-              {/* Render the numeric badge if a count exists */}
-              {counts && counts[status] !== undefined && (
-                <span
-                  className={cn(
-                    "px-1.5 py-0.5 rounded-full text-[10px] min-w-[20px] flex items-center justify-center font-bold",
-                    activeStatus === status
-                      ? "bg-white/25 text-white"
-                      : "bg-white text-muted-foreground shadow-sm",
-                  )}
-                >
-                  {counts[status]}
-                </span>
-              )}
-            </button>
-          ))}
+          {tabOptions.map((status) => {
+            const count = counts?.[status] || 0;
+            return (
+              <button
+                key={status}
+                onClick={() => onStatusChange(status)}
+                className={cn(
+                  "px-4 py-1.5 text-sm font-medium rounded-full capitalize whitespace-nowrap transition-colors duration-200",
+                  activeStatus === status
+                    ? "bg-[#C77752] text-white shadow-sm" // 🟢 Active brown pill
+                    : "bg-[#F5F2EE] text-gray-600 hover:bg-[#e8e4dc]", // 🟢 Inactive beige pill
+                )}
+              >
+                {/* 🟢 Inline text formatting: "Status (Count)" */}
+                {status}
+                {count > 0 ? ` (${count})` : ""}
+              </button>
+            );
+          })}
         </div>
       </div>
 
