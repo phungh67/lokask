@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -102,8 +102,12 @@ const ConsultantDashboard = () => {
   const [activeSection, setActiveSection] = useState<
     "inbox" | "bookings" | "profile" | "articles"
   >(() => {
-    const saved = AuthStorage.getDashboardSection();
-    return (saved as "inbox" | "bookings" | "profile" | "articles") || "inbox";
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab && ["inbox", "bookings", "profile", "articles"].includes(tab)) {
+      return tab as "inbox" | "bookings" | "profile" | "articles";
+    }
+    return "inbox"; // Default if URL is clean
   });
 
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
@@ -152,6 +156,16 @@ const ConsultantDashboard = () => {
 
   useEffect(() => {
     AuthStorage.setDashboardSection(activeSection);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") !== activeSection) {
+      params.set("tab", activeSection);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}?${params.toString()}`,
+      );
+    }
   }, [activeSection]);
 
   // Load Identity
@@ -214,7 +228,24 @@ const ConsultantDashboard = () => {
       );
       setConversations(uniqueConversations);
 
+      const params = new URLSearchParams(window.location.search);
+      const targetChatId = params.get("chat");
+
       setActiveConversationId((prev) => {
+        if (
+          targetChatId &&
+          uniqueConversations.some((c) => c.id === targetChatId)
+        ) {
+          // Remove the chat parameter so a refresh doesn't force this chat open again later
+          params.delete("chat");
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}?${params.toString()}`,
+          );
+          setIsMobileChatOpen(true);
+          return targetChatId;
+        }
         if (!prev && uniqueConversations.length > 0)
           return uniqueConversations[0].id;
         return prev;
@@ -244,7 +275,7 @@ const ConsultantDashboard = () => {
     };
   }, [syncDashboardState, latestNotifId]);
 
-  // Handle Incoming Chat Intent
+  // Handle Incoming Chat Intent (from standard React Navigation state)
   useEffect(() => {
     const handleIncomingChatIntent = async () => {
       const state = location.state as DashboardLocationState;

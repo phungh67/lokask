@@ -166,18 +166,15 @@ export const NotificationProvider = ({
     setActiveBanners((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  // 🟢 Updated: Now correctly routes booking clicks to the Bookings tab!
   const handleBannerClick = (banner: NotificationPayload) => {
     if (banner.type === "new_message" && banner.conversation_id) {
-      AuthStorage.setDashboardSection("inbox");
-      window.location.href = `/dashboard?chat=${banner.conversation_id}`;
+      window.location.href = `/dashboard?tab=inbox&chat=${banner.conversation_id}`;
     } else if (
       ["new_booking", "booking_confirmed", "booking_cancelled"].includes(
         banner.type,
       )
     ) {
-      AuthStorage.setDashboardSection("bookings");
-      window.location.href = "/dashboard";
+      window.location.href = "/dashboard?tab=bookings";
     }
     dismissBanner(banner.id);
   };

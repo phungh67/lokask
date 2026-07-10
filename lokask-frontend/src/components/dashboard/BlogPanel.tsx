@@ -1,272 +1,245 @@
-import { useState, useRef, useEffect } from "react";
-import { Plus, Image as ImageIcon, ArrowLeft, Loader2, Calendar as CalendarIcon, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Consultant } from "@/types/consultant";
-import { Blog } from "@/types/blog";
-import { createBlog, getConsultantBlogs } from "@/lib/consultants"; 
+import { useState, useMemo, useEffect } from "react";
+import { isSameDay } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { BookingList, BookingStatusFilter } from "./bookings/BookingList";
+import BookingDetail from "./bookings/BookingDetail";
+import BookingMiniCalendar from "./bookings/BookingMiniCalendar";
+import { Booking } from "@/types/booking";
+import { ArrowLeft, Calendar } from "lucide-react";
+import {
+  getConsultantBookings,
+  updateBookingStatus,
+  getMyTrips,
+} from "@/lib/bookings";
+import { useNotifications } from "@/context/NotificationContext";
 
-interface BlogPanelProps {
-  consultant: Consultant;
+interface BookingsPanelProps {
+  consultantId: string;
+  userId: string | null;
+  userRole: string | null;
 }
 
-const BlogPanel = ({ consultant }: BlogPanelProps) => {
-  const { toast } = useToast();
-  const [view, setView] = useState<"list" | "create">("list");
-  
-  // Creation States
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [content, setContent] = useState("");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const BookingsPanel = ({
+  consultantId,
+  userId,
+  userRole,
+}: BookingsPanelProps) => {
+  const { notifications } = useNotifications();
+  const latestNotifId = notifications[0]?.id;
 
-  // Listing States
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [isLoadingBlogs, setIsLoadingBlogs] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  // Default back to 'upcoming'
+  const [activeStatus, setActiveStatus] =
+    useState<BookingStatusFilter>("upcoming");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch blogs when the component mounts or when we switch back to the list view
-  const fetchBlogs = async () => {
-    setIsLoadingBlogs(true);
+  const loadBookings = async () => {
+    if (!userId || consultantId === "loading") return;
+
     try {
-      // Use the safe userId that we established earlier
-      const authorId = consultant.userId || (consultant as any).user_id;
-      if (!authorId) return;
+      setIsLoading(true);
+      let data: any;
 
-      const data = await getConsultantBlogs(authorId);
-      setBlogs(data || []);
+      if (userRole === "consultant" && consultantId) {
+        data = await getConsultantBookings(consultantId);
+      } else {
+        data = await getMyTrips(userId);
+      }
+
+      const bookingsArray = Array.isArray(data) ? data : data?.data || [];
+      setBookings(bookingsArray);
     } catch (error) {
-      console.error("Failed to fetch blogs:", error);
       toast({
-        title: "Error loading articles",
-        description: "We couldn't load your articles right now.",
+        title: "Error",
+        description: "Failed to load bookings from server.",
         variant: "destructive",
       });
     } finally {
-      setIsLoadingBlogs(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (view === "list") {
-      fetchBlogs();
-    }
-  }, [view, consultant]);
+    loadBookings();
+  }, [consultantId, userId, userRole, latestNotifId]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setCoverFile(file);
-      setCoverPreview(URL.createObjectURL(file));
-    }
-  };
+  // Calculate the exact counts for each tab
+  const tabCounts = useMemo(() => {
+    const now = new Date();
+    return {
+      all: bookings.length,
+      upcoming: bookings.filter((b) => {
+        const isPendingOrConfirmed =
+          b.status === "confirmed" || b.status === "pending";
+        const bookingDate = new Date(b.start_time);
+        return (
+          isPendingOrConfirmed &&
+          (bookingDate > now || isSameDay(bookingDate, now))
+        );
+      }).length,
+      past: bookings.filter((b) => {
+        const endDate = new Date(b.end_time);
+        return endDate < now && b.status !== "cancelled";
+      }).length,
+      cancelled: bookings.filter((b) => b.status === "cancelled").length,
+    };
+  }, [bookings]);
 
-  const handleSubmit = async () => {
-    if (!title || !content) {
+  const filteredBookings = useMemo(() => {
+    let result = [...bookings];
+
+    if (activeStatus === "upcoming") {
+      result = result.filter((b) => {
+        const isPendingOrConfirmed =
+          b.status === "confirmed" || b.status === "pending";
+        const bookingDate = new Date(b.start_time);
+        const now = new Date();
+        const isFutureOrToday =
+          bookingDate > now || isSameDay(bookingDate, now);
+        return isPendingOrConfirmed && isFutureOrToday;
+      });
+    } else if (activeStatus === "past") {
+      result = result.filter((b) => {
+        const endDate = new Date(b.end_time);
+        return endDate < new Date() && b.status !== "cancelled";
+      });
+    } else if (activeStatus === "cancelled") {
+      result = result.filter((b) => b.status === "cancelled");
+    } else if (activeStatus === "all") {
+      // Keep everything
+    } else {
+      result = result.filter((b) => b.status === activeStatus);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (b) =>
+          b.traveller_name?.toLowerCase().includes(query) ||
+          b.consultant_city?.toLowerCase().includes(query),
+      );
+    }
+
+    result.sort((a, b) => {
+      if (activeStatus === "upcoming") {
+        return (
+          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        );
+      }
+      return (
+        new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+      );
+    });
+
+    return result;
+  }, [bookings, activeStatus, searchQuery]);
+
+  const handleStatusUpdate = async (newStatus: "confirmed" | "cancelled") => {
+    if (!selectedBooking || !selectedBooking.id) {
       toast({
-        title: "Missing fields",
-        description: "Please provide a title and content for your article.",
+        title: "Missing ID",
+        description:
+          "This booking is missing its ID from the database. Please refresh.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsPublishing(true);
     try {
-      await createBlog({
-        title,
-        summary,
-        content,
-        city: consultant.city,
-        country: consultant.country,
-        coverImage: coverFile || undefined,
-      });
+      await updateBookingStatus(selectedBooking.id, newStatus);
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === selectedBooking.id ? { ...b, status: newStatus } : b,
+        ),
+      );
+      setSelectedBooking((prev) =>
+        prev ? { ...prev, status: newStatus } : null,
+      );
 
       toast({
-        title: "Article published!",
-        description: "Your new travel article is now live.",
+        title: `Booking ${newStatus}`,
+        description: `Session with ${selectedBooking.traveller_name} has been ${newStatus}.`,
       });
-
-      // Reset form and go back to list
-      setTitle("");
-      setSummary("");
-      setContent("");
-      setCoverFile(null);
-      setCoverPreview(null);
-      setView("list"); // This will trigger the useEffect to refetch the fresh list!
-      
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: "Failed to publish",
-        description: error.message || "An error occurred.",
+        title: "Update failed",
+        description: "Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsPublishing(false);
     }
   };
 
-  if (view === "create") {
-    return (
-      <div className="flex-1 bg-secondary/20 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => setView("list")} className="rounded-full">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Write an Article</h1>
-                <p className="text-muted-foreground mt-1">Share your local expertise</p>
-              </div>
-            </div>
-            <Button onClick={handleSubmit} disabled={isPublishing} className="rounded-full px-8">
-              {isPublishing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-              Publish Article
-            </Button>
-          </div>
-
-          {/* Form Sections */}
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl p-6 border border-border">
-              <div className="space-y-6">
-                
-                {/* Cover Image */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Cover Image</label>
-                  <div
-                    className="relative w-full aspect-[21/9] rounded-xl overflow-hidden bg-muted cursor-pointer group flex items-center justify-center border-2 border-dashed border-border hover:border-primary/50 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {coverPreview ? (
-                      <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center text-muted-foreground">
-                        <ImageIcon className="h-10 w-10 mb-2" />
-                        <span className="text-sm">Click to upload cover image</span>
-                      </div>
-                    )}
-                  </div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                </div>
-
-                {/* Text Fields */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Hidden Art Museums Only Locals Know About"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 outline-none transition-all text-lg font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Short Summary</label>
-                    <textarea
-                      placeholder="A brief overview for the article card..."
-                      value={summary}
-                      onChange={(e) => setSummary(e.target.value)}
-                      rows={2}
-                      className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Content</label>
-                    <textarea
-                      placeholder="Write your insights here..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={12}
-                      className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none font-serif text-base"
-                    />
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // LIST VIEW
   return (
-    <div className="flex-1 bg-secondary/20 overflow-y-auto">
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">Your Articles</h1>
-            <p className="text-muted-foreground mt-1">Manage your local guides and insights</p>
-          </div>
-          <Button onClick={() => setView("create")} className="gap-2 rounded-full px-6 bg-[#C77752] hover:bg-[#A86444] text-white">
-            <Plus className="h-4 w-4" />
-            Write Article
-          </Button>
-        </div>
+    <div className="flex-1 flex overflow-hidden w-full h-full relative bg-gray-50/30">
+      <div
+        className={`w-full md:w-[380px] lg:w-[420px] shrink-0 md:border-r border-border/40 bg-white h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}
+      >
+        <BookingList
+          consultantId={consultantId}
+          bookings={filteredBookings}
+          selectedId={selectedBooking?.id || null}
+          onSelect={setSelectedBooking}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeStatus={activeStatus}
+          onStatusChange={setActiveStatus}
+          isLoading={isLoading}
+          // Pass the calculated counts down to the list
+          counts={tabCounts}
+        />
+      </div>
 
-        {isLoadingBlogs ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : blogs.length === 0 ? (
-          <div className="bg-card rounded-2xl p-12 border border-border text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#FCE8E0] rounded-full flex items-center justify-center mb-4">
-              <ImageIcon className="h-8 w-8 text-[#C77752]" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No articles yet</h3>
-            <p className="text-muted-foreground max-w-md mb-6">
-              Start sharing your local knowledge with travelers. Articles help you build trust and showcase your expertise.
-            </p>
-            <Button onClick={() => setView("create")} variant="outline" className="rounded-full border-[#C77752] text-[#C77752] hover:bg-[#FCE8E0]">
-              Write your first article
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogs.map((blog) => (
-              <div key={blog.id} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
-                <div className="relative aspect-[16/9] bg-zinc-100 overflow-hidden">
-                  {blog.coverImageUrl ? (
-                    <img src={blog.coverImageUrl} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
-                      <ImageIcon className="w-8 h-8 opacity-50" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-5 flex flex-col flex-1">
-                  <h4 className="font-bold text-zinc-900 line-clamp-2 mb-2 leading-tight">
-                    {blog.title}
-                  </h4>
-                  <p className="text-sm text-zinc-500 line-clamp-2 mb-4 flex-1">
-                    {blog.summary}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-zinc-400 pt-4 border-t border-zinc-100">
-                    <div className="flex items-center gap-1.5">
-                      <CalendarIcon className="w-3.5 h-3.5" />
-                      <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>{blog.viewsCount || 0}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+      <div
+        className={`flex-1 h-full flex flex-col relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}
+      >
+        {selectedBooking && (
+          <div className="md:hidden p-4 bg-white border-b border-border/40 flex items-center shrink-0 shadow-sm z-10">
+            <button
+              onClick={() => setSelectedBooking(null)}
+              className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Bookings
+            </button>
           </div>
         )}
+
+        {selectedBooking ? (
+          <div className="flex-1 overflow-y-auto flex justify-center w-full px-4 py-6 md:p-8">
+            <div className="w-full max-w-4xl h-fit animate-in fade-in duration-300">
+              <BookingDetail
+                booking={selectedBooking}
+                onConfirm={() => handleStatusUpdate("confirmed")}
+                onCancel={() => handleStatusUpdate("cancelled")}
+                onReschedule={() =>
+                  toast({ title: "Info", description: "Feature coming soon." })
+                }
+                onUpdateNotes={(notes) => console.log("Updating notes:", notes)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-border/40">
+              <Calendar className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="font-medium">Select a booking to view details</p>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden xl:block w-[320px] shrink-0 border-l border-border/40 bg-white">
+        <BookingMiniCalendar
+          selectedDate={
+            selectedBooking ? new Date(selectedBooking.start_time) : undefined
+          }
+          bookings={bookings}
+        />
       </div>
     </div>
   );
 };
 
-export default BlogPanel;
+export default BookingsPanel;
