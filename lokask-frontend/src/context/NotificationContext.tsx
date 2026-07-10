@@ -12,7 +12,6 @@ import NotificationBanner from "@/components/notification/NotificationBanner";
 import { useWebSocket } from "@/lib/websocket";
 import { getAvatar } from "@/lib/consultants";
 
-// For the transient floating banners
 interface NotificationPayload {
   id: string;
   type:
@@ -26,7 +25,6 @@ interface NotificationPayload {
   conversation_id?: string;
 }
 
-// For the persistent dropdown history
 export interface AppNotification {
   id: string;
   type: string;
@@ -37,7 +35,7 @@ export interface AppNotification {
 }
 
 interface NotificationContextType {
-  notifications: AppNotification[]; // Dropdown History
+  notifications: AppNotification[];
   unreadCount: number;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -53,16 +51,12 @@ export const NotificationProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  // --- SPLIT STATES ---
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeBanners, setActiveBanners] = useState<NotificationPayload[]>([]);
 
   const [token, setToken] = useState<string | null>(AuthStorage.getToken());
   const location = useLocation();
-  const isDashboardRoute =
-    location.pathname.startsWith("/consultant/dashboard") ||
-    location.pathname.startsWith("/dashboard");
 
   // Listen to global auth-changed event
   useEffect(() => {
@@ -97,10 +91,9 @@ export const NotificationProvider = ({
     };
 
     fetchHistory();
-    
+
     window.addEventListener("focus", fetchHistory);
     return () => window.removeEventListener("focus", fetchHistory);
-
   }, [token]);
 
   const wsUrl = useMemo(() => {
@@ -109,11 +102,10 @@ export const NotificationProvider = ({
     return `${wsProtocol}//${window.location.host}/ws/notifications?token=${token}`;
   }, [token]);
 
-  // 2. Handle Incoming Real-Time WebSocket Events
+  // Handle Incoming Real-Time WebSocket Events
   const handleIncomingNotification = useCallback((payload: any) => {
     const id = payload.id || Date.now().toString();
 
-    // A. Add to Dropdown History
     const historyItem: AppNotification = {
       id,
       type: payload.type,
@@ -126,7 +118,6 @@ export const NotificationProvider = ({
     setNotifications((prev) => [historyItem, ...prev]);
     setUnreadCount((prev) => prev + 1);
 
-    // B. Add to Floating Banners
     const bannerItem: NotificationPayload = {
       id,
       type: payload.type as
@@ -145,7 +136,6 @@ export const NotificationProvider = ({
 
   useWebSocket(wsUrl, handleIncomingNotification);
 
-  // 3. Mark As Read API Calls
   const markAsRead = async (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
@@ -172,30 +162,25 @@ export const NotificationProvider = ({
     }
   };
 
-  // 4. Dismiss Banner (Removes from screen, keeps in history dropdown)
   const dismissBanner = useCallback((id: string) => {
     setActiveBanners((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
+  // 🟢 Updated: Now correctly routes booking clicks to the Bookings tab!
   const handleBannerClick = (banner: NotificationPayload) => {
     if (banner.type === "new_message" && banner.conversation_id) {
       AuthStorage.setDashboardSection("inbox");
       window.location.href = `/dashboard?chat=${banner.conversation_id}`;
-    } else if (["new_booking", "booking_confirmed", "booking_cancelled"].includes(banner.type)) {
+    } else if (
+      ["new_booking", "booking_confirmed", "booking_cancelled"].includes(
+        banner.type,
+      )
+    ) {
       AuthStorage.setDashboardSection("bookings");
       window.location.href = "/dashboard";
     }
     dismissBanner(banner.id);
   };
-
-  const visibleBanners = activeBanners.filter((notif) => {
-    if (isDashboardRoute) {
-      return ["new_booking", "booking_confirmed", "booking_cancelled"].includes(
-        notif.type,
-      );
-    }
-    return true;
-  });
 
   return (
     <NotificationContext.Provider
@@ -210,7 +195,7 @@ export const NotificationProvider = ({
       {children}
 
       <div className="fixed bottom-0 right-0 z-[9999] p-4 flex flex-col gap-2 pointer-events-none">
-        {visibleBanners.map((banner) => (
+        {activeBanners.map((banner) => (
           <div
             key={banner.id}
             className="pointer-events-auto animate-in slide-in-from-right-8 duration-300"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -201,65 +201,55 @@ const ConsultantDashboard = () => {
     loadIdentity();
   }, [navigate]);
 
-  // Load Inbox
-  useEffect(() => {
-    const loadInbox = async () => {
-      if (!accountUserId || !consultantProfile || isProfileLoading) return;
+  // Pulls absolute truth from Go backend
+  const syncDashboardState = useCallback(async () => {
+    if (!accountUserId || !consultantProfile || isProfileLoading) return;
 
-      try {
-        const data = await getInbox();
-        const safeData = data ?? [];
+    try {
+      // Sync Inbox
+      const inboxData = await getInbox();
+      const mapped = (inboxData ?? []).map((apiConv: any) =>
+        mapConversationToDashboard(apiConv)
+      );
+      const uniqueConversations = Array.from(
+        new Map(mapped.map((item: any) => [item.id, item])).values()
+      );
+      setConversations(uniqueConversations);
 
-        const mapped = safeData.map((apiConv: any) =>
-          mapConversationToDashboard(apiConv),
-        );
+      // Auto-select the first conversation
+      setActiveConversationId((prev) => {
+        if (!prev && uniqueConversations.length > 0) return uniqueConversations[0].id;
+        return prev;
+      });
 
-        const uniqueConversations = Array.from(
-          new Map(mapped.map((item: any) => [item.id, item])).values(),
-        );
-
-        setConversations(mapped);
-
-        if (!activeConversationId && uniqueConversations.length > 0) {
-          setActiveConversationId(uniqueConversations[0].id);
-        }
-      } catch (error) {
-        console.error("Failed to load inbox", error);
+      // Sync Bookings
+      let data: any;
+      if (userRole === "consultant" && consultantProfile.id) {
+        data = await getConsultantBookings(consultantProfile.id);
+      } else {
+        data = await getMyTrips(accountUserId);
       }
-    };
+      const bookingsArray = Array.isArray(data) ? data : data?.data || [];
+      setBookings(bookingsArray);
 
-    loadInbox();
-  }, [
-    consultantProfile,
-    accountUserId,
-    isProfileLoading,
-    activeConversationId,
-    latestNotifId
-  ]);
+    } catch (error) {
+      console.error("Silent background sync failed", error);
+    }
+  }, [accountUserId, consultantProfile, userRole, isProfileLoading]);
 
-  // Fetch Global Bookings for State Sharing
+  // Push + Poll + Focus
   useEffect(() => {
-    const loadBookings = async () => {
-      if (!accountUserId || !consultantProfile || isProfileLoading) return;
+    syncDashboardState();
 
-      try {
-        let data: any;
-        if (userRole === "consultant" && consultantProfile.id) {
-          data = await getConsultantBookings(consultantProfile.id);
-        } else {
-          data = await getMyTrips(accountUserId);
-        }
-        const bookingsArray = Array.isArray(data) ? data : data?.data || [];
-        setBookings(bookingsArray);
-      } catch (error) {
-        console.error("Failed to fetch global bookings", error);
-      }
+    const intervalId = setInterval(syncDashboardState, 15000);
+
+    window.addEventListener("focus", syncDashboardState);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", syncDashboardState);
     };
-
-    loadBookings();
-    const intervalId = setInterval(loadBookings, 30000);
-    return () => clearInterval(intervalId);
-  }, [consultantProfile, accountUserId, userRole, isProfileLoading, latestNotifId]);
+  }, [syncDashboardState, latestNotifId]);
 
   // Handle Incoming Chat Intent
   useEffect(() => {
@@ -499,7 +489,6 @@ const ConsultantDashboard = () => {
           >
             <div className="relative">
               <MessageSquare className="w-5 h-5" />
-              {/* 🟢 Unread Message Dot */}
               {hasUnreadMessages && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
               )}
@@ -515,7 +504,6 @@ const ConsultantDashboard = () => {
           >
             <div className="relative">
               <Calendar className="w-5 h-5" />
-              {/* 🟢 Unread Booking Dot */}
               {hasUnreadBookings && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
               )}
