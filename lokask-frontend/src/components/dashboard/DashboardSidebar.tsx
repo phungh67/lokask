@@ -19,8 +19,8 @@ interface DashboardSidebarProps {
     section: "inbox" | "bookings" | "profile" | "articles",
   ) => void;
   userRole: string | null;
-  hasUnreadMessages?: boolean;
-  hasUnreadBookings?: boolean;
+  unreadMessagesCount?: number;
+  unreadBookingsCount?: number;
 }
 
 const DashboardSidebar = ({
@@ -28,8 +28,8 @@ const DashboardSidebar = ({
   activeSection,
   onSectionChange,
   userRole,
-  hasUnreadMessages,
-  hasUnreadBookings,
+  unreadMessagesCount,
+  unreadBookingsCount,
 }: DashboardSidebarProps) => {
   const isConsultant = userRole === "consultant";
 
@@ -114,15 +114,23 @@ const DashboardSidebar = ({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  {/* 🟢 3. Wrapped icon in relative container and added dot logic */}
                   <div className="relative">
                     <item.icon className="h-5 w-5" />
-                    {item.id === "inbox" && hasUnreadMessages && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                    {item.id === "inbox" && (unreadMessagesCount || 0) > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                        {unreadMessagesCount! > 99
+                          ? "99+"
+                          : unreadMessagesCount}
+                      </span>
                     )}
-                    {item.id === "bookings" && hasUnreadBookings && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-                    )}
+                    {item.id === "bookings" &&
+                      (unreadBookingsCount || 0) > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                          {unreadBookingsCount! > 99
+                            ? "99+"
+                            : unreadBookingsCount}
+                        </span>
+                      )}
                   </div>
                   <span>{item.label}</span>
                 </div>
