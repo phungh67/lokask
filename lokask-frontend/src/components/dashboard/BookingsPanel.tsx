@@ -29,7 +29,7 @@ const BookingsPanel = ({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] =
-    useState<BookingStatusFilter>("all");
+    useState<BookingStatusFilter>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +64,27 @@ const BookingsPanel = ({
     loadBookings();
   }, [consultantId, userId, userRole, latestNotifId]);
 
+  const tabCounts = useMemo(() => {
+    const now = new Date();
+    return {
+      all: bookings.length,
+      upcoming: bookings.filter((b) => {
+        const isPendingOrConfirmed =
+          b.status === "confirmed" || b.status === "pending";
+        const bookingDate = new Date(b.start_time);
+        return (
+          isPendingOrConfirmed &&
+          (bookingDate > now || isSameDay(bookingDate, now))
+        );
+      }).length,
+      past: bookings.filter((b) => {
+        const endDate = new Date(b.end_time);
+        return endDate < now && b.status !== "cancelled";
+      }).length,
+      cancelled: bookings.filter((b) => b.status === "cancelled").length,
+    };
+  }, [bookings]);
+
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
 
@@ -73,10 +94,8 @@ const BookingsPanel = ({
           b.status === "confirmed" || b.status === "pending";
         const bookingDate = new Date(b.start_time);
         const now = new Date();
-
         const isFutureOrToday =
           bookingDate > now || isSameDay(bookingDate, now);
-
         return isPendingOrConfirmed && isFutureOrToday;
       });
     } else if (activeStatus === "past") {
@@ -87,7 +106,7 @@ const BookingsPanel = ({
     } else if (activeStatus === "cancelled") {
       result = result.filter((b) => b.status === "cancelled");
     } else if (activeStatus === "all") {
-      // 🟢 Keep everything!
+      // Keep everything
     } else {
       result = result.filter((b) => b.status === activeStatus);
     }
@@ -96,8 +115,8 @@ const BookingsPanel = ({
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (b) =>
-          b.traveller_name.toLowerCase().includes(query) ||
-          b.consultant_city.toLowerCase().includes(query),
+          b.traveller_name?.toLowerCase().includes(query) ||
+          b.consultant_city?.toLowerCase().includes(query),
       );
     }
 
@@ -128,7 +147,6 @@ const BookingsPanel = ({
 
     try {
       await updateBookingStatus(selectedBooking.id, newStatus);
-
       setBookings((prev) =>
         prev.map((b) =>
           b.id === selectedBooking.id ? { ...b, status: newStatus } : b,
@@ -153,7 +171,6 @@ const BookingsPanel = ({
 
   return (
     <div className="flex-1 flex overflow-hidden w-full h-full relative bg-gray-50/30">
-      {/* List Panel */}
       <div
         className={`w-full md:w-[380px] lg:w-[420px] shrink-0 md:border-r border-border/40 bg-white h-full flex flex-col ${selectedBooking ? "hidden md:flex" : "flex"}`}
       >
@@ -167,14 +184,13 @@ const BookingsPanel = ({
           activeStatus={activeStatus}
           onStatusChange={setActiveStatus}
           isLoading={isLoading}
+          counts={tabCounts}
         />
       </div>
 
-      {/* Details Panel area */}
       <div
         className={`flex-1 h-full flex flex-col relative ${!selectedBooking ? "hidden md:flex" : "flex"}`}
       >
-        {/* Mobile "Back" Button */}
         {selectedBooking && (
           <div className="md:hidden p-4 bg-white border-b border-border/40 flex items-center shrink-0 shadow-sm z-10">
             <button
@@ -211,7 +227,6 @@ const BookingsPanel = ({
         )}
       </div>
 
-      {/* Calendar Panel */}
       <div className="hidden xl:block w-[320px] shrink-0 border-l border-border/40 bg-white">
         <BookingMiniCalendar
           selectedDate={
