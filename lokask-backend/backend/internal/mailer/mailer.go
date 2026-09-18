@@ -103,3 +103,29 @@ func (m *MailService) SendResetPasswordEmail(toEmail, toName, LostPasswordURL st
 
 	return err
 }
+
+// send notify about SSL expiry
+func (m *MailService) SendSSLExpiryAlert(toEmail, domain string, remainingDay int, expiryDate string) error {
+	params := &resend.SendEmailRequest{
+		From:    m.From,
+		To:      []string{toEmail},
+		Subject: "SSL Certificate is needed renewing",
+		Template: &resend.EmailTemplate{
+			Id: "ssl-expiry-alert",
+			Variables: map[string]any{
+				"Domain":     domain,
+				"expiryDate": expiryDate,
+			},
+		},
+	}
+
+	log.Printf("[MAILER] Sending SSL notification via Resend, destination: %s", toEmail)
+	_, err := m.Client.Emails.Send(params)
+	if err != nil {
+		log.Printf("[ERROR][MAILER] Failed to notify the administrator, check the error: %v", err)
+	} else {
+		log.Printf("[INFO][MAILER] Successfully sent email to: %s", toEmail)
+	}
+
+	return err
+}

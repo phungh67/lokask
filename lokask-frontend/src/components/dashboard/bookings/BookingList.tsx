@@ -77,11 +77,10 @@ export const BookingList: React.FC<BookingListProps> = ({
                 className={cn(
                   "px-4 py-1.5 text-sm font-medium rounded-full capitalize whitespace-nowrap transition-colors duration-200",
                   activeStatus === status
-                    ? "bg-[#C77752] text-white shadow-sm" // 🟢 Active brown pill
-                    : "bg-[#F5F2EE] text-gray-600 hover:bg-[#e8e4dc]", // 🟢 Inactive beige pill
+                    ? "bg-[#C77752] text-white shadow-sm" 
+                    : "bg-[#F5F2EE] text-gray-600 hover:bg-[#e8e4dc]", 
                 )}
               >
-                {/* 🟢 Inline text formatting: "Status (Count)" */}
                 {status}
                 {count > 0 ? ` (${count})` : ""}
               </button>
