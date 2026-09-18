@@ -14,7 +14,7 @@ func StartUnreadMessageCron(db *sqlx.DB, mailService *mailer.MailService) {
 
 	go func() {
 		for range ticker.C {
-
+			processUnreadMessages(db, mailService)
 		}
 	}()
 
