@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"time"
 )
 
@@ -25,9 +26,23 @@ func StartSSLCheckCron(mailSvc *mailer.MailService, domain string) {
 }
 
 func checkSSL(mailSvc *mailer.MailService, domain string) {
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%:443", domain), nil)
+	dialer := &net.Dialer{
+		Timeout: 10 * time.Second,
+	}
+
+	config := &tls.Config{
+		ServerName: domain,
+	}
+
+	conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%s:443", domain), config)
 	if err != nil {
 		log.Printf("[ERROR][WORKER] SSL Connection failed for %s: %v", domain, err)
+		return
+	}
+
+	if conn == nil {
+		log.Printf("[ERROR][WORKER] SSL Connection returned nil for %s", domain)
+		return
 	}
 
 	defer conn.Close()
