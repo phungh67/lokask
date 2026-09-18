@@ -34,7 +34,7 @@ func checkSSL(mailSvc *mailer.MailService, domain string) {
 		ServerName: domain,
 	}
 
-	conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%s:443", domain), config)
+	conn, err := tls.DialWithDialer(dialer, "tcp4", fmt.Sprintf("%s:443", domain), config)
 	if err != nil {
 		log.Printf("[ERROR][WORKER] SSL Connection failed for %s: %v", domain, err)
 		return
