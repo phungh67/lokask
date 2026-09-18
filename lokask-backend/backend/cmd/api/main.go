@@ -106,7 +106,7 @@ func main() {
 
 	// cron service
 	worker.StartUnreadMessageCron(db, mailService)
-	worker.StartSSLCheckCron(mailService, "lokask.se")
+	worker.StartSSLCheckCron(mailService, "lokask_web") // internal calling
 
 	// auth handler
 	authHandler := &handler.AuthHandler{
